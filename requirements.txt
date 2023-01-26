@@ -1,0 +1,15 @@
+psutil
+setuptools
+matplotlib
+absl-py
+gin-config
+black
+scipy
+regex
+gym
+
+# reliabiility
+-r rl_perf/metrics/reliability/requirements.txt
+
+# codecarbon
+-r rl_perf/metrics/system/codecarbon/requirements-dev.txt
