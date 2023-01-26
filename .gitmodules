@@ -1,0 +1,18 @@
+[submodule "web_nav"]
+	path = web_nav
+	url = https://github.com/uchendui/web_nav.git
+[submodule "circuit_training"]
+	path = circuit_training
+	url = https://github.com/uchendui/circuit_training.git
+[submodule "quadruped_locomotion"]
+	path = quadruped_locomotion
+	url = https://github.com/uchendui/quadruped_locomotion.git
+[submodule "src/quadruped_locomotion"]
+	path = src/quadruped_locomotion
+	url = https://github.com/uchendui/quadruped_locomotion.git
+[submodule "src/circuit_training"]
+	path = src/circuit_training
+	url = https://github.com/uchendui/circuit_training.git
+[submodule "src/web_nav"]
+	path = src/web_nav
+	url = https://github.com/uchendui/web_nav.git
