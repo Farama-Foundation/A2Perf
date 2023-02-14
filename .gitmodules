@@ -8,11 +8,11 @@
 	path = quadruped_locomotion
 	url = https://github.com/uchendui/quadruped_locomotion.git
 [submodule "src/quadruped_locomotion"]
-	path = rl_perf/quadruped_locomotion
+	path = rl_perf/domains/quadruped_locomotion
 	url = https://github.com/uchendui/quadruped_locomotion.git
 [submodule "src/circuit_training"]
-	path = rl_perf/circuit_training
+	path = rl_perf/domains/circuit_training
 	url = https://github.com/uchendui/circuit_training.git
 [submodule "src/web_nav"]
-	path = rl_perf/web_nav
+	path = rl_perf/domains/web_nav
 	url = https://github.com/uchendui/web_nav.git
