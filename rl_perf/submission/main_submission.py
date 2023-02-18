@@ -5,11 +5,7 @@ from rl_perf import profiler
 
 
 def run_benchmark(participant_module):
-
-
-    with profiler.TrainingMemoryProfiler() as mem_profiler:
-
-        pass
+    pass
 
 
 def main(_):
@@ -22,4 +18,3 @@ def main(_):
 
 if __name__ == '__main__':
     app.run(main)
-    # import the 'train' module from ../rlperf_benchmark_submission
