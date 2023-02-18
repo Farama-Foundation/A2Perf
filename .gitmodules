@@ -16,3 +16,9 @@
 [submodule "src/web_nav"]
 	path = rl_perf/domains/web_nav
 	url = https://github.com/uchendui/web_nav.git
+[submodule "rl_perf/rlperf_benchmark_submission"]
+	path = rl_perf/rlperf_benchmark_submission
+	url = https://github.com/uchendui/rlperf_benchmark_submission.git
+[submodule "rl_perf/metrics/reliability"]
+	path = rl_perf/metrics/reliability
+	url = https://github.com/google-research/rl-reliability-metrics.git
