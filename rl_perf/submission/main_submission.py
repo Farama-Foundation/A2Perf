@@ -1,7 +1,6 @@
 import os
 from absl import app
 import importlib.util
-from rl_perf import profiler
 
 
 def run_benchmark(participant_module):
