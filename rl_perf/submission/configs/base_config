@@ -1,9 +1,0 @@
-import submission
-
-Submission.participant_module = 'my_participant_module'
-Submission.benchmark = 'example_benchmark'
-Submission.domain = 'web_navigation'
-Submission.mode = 'eval'
-Submission.model_location = '/path/to/trained/model'
-
-submission = Submission()

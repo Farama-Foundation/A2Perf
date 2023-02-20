@@ -3,21 +3,19 @@ import os
 
 from absl import app
 import logging
-from submission import Submission
+import gin
+from rl_perf.submission.submission_util import Submission
+from rl_perf.submission.submission_util import BenchmarkDomain
+from rl_perf.submission.submission_util import BenchmarkMode
 
 
 def main(_):
+    gin.parse_config_file('configs/base_config.gin')
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    participant_module_path = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '..', 'rlperf_benchmark_submission', 'train.py'))
-    participant_module_spec = importlib.util.spec_from_file_location("train", participant_module_path)
-    participant_module = importlib.util.module_from_spec(participant_module_spec)
-
-    submission = Submission(participant_module=participant_module, participant_module_path=participant_module_path,
-                            participant_module_spec=participant_module_spec,
-                            benchmark='web_navigation', mode='train')
+    submission = Submission()
     submission.run_benchmark()
 
 
