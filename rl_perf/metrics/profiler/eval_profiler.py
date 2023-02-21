@@ -2,5 +2,9 @@ from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 
 
 class EvaluationProfiler(BaseProfiler):
-    def __init__(self, ):
-        super(EvaluationProfiler, self).__init__()
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass

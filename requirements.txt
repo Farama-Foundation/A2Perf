@@ -1,0 +1,8 @@
+psutil==5.9.4
+numpy==1.23.5
+CoDE==0.0.1
+gym==0.26.2
+setuptools==65.5.1
+six==1.16.0
+tensorflow==2.11.0
+tensorboard==2.11.2

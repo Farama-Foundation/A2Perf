@@ -5,3 +5,4 @@ Submission.participant_module_path = '/tmp/pycharm_project_101/rl_perf/rlperf_be
 Submission.domain = 'web_navigation'
 Submission.mode = 'train'
 Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.TrainingMemoryProfiler,)
+Submission.base_log_dir = '/tmp/pycharm_project_101/rl_perf/submission/logs'

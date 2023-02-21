@@ -1,12 +1,19 @@
+import multiprocessing
+
+
 class BaseProfiler(object):
-    def __init__(self, ):
-        self.participant_process = None
 
-    def __enter__(self):
-        pass
+    def __init__(self, participant_process_event: multiprocessing.Event = None,
+                 participant_process: multiprocessing.Process = None,
+                 profiler_event: multiprocessing.Event = None,
+                 base_log_dir: str = None):
+        self.participant_process_event = participant_process_event
+        self.profiler_event = profiler_event
+        self.participant_process = participant_process
+        self.base_log_dir = base_log_dir
 
-    def __exit__(self):
-        pass
+    def start(self):
+        raise NotImplementedError
 
-    def set_participant_process(self, process):
-        self.participant_process = process
+    def stop(self):
+        raise NotImplementedError
