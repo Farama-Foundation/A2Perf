@@ -1,15 +1,16 @@
-import importlib.util
-import os
-
-from absl import app
 import logging
+import multiprocessing
+
 import gin
+from absl import app
+
 from rl_perf.submission.submission_util import Submission
-from rl_perf.submission.submission_util import BenchmarkDomain
-from rl_perf.submission.submission_util import BenchmarkMode
 
 
 def main(_):
+    # TODO: make sure spawn doesn't break anything.
+    multiprocessing.set_start_method('spawn', force=True)
+
     gin.parse_config_file('configs/base_config.gin')
 
     logging.basicConfig(level=logging.INFO)

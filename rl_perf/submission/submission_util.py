@@ -7,20 +7,36 @@ import typing
 
 import gin
 
-from metrics.profiler.base_profiler import BaseProfiler
+from rl_perf.metrics.profiler.base_profiler import BaseProfiler
+
+from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
+from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
+                                                                        LowerCVaROnAcross,
+                                                                        LowerCVaROnDiffs, )
 
 
-@gin.configurable
+@gin.constants_from_enum
 class BenchmarkMode(enum.Enum):
     TRAIN = 'train'
     EVAL = 'eval'
+    INFERENCE = 'inference'
 
 
-@gin.configurable
+@gin.constants_from_enum
 class BenchmarkDomain(enum.Enum):
     WEB_NAVIGATION = 'web_navigation'
     CIRCUIT_TRAINING = 'circuit_training'
     QUADRUPED_LOCOMOTION = 'quadruped_locomotion'
+
+
+@gin.constants_from_enum
+class ReliabilityMetrics(enum.Enum):
+    IqrWithinRuns = 'IqrWithinRuns'
+    IqrAcrossRuns = 'IqrAcrossRuns'
+    LowerCVaROnDiffs = 'LowerCVaROnDiffs'
+    LowerCVaROnDrawdown = 'LowerCVaROnDrawdown'
+    LowerCVarOnAcross = 'LowerCVarOnAcross'
+    MedianPerfDuringTraining = 'MedianPerfDuringTraining'
 
 
 def _start_profilers(profilers: typing.List[typing.Type[BaseProfiler]],
@@ -43,20 +59,27 @@ def _start_profilers(profilers: typing.List[typing.Type[BaseProfiler]],
 @gin.configurable
 class Submission:
     def __init__(self,
-                 participant_module_path,
-                 profilers=None,
-                 mode=BenchmarkMode.TRAIN,
-                 domain=BenchmarkDomain.WEB_NAVIGATION,
-                 base_log_dir=None):
+                 participant_module_path: str = None,
+                 profilers: typing.List[typing.Type[BaseProfiler]] = None,
+                 mode: BenchmarkMode = BenchmarkMode.TRAIN,
+                 domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
+                 base_log_dir: str = None,
+                 metric_values_dir: str = None,
+                 reliability_metrics: typing.List[ReliabilityMetrics] = None):
 
         self.base_log_dir = base_log_dir
         if self.base_log_dir is not None:
             os.makedirs(self.base_log_dir, exist_ok=True)
 
+        self.metric_values_dir = metric_values_dir
+        if self.metric_values_dir is not None:
+            os.makedirs(self.metric_values_dir, exist_ok=True)
+
         self.profilers = profilers if profilers is not None else []
         self.participant_module_path = participant_module_path
         self.domain = domain
         self.mode = mode
+        self.reliability_metrics = reliability_metrics
 
     def _train(self, participant_event, profiler_events):
         participant_event.set()
@@ -74,16 +97,54 @@ class Submission:
     def _eval(self):
         pass
 
+    def run_reliability_metrics(self):
+        # TODO make sure to write gin config for metric parameters
+        metrics = []
+        for metric in self.reliability_metrics:
+            if metric == ReliabilityMetrics.IqrWithinRuns:
+                metrics.append(IqrWithinRuns())
+            elif metric == ReliabilityMetrics.IqrAcrossRuns:
+                metrics.append(IqrAcrossRuns())
+            elif metric == ReliabilityMetrics.LowerCVaROnDiffs:
+                metrics.append(LowerCVaROnDiffs())
+            elif metric == ReliabilityMetrics.LowerCVaROnDrawdown:
+                metrics.append(LowerCVaROnDiffs())
+            elif metric == ReliabilityMetrics.LowerCVarOnAcross:
+                metrics.append(LowerCVaROnAcross())
+            elif metric == ReliabilityMetrics.MedianPerfDuringTraining:
+                raise NotImplementedError('MedianPerfDuringTraining not implemented yet')
+            else:
+                raise ValueError(f'Invalid metric: {metric}')
+
+        run_paths = [os.path.join(self.base_log_dir, run_path, 'eval.csv') for run_path in
+                     os.listdir(self.base_log_dir)]
+
+        # TODO:
+        #   define n_timeframes in gin (for dividing each run into timeframes)
+        #   define n_random_samples for permutations /bootstraps
+        #   define n_worker for permutations /bootstraps
+        #   define pvals_dir in gin
+        #   define confidence_intervals_dir in gin
+        #   define plots_dir in gin
+        #   define tasks in gin (for locomotion this would be the different gaits)
+        #   define the algorithms in gin (for locomotion this would be MPC, PPO, etc)
+        #   define n_runs_per_experiment in gin
+
+        evaluator = Evaluator(metrics=metrics, )
+        evaluator.evaluate(run_paths=run_paths, outfile_prefix=self.metric_values_dir)
+
     def run_benchmark(self):
+
+        # Need a participant event to signal to profilers
         participant_started_event = multiprocessing.Event()
         profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
-        if self.mode == 'train':
+        if self.mode == BenchmarkMode.TRAIN:
             participant_process = multiprocessing.Process(target=self._train,
                                                           args=(participant_started_event, profilers_started_events))
-        elif self.mode == 'eval':
-            participant_process = multiprocessing.Process(target=self._eval, args=(self.participant_module_path, q))
-        elif self.mode == 'infer':
-            participant_process = multiprocessing.Process(target=self._infer, args=(self.participant_module_path, q))
+        elif self.mode == BenchmarkMode.EVAL:
+            participant_process = multiprocessing.Process(target=self._eval, args=(self.participant_module_path, None))
+        elif self.mode == BenchmarkMode.INFERENCE:
+            participant_process = multiprocessing.Process(target=self._infer, args=(self.participant_module_path, None))
         else:
             raise ValueError('Mode must be one of train, eval, or infer')
 
@@ -99,3 +160,6 @@ class Submission:
         for profiler in profilers:
             profiler.join()
             logging.info(f'Profiler process {profiler.pid} finished')
+
+        if self.reliability_metrics:
+            self.run_reliability_metrics()
