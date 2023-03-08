@@ -1,8 +1,53 @@
 import rl_perf.submission.submission_util
 import rl_perf.metrics.profiler.memory_profiler
 
-Submission.participant_module_path = '/tmp/pycharm_project_101/rl_perf/rlperf_benchmark_submission/train.py'
-Submission.domain = 'web_navigation'
-Submission.mode = 'train'
-Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.TrainingMemoryProfiler,)
-Submission.base_log_dir = '/tmp/pycharm_project_101/rl_perf/submission/logs'
+import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+
+# Set up submission object
+Submission.participant_module_path = '../rlperf_benchmark_submission/train.py'
+Submission.mode = %BenchmarkMode.TRAIN
+#Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.TrainingMemoryProfiler,)
+Submission.base_log_dir = './logs'
+Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
+
+# Reliability
+METRICS = [%ReliabilityMetrics.IqrWithinRuns]
+Submission.reliability_metrics  = %METRICS
+Submission.metric_values_dir = './reliability_metrics/'
+
+## Configure evaluation
+eval_metrics.Evaluator.metrics = %METRICS
+eval_metrics.Evaluator.timepoint_variable = ['environment_steps',]
+eval_metrics.Evaluator.dependent_variable = ['average_return', 'average_episode_length']
+eval_metrics.Evaluator.align_on_global_step = True
+
+# TODO: We may have to set these variables programmatically with an auto-generated gin file.
+# We could also make the gin config via Python.
+FREQ_THRESH = 0.01
+WINDOW_SIZE = None
+WINDOW_SIZE_TRIMMED = None
+EVAL_POINTS = None
+
+metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
+metrics_online.IqrWithinRuns.eval_points = %EVAL_POINTS
+metrics_online.IqrWithinRuns.baseline = 'curve_range'
+
+metrics_online.LowerCVaROnDiffs.baseline = 'curve_range'
+
+metrics_online.LowerCVaROnDrawdown.baseline = 'curve_range'
+
+metrics_online.IqrAcrossRuns.lowpass_thresh = %FREQ_THRESH
+metrics_online.IqrAcrossRuns.eval_points = %EVAL_POINTS
+metrics_online.IqrAcrossRuns.window_size = %WINDOW_SIZE
+metrics_online.IqrAcrossRuns.baseline = 'curve_range'
+
+metrics_online.LowerCVaROnAcross.lowpass_thresh = %FREQ_THRESH
+metrics_online.LowerCVaROnAcross.eval_points = %EVAL_POINTS
+metrics_online.LowerCVaROnAcross.window_size = %WINDOW_SIZE
+metrics_online.LowerCVaROnAcross.baseline = 'curve_range'
+
+metrics_online.MedianPerfDuringTraining.window_size = %WINDOW_SIZE
+metrics_online.MedianPerfDuringTraining.eval_points = %EVAL_POINTS
+
+
