@@ -7,6 +7,9 @@ import typing
 
 import gin
 
+import gym
+
+from rl_perf.domains import web_nav
 from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
@@ -18,15 +21,14 @@ from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcros
 @gin.constants_from_enum
 class BenchmarkMode(enum.Enum):
     TRAIN = 'train'
-    EVAL = 'eval'
     INFERENCE = 'inference'
 
 
 @gin.constants_from_enum
 class BenchmarkDomain(enum.Enum):
-    WEB_NAVIGATION = 'web_navigation'
-    CIRCUIT_TRAINING = 'circuit_training'
-    QUADRUPED_LOCOMOTION = 'quadruped_locomotion'
+    WEB_NAVIGATION = 'WebNavigation-v0'
+    CIRCUIT_TRAINING = 'CircuitTraining-v0'
+    QUADRUPED_LOCOMOTION = 'QuadrupedLocomotion-v0'
 
 
 @gin.constants_from_enum
@@ -65,6 +67,7 @@ class Submission:
                  domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
                  base_log_dir: str = None,
                  metric_values_dir: str = None,
+                 num_inference_steps: int = 1000,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None):
 
         self.base_log_dir = base_log_dir
@@ -74,7 +77,7 @@ class Submission:
         self.metric_values_dir = metric_values_dir
         if self.metric_values_dir is not None:
             os.makedirs(self.metric_values_dir, exist_ok=True)
-
+        self.num_inference_steps = num_inference_steps
         self.profilers = profilers if profilers is not None else []
         self.participant_module_path = participant_module_path
         self.domain = domain
@@ -94,8 +97,38 @@ class Submission:
         participant_module.train()
         participant_event.clear()
 
-    def _eval(self):
-        pass
+    def _infer(self, participant_event, profiler_events):
+
+        # Wait for all profilers to start up before continuing with inference
+        for profiler_event in profiler_events:
+            profiler_event.wait()
+
+        participant_module_spec = importlib.util.spec_from_file_location("infer", self.participant_module_path)
+        participant_module = importlib.util.module_from_spec(participant_module_spec)
+        participant_module_spec.loader.exec_module(participant_module)
+
+        # Generate fake data for inference using a tensorspec. To avoid clashing with the participant code,
+        # we will generate all of the tensorspecs beforehand.
+        env = gym.make(self.domain.value, difficulty=1, seed=0)
+        data = []
+        for _ in range(self.num_inference_steps):
+            observation = env.observation_space.sample()
+            preprocessed_obs = participant_module.preprocess_observation(observation)
+            data.append(preprocessed_obs)
+
+        # Get the participant model
+        participant_model = participant_module.load_model()
+
+        # Since all the startup is done, we can communicate to the profilers that they can start profiling
+        participant_event.set()
+
+        participants_actions = []
+        for i in range(self.num_inference_steps):
+            action = participant_module.infer_once(model=participant_model, observation=data[i])
+            participants_actions.append(action)
+        participant_event.clear()
+
+        # TODO: Add a check to make sure that the participant's actions are valid
 
     def run_reliability_metrics(self):
         # TODO make sure to write gin config for metric parameters
@@ -116,7 +149,7 @@ class Submission:
             else:
                 raise ValueError(f'Invalid metric: {metric}')
 
-        run_paths = [os.path.join(self.base_log_dir, run_path, 'eval.csv') for run_path in
+        run_paths = [os.path.join(self.base_log_dir, run_path, 'train', 'train_summary.csv') for run_path in
                      os.listdir(self.base_log_dir)]
 
         # TODO:
@@ -141,12 +174,11 @@ class Submission:
         if self.mode == BenchmarkMode.TRAIN:
             participant_process = multiprocessing.Process(target=self._train,
                                                           args=(participant_started_event, profilers_started_events))
-        elif self.mode == BenchmarkMode.EVAL:
-            participant_process = multiprocessing.Process(target=self._eval, args=(self.participant_module_path, None))
         elif self.mode == BenchmarkMode.INFERENCE:
-            participant_process = multiprocessing.Process(target=self._infer, args=(self.participant_module_path, None))
+            participant_process = multiprocessing.Process(target=self._infer,
+                                                          args=(participant_started_event, profilers_started_events))
         else:
-            raise ValueError('Mode must be one of train, eval, or infer')
+            raise ValueError('Benchmark mode must be either train or infer')
 
         participant_process.start()
         profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,

@@ -6,6 +6,7 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 
 # Set up submission object
 Submission.participant_module_path = '../rlperf_benchmark_submission/train.py'
+
 Submission.mode = %BenchmarkMode.TRAIN
 #Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.TrainingMemoryProfiler,)
 Submission.base_log_dir = './logs'
@@ -18,16 +19,16 @@ Submission.metric_values_dir = './reliability_metrics/'
 
 ## Configure evaluation
 eval_metrics.Evaluator.metrics = %METRICS
-eval_metrics.Evaluator.timepoint_variable = ['environment_steps',]
-eval_metrics.Evaluator.dependent_variable = ['average_return', 'average_episode_length']
+eval_metrics.Evaluator.timepoint_variable = ['EnvironmentSteps',]
+eval_metrics.Evaluator.dependent_variable = ['AverageReturn',]
 eval_metrics.Evaluator.align_on_global_step = True
 
 # TODO: We may have to set these variables programmatically with an auto-generated gin file.
 # We could also make the gin config via Python.
 FREQ_THRESH = 0.01
-WINDOW_SIZE = None
-WINDOW_SIZE_TRIMMED = None
-EVAL_POINTS = None
+WINDOW_SIZE = 100
+WINDOW_SIZE_TRIMMED = 75
+EVAL_POINTS = [ 75, 100, 125, 150, 175, 200 ]
 
 metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
 metrics_online.IqrWithinRuns.eval_points = %EVAL_POINTS

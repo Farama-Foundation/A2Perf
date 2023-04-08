@@ -1,0 +1,24 @@
+import rl_perf.submission.submission_util
+import rl_perf.metrics.profiler.memory_profiler
+
+import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+
+# Set up submission object
+Submission.participant_module_path = '../rlperf_benchmark_submission/infer.py'
+Submission.mode = %BenchmarkMode.INFERENCE
+Submission.base_log_dir = './logs'
+Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
+
+
+# Set up benchmark mode
+Submission.num_inference_steps= 1000
+
+
+# Reliability
+#METRICS = [%ReliabilityMetrics.IqrWithinRuns]
+#Submission.reliability_metrics  = %METRICS
+#Submission.metric_values_dir = './reliability_metrics/'
+
+
+
