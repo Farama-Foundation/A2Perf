@@ -1,17 +1,19 @@
 import enum
-import os
 import importlib
+import json
 import logging
 import multiprocessing
+import os
+import timeit
 import typing
 
 import gin
-
 import gym
-
+import matplotlib.pyplot as plt
+import numpy as np
 from rl_perf.domains import web_nav
-from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 
+from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
@@ -29,6 +31,11 @@ class BenchmarkDomain(enum.Enum):
     WEB_NAVIGATION = 'WebNavigation-v0'
     CIRCUIT_TRAINING = 'CircuitTraining-v0'
     QUADRUPED_LOCOMOTION = 'QuadrupedLocomotion-v0'
+
+
+@gin.constants_from_enum
+class SystemMetrics(enum.Enum):
+    INFERENCE_TIME = 'InferenceTime'
 
 
 @gin.constants_from_enum
@@ -68,6 +75,8 @@ class Submission:
                  base_log_dir: str = None,
                  metric_values_dir: str = None,
                  num_inference_steps: int = 1000,
+                 time_participant_code: bool = True,
+                 plot_metrics: bool = True,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None):
 
         self.base_log_dir = base_log_dir
@@ -75,14 +84,17 @@ class Submission:
             os.makedirs(self.base_log_dir, exist_ok=True)
 
         self.metric_values_dir = metric_values_dir
+        self.plot_metrics = plot_metrics
         if self.metric_values_dir is not None:
             os.makedirs(self.metric_values_dir, exist_ok=True)
         self.num_inference_steps = num_inference_steps
+        self.time_inference_steps = time_participant_code
         self.profilers = profilers if profilers is not None else []
         self.participant_module_path = participant_module_path
         self.domain = domain
         self.mode = mode
         self.reliability_metrics = reliability_metrics
+        self.metrics_results = {}
 
     def _train(self, participant_event, profiler_events):
         participant_event.set()
@@ -107,25 +119,12 @@ class Submission:
         participant_module = importlib.util.module_from_spec(participant_module_spec)
         participant_module_spec.loader.exec_module(participant_module)
 
-        # Generate fake data for inference using a tensorspec. To avoid clashing with the participant code,
-        # we will generate all of the tensorspecs beforehand.
-        env = gym.make(self.domain.value, difficulty=1, seed=0)
-        data = []
-        for _ in range(self.num_inference_steps):
-            observation = env.observation_space.sample()
-            preprocessed_obs = participant_module.preprocess_observation(observation)
-            data.append(preprocessed_obs)
-
         # Get the participant model
         participant_model = participant_module.load_model()
 
         # Since all the startup is done, we can communicate to the profilers that they can start profiling
         participant_event.set()
 
-        participants_actions = []
-        for i in range(self.num_inference_steps):
-            action = participant_module.infer_once(model=participant_model, observation=data[i])
-            participants_actions.append(action)
         participant_event.clear()
 
         # TODO: Add a check to make sure that the participant's actions are valid
@@ -164,27 +163,20 @@ class Submission:
         #   define n_runs_per_experiment in gin
 
         evaluator = Evaluator(metrics=metrics, )
-        evaluator.evaluate(run_paths=run_paths, outfile_prefix=self.metric_values_dir)
+        self.metrics_results['reliability_metrics'] = evaluator.evaluate(run_paths=run_paths,
+                                                                         outfile_prefix=self.metric_values_dir)
 
-    def run_benchmark(self):
-
+    def _run_training_benchmark(self):
         # Need a participant event to signal to profilers
         participant_started_event = multiprocessing.Event()
         profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
-        if self.mode == BenchmarkMode.TRAIN:
-            participant_process = multiprocessing.Process(target=self._train,
-                                                          args=(participant_started_event, profilers_started_events))
-        elif self.mode == BenchmarkMode.INFERENCE:
-            participant_process = multiprocessing.Process(target=self._infer,
-                                                          args=(participant_started_event, profilers_started_events))
-        else:
-            raise ValueError('Benchmark mode must be either train or infer')
 
+        participant_process = multiprocessing.Process(target=self._train,
+                                                      args=(participant_started_event, profilers_started_events))
         participant_process.start()
         profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
                                      profiler_events=profilers_started_events,
                                      participant_process=participant_process, log_dir=self.base_log_dir)
-
         logging.info(f'Participant module process ID: {participant_process.pid}')
         participant_process.join()
         logging.info(f'Participant module process {participant_process.pid} finished')
@@ -193,5 +185,89 @@ class Submission:
             profiler.join()
             logging.info(f'Profiler process {profiler.pid} finished')
 
+    def _run_inference_benchmark(self):
+        ##################################################
+        # Setting up the participants code
+        ##################################################
+
+        # Load participant module. Change the current working directory to the directory containing the participant
+        # module file, so that any relative imports work
+        participant_module_dir = os.path.dirname(self.participant_module_path)
+        original_dir = os.getcwd()
+        os.chdir(participant_module_dir)
+        participant_module_spec = importlib.util.spec_from_file_location("infer", self.participant_module_path)
+        participant_module = importlib.util.module_from_spec(participant_module_spec)
+        participant_module_spec.loader.exec_module(participant_module)
+        os.chdir(original_dir)  # Change back to the original working directory
+
+        # Generate fake data for inference
+        # TODO: replace this with a function to create environments since we need different args for different domains
+        env = gym.make(self.domain.value, difficulty=1, seed=0)
+        data = []
+        for _ in range(self.num_inference_steps):
+            observation = env.observation_space.sample()
+            preprocessed_obs = participant_module.preprocess_observation(observation)
+            data.append(preprocessed_obs)
+
+        # Get the participant model
+        participant_model = participant_module.load_model()
+
+        ##################################################
+        # Timing metrics for single inference steps
+        ##################################################
+        def inference_step():
+            return participant_module.infer_once(model=participant_model, observation=data[i])
+
+        if self.time_inference_steps:
+            inference_times = []
+            for i in range(self.num_inference_steps):
+                inference_times.append(timeit.timeit(inference_step, number=1))
+
+            self.metrics_results['inference_time'] = dict(values=inference_times,
+                                                          mean=np.mean(inference_times),
+                                                          std=np.std(inference_times))
+
+        # TODO: Run other metrics for inference
+
         if self.reliability_metrics:
             self.run_reliability_metrics()
+
+        ##################################################
+        # Save raw metrics to disk, and plot results
+        ##################################################
+
+        if not os.path.exists(os.path.join(self.base_log_dir, 'metrics')):
+            os.makedirs(os.path.join(self.base_log_dir, 'metrics'))
+        with open(os.path.join(self.base_log_dir, 'metrics', 'metric_results.json'), 'w') as f:
+            json.dump(self.metrics_results, f)
+
+        # Plot metrics and save to file
+        if self.plot_metrics:
+            self._plot_metrics()
+
+    def _plot_metrics(self):
+        if not self.metrics_results:
+            logging.warning('No metrics to plot')
+
+        if 'inference_time' in self.metrics_results:
+            fig, ax = plt.subplots()
+            ax.boxplot(self.metrics_results['inference_time']['values'], labels=['DQNLSTM (TFA)'])
+            ax.set_title('Inference Time')
+            ax.set_ylabel('Time (s)')
+            fig.savefig(os.path.join(self.base_log_dir, 'metrics', 'inference_times.png'))
+
+            fig, ax = plt.subplots()
+            ax.plot(self.metrics_results['inference_time']['values'], label='DQNLSTM (TFA)')
+            ax.set_title('Inference Time')
+            ax.set_ylabel('Time (s)')
+            ax.set_xlabel('Step')
+            ax.legend(loc='upper right')
+            fig.savefig(os.path.join(self.base_log_dir, 'metrics', 'inference_times_line.png'))
+
+    def run_benchmark(self):
+        if self.mode == BenchmarkMode.TRAIN:
+            self._run_training_benchmark()
+        elif self.mode == BenchmarkMode.INFERENCE:
+            self._run_inference_benchmark()
+        else:
+            raise ValueError('Benchmark mode must be either train or infer')

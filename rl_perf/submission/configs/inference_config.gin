@@ -12,8 +12,8 @@ Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
 
 
 # Set up benchmark mode
-Submission.num_inference_steps= 1000
-
+Submission.num_inference_steps= 10000
+Submission.time_participant_code = False
 
 # Reliability
 #METRICS = [%ReliabilityMetrics.IqrWithinRuns]

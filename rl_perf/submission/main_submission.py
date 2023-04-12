@@ -19,7 +19,7 @@ def main(_):
     multiprocessing.set_start_method('spawn', force=True)
 
     gin.parse_config_file(FLAGS.gin_file)
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
 
     submission = Submission()
