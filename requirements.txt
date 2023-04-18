@@ -5,4 +5,4 @@ matplotlib
 absl-py
 gin-config
 black
-
+scipy

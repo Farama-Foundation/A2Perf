@@ -16,23 +16,23 @@ Submission.create_domain.difficulty = 1
 Submission.create_domain.seed= 0
 
 # Set up benchmark mode
-Submission.num_inference_steps= 100
-Submission.time_participant_code = False
+Submission.num_inference_steps= 4000
+Submission.time_participant_code = True
 
 
 # Profiler setup
 memory_profiler.InferenceMemoryProfiler.interval=0.5
 memory_profiler.InferenceMemoryProfiler.base_log_dir = './logs'
 memory_profiler.InferenceMemoryProfiler.log_file = 'inference_memory_profiler.csv'
-memory_profiler.InferenceMemoryProfiler.plot_results.save_path = 'inference_memory_profiler.png'
+#memory_profiler.InferenceMemoryProfiler.plot_results.save_path = 'inference_memory_profiler.png'
 
-Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.InferenceMemoryProfiler,)
+#Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.InferenceMemoryProfiler,)
 
 
 # Reliability
 #METRICS = [%ReliabilityMetrics.IqrWithinRuns]
 #Submission.reliability_metrics  = %METRICS
-#Submission.metric_values_dir = './reliability_metrics/'
+Submission.metric_values_dir = './logs/metrics/'
 
 
 

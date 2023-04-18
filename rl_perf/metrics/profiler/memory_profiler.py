@@ -10,6 +10,7 @@ from absl import logging
 
 from rl_perf.metrics.profiler.inference_profiler import InferenceProfiler
 from rl_perf.metrics.profiler.training_profiler import TrainingProfiler
+import pandas as pd
 
 
 def compute_memory(process):
@@ -43,10 +44,15 @@ class InferenceMemoryProfiler(InferenceProfiler):
         self.interval = interval
         self.participant_ps_process = None
         self.log_file_path = os.path.join(self.base_log_dir, log_file)
+        self.headers = ['timestamp', 'rss', 'vms', 'shared']
         self.values = []
 
     def start(self):
         logging.info('Starting inference memory profiler')
+
+        # Create the log file
+        with open(self.log_file_path, 'w') as self.output_file:
+            self.output_file.write(','.join(self.headers) + '\n')
         while not self.participant_process_event.is_set():
             time.sleep(1)
             logging.info('Inference Memory Profiler: Waiting for participant process to start')
@@ -58,7 +64,7 @@ class InferenceMemoryProfiler(InferenceProfiler):
 
         self.profiler_event.set()
 
-        with open(self.log_file_path, 'w') as self.output_file:
+        with open(self.log_file_path, 'a') as self.output_file:
             while self.participant_process_event.is_set():
                 time.sleep(self.interval)
                 logging.info('Inference Memory Profiler: Profiling memory')
@@ -68,31 +74,53 @@ class InferenceMemoryProfiler(InferenceProfiler):
 
     def _profile_memory(self):
         rss, vms, shared = compute_memory(self.participant_ps_process)
-        rss, vms, shared = psutil._common.bytes2human(rss), psutil._common.bytes2human(vms), psutil._common.bytes2human(
-                shared)
+        rss = rss / 1024 / 1024
+        vms = vms / 1024 / 1024
+        shared = shared / 1024 / 1024
         self.output_file.write(f'{time.time()},{rss},{vms},{shared}\n')
         self.values.append((time.time(), rss, vms, shared))
-        logging.info(f'Memory Profiler: RSS: {rss}, VMS: {vms}, Shared: {shared}')
+        logging.info(f'Memory Profiler: RSS: {rss}MB, VMS: {vms}MB, Shared: {shared}MB')
 
     def get_metric_results(self):
-        timestamps, rss, vms, shared = zip(*self.values)
-        result = dict(
-                rss=rss,
-                vms=vms,
-                shared=shared,
-                timestamps=timestamps
-                )
+        with open(self.log_file_path, 'r') as self.output_file:
+            # use pandas to read csv
+            df = pd.read_csv(self.output_file, header=0)
 
-        return result
+            # convert to dictionary
+            result = df.to_dict(orient='list')
 
-    @gin.configurable('InferenceMemoryProfiler.plot_results')
-    def plot_results(self, **kwargs):
-        timestamps, rss, vms, shared = zip(*self.values)
-        plt.plot(timestamps, rss, label='RSS')
-        plt.plot(timestamps, vms, label='VMS')
-        plt.plot(timestamps, shared, label='Shared')
-        plt.legend()
-        plt.savefig(save_path)
+        return dict(inference_memory_profiler=result)
+
+    def plot_results(self):
+
+        results = self.get_metric_results()
+
+        timestamps = results['inference_memory_profiler']['timestamp']
+        rss = results['inference_memory_profiler']['rss']
+        vms = results['inference_memory_profiler']['vms']
+        shared = results['inference_memory_profiler']['shared']
+        title = 'Inference Memory Profiler'
+        fig, ax = plt.subplots(1, 3)
+        ax[0].plot(timestamps, rss)
+        ax[0].set_title('RSS')
+        ax[0].set_xlabel('Time')
+        ax[0].set_ylabel('Memory (MB)')
+
+        ax[1].plot(timestamps, vms)
+        ax[1].set_title('VMS')
+        ax[1].set_xlabel('Time')
+        ax[1].set_ylabel('Memory (MB)')
+
+        ax[2].plot(timestamps, shared)
+        ax[2].set_title('Shared')
+        ax[2].set_xlabel('Time')
+        ax[2].set_ylabel('Memory (MB)')
+
+        fig.suptitle(title)
+        fig.tight_layout()
+        fig.subplots_adjust(wspace=0.4)  # adjust the spacing between subplots
+
+        return title, fig
 
 
 @gin.configurable

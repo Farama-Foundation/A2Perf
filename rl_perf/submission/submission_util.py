@@ -6,7 +6,7 @@ import multiprocessing
 import os
 import timeit
 import typing
-
+import math
 import gin
 import gym
 import matplotlib.pyplot as plt
@@ -181,7 +181,6 @@ class Submission:
         counter = 0
         while counter < num_observations:
             observation = observation_pipe.recv()
-            observation = participant_module.preprocess_observation(observation)
             participant_module.infer_once(model, observation)
             counter += 1
 
@@ -208,17 +207,6 @@ class Submission:
 
         run_paths = [os.path.join(self.base_log_dir, run_path, 'train', 'train_summary.csv') for run_path in
                      os.listdir(self.base_log_dir)]
-
-        # TODO:
-        #   define n_timeframes in gin (for dividing each run into timeframes)
-        #   define n_random_samples for permutations /bootstraps
-        #   define n_worker for permutations /bootstraps
-        #   define pvals_dir in gin
-        #   define confidence_intervals_dir in gin
-        #   define plots_dir in gin
-        #   define tasks in gin (for locomotion this would be the different gaits)
-        #   define the algorithms in gin (for locomotion this would be MPC, PPO, etc)
-        #   define n_runs_per_experiment in gin
 
         evaluator = Evaluator(metrics=metrics, )
         self.metrics_results['reliability_metrics'] = evaluator.evaluate(run_paths=run_paths,
@@ -320,7 +308,9 @@ class Submission:
         ##################################################
         # Asynchronous inference metrics
         ##################################################
-        done_profiler_objects = self._run_inference_benchmark_async()
+        done_profiler_objects = []
+        if self.profilers:
+            done_profiler_objects = self._run_inference_benchmark_async()
 
         if self.reliability_metrics:
             self._run_reliability_metrics()
@@ -336,29 +326,20 @@ class Submission:
 
         # Plot metrics and save to file
         if self.plot_metrics:
-            self._plot_metrics()
             for profiler_object in done_profiler_objects:
-                profiler_object.plot_results()
+                title, fig = profiler_object.plot_results()
+                plt.savefig(os.path.join(self.base_log_dir, 'metrics', f'{title}.png'))
+            self._plot_metrics()
 
     def _plot_metrics(self):
         if not self.metrics_results:
             logging.warning('No metrics to plot')
 
-        for metric in self.metrics_results:
-            values = self.metrics_results[metric]['values']
-            fig, ax = plt.subplots()
-            ax.boxplot(values, labels=['DQNLSTM (TFA)'])
-            ax.set_title(metric)
-            ax.set_ylabel(metric)
-            fig.savefig(os.path.join(self.base_log_dir, 'metrics', f'{metric}.png'))
-
-            fig, ax = plt.subplots()
-            ax.plot(values, label='DQNLSTM (TFA)')
-            ax.set_title('Inference Time')
-            ax.set_ylabel('Time (s)')
-            ax.set_xlabel('Step')
-            ax.legend(loc='upper right')
-            fig.savefig(os.path.join(self.base_log_dir, 'metrics', f'{metric}_line.png'))
+        for metric_name, metric_values in self.metrics_results.items():
+            plt.figure()
+            plt.title(metric_name)
+            plt.plot(metric_values['values'])
+            plt.savefig(os.path.join(self.metric_values_dir, f'{metric_name}.png'))
 
     def run_benchmark(self):
         if self.mode == BenchmarkMode.TRAIN:
