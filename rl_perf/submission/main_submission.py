@@ -1,10 +1,10 @@
-import logging
 import multiprocessing
 import os
 
 import gin
 from absl import app
 from absl import flags
+from absl import logging
 from rl_perf.submission.submission_util import Submission
 
 flags.DEFINE_string('gin_file', None, 'Path to the gin-config file.')
@@ -19,8 +19,7 @@ def main(_):
     multiprocessing.set_start_method('spawn', force=True)
 
     gin.parse_config_file(FLAGS.gin_file)
-    logging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
+    logging.set_verbosity(logging.INFO)
 
     submission = Submission()
     submission.run_benchmark()

@@ -17,3 +17,6 @@ class BaseProfiler(object):
 
     def stop(self):
         raise NotImplementedError
+
+    def get_metric_results(self):
+        raise NotImplementedError
