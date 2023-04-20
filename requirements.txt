@@ -6,3 +6,4 @@ absl-py
 gin-config
 black
 scipy
+regex
