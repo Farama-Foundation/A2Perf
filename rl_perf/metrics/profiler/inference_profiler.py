@@ -1,7 +1,7 @@
 from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 
 
-class EvaluationProfiler(BaseProfiler):
+class InferenceProfiler(BaseProfiler):
 
     def start(self):
         pass

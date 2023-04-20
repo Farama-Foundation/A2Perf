@@ -1,11 +1,9 @@
-psutil==5.9.4
-numpy==1.23.5
+psutil
 gym
-setuptools==65.5.1
-six==1.16.0
-tensorflow
-tensorboard
-scipy
+setuptools
 matplotlib
 absl-py
 gin-config
+black
+scipy
+regex
