@@ -11,7 +11,7 @@ import gin
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
-from rl_perf.domains import web_nav
+import rl_perf.domains.web_nav.web_nav
 
 from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
