@@ -163,9 +163,10 @@ class Submission:
             profiler_event.wait()
 
         participant_module_spec = importlib.util.spec_from_file_location("train", self.participant_module_path)
-        participant_module = importlib.util.module_from_spec(participant_module_spec)
-        participant_module_spec.loader.exec_module(participant_module)
-        participant_module.train()
+        with working_directory(self.participant_module_dir):
+            participant_module = importlib.util.module_from_spec(participant_module_spec)
+            participant_module_spec.loader.exec_module(participant_module)
+            participant_module.train()
         participant_event.clear()
 
     def _infer_async(self, participant_event: multiprocessing.Event, num_observations: int,

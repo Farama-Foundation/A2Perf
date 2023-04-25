@@ -1,3 +1,4 @@
+import os
 from xmanager import xm
 from xmanager import xm_local
 
@@ -13,14 +14,18 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    # Set the binary path depending on whether we are running locally or on FASRC
+    # set directory of this script as working directory
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
     if FLAGS.local:
+        executable_path = '/usr/bin/bash'
         binary_path = './local/web_nav/launch.sh'
     else:
+        executable_path = '/usr/bin/sbatch'
         binary_path = 'sbatch ./singularity/web_nav/launch.sh'
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
-        web_nav_seeds = [0, 1, 2]
+        web_nav_seeds = [0, ]
         web_nav_hparam_sweeps = list(
                 dict([
                         ('seed', seed),
@@ -36,8 +41,10 @@ def main(_):
         # Define Executable
         [executable] = experiment.package([
                 xm.binary(
-                        path=binary_path,
-                        executor_spec=xm_local.Local.Spec(),
+                        path=executable_path,
+                        args=[binary_path],
+                        executor_spec=xm_local.LocalSpec()
+
                         )
                 ])
 
