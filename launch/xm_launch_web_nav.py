@@ -20,9 +20,13 @@ def main(_):
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
         binary_path = './local/web_nav/launch.sh'
+        additional_args = []
     else:
+        # Create log dirs since singularity needs them to exist
+
         executable_path = '/usr/bin/sbatch'
-        binary_path = 'sbatch ./singularity/web_nav/launch.sh'
+        binary_path = './singularity/web_nav/launch.slurm'
+        additional_args = []
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
         web_nav_seeds = [0, ]
@@ -30,9 +34,7 @@ def main(_):
                 dict([
                         ('seed', seed),
                         ])
-                for (
-                        seed,
-                        ) in
+                for (seed,) in
                 itertools.product(
                         web_nav_seeds,
                         )
@@ -42,23 +44,18 @@ def main(_):
         [executable] = experiment.package([
                 xm.binary(
                         path=executable_path,
-                        args=[binary_path],
+                        args=[binary_path] + additional_args,
                         executor_spec=xm_local.LocalSpec()
 
                         )
                 ])
 
         # Define resource requirements for the job
-        requirements = xm.JobRequirements(resources={xm.ResourceType.CPU: 1,
-                                                     xm.ResourceType.MEMORY: 1,  # in bytes
-                                                     xm.ResourceType.P100: 1,
-                                                     })
         for hparam_config in web_nav_hparam_sweeps:
+            print(hparam_config)
             experiment.add(xm.Job(
                     executable=executable,
-                    executor=xm_local.Local(
-                            requirements=requirements,
-                            ),
+                    executor=xm_local.Local(),
                     args=dict(**hparam_config),
                     env_vars=dict(),
                     ))

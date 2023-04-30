@@ -1,5 +1,6 @@
 psutil
 gym
+protobuf
 setuptools
 matplotlib
 absl-py

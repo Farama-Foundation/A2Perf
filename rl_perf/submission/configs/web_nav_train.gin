@@ -9,7 +9,7 @@ Submission.participant_module_path = '../rlperf_benchmark_submission/web_nav/tra
 
 Submission.mode = %BenchmarkMode.TRAIN
 #Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.TrainingMemoryProfiler,)
-Submission.base_log_dir = '../logs'
+#Submission.base_log_dir = '../logs/web_nav/'
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
 
 # Reliability
