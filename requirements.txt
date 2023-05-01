@@ -1,6 +1,4 @@
 psutil
-gym
-protobuf
 setuptools
 matplotlib
 absl-py
@@ -8,4 +6,3 @@ gin-config
 black
 scipy
 regex
-xmanager
