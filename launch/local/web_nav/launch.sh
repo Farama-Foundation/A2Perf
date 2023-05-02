@@ -80,5 +80,5 @@ cd /rl-perf/rl_perf/submission
 python3 main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
-  --base_log_dir=$ROOT_DIR
+  --root_dir=$ROOT_DIR
 EOF

@@ -7,7 +7,7 @@ from absl import app
 from absl import flags
 
 flags.DEFINE_string('experiment_name', 'web_nav', 'Name of experiment')
-flags.DEFINE_string('base_log_dir', '/tmp/xm_local', 'Base directory for logs and results')
+flags.DEFINE_string('root_dir', '/tmp/xm_local', 'Base directory for logs and results')
 flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 flags.DEFINE_bool('train', False, 'Whether to run training or inference')
 flags.DEFINE_string('participant_module_path', None, 'Path to participant module')
@@ -69,14 +69,14 @@ def main(_):
             )
         ])
 
-        # Get the full path of our FLAGS.base_log_dir since it is relative to this script
-        base_log_dir = os.path.abspath(FLAGS.base_log_dir)
+        # Get the full path of our FLAGS.root_dir since it is relative to this script
+        root_dir = os.path.abspath(FLAGS.root_dir)
 
         for hparam_config in web_nav_hparam_sweeps:
             experiment_name = f"{FLAGS.experiment_name}_seed_{hparam_config['seed']}_env_batch_size_{hparam_config['env_batch_size']}"
 
             # Add additional arguments that are constant across all runs
-            root_dir = os.path.join(base_log_dir, experiment_name)
+            root_dir = os.path.join(root_dir, experiment_name)
             participant_module_path = os.path.join(FLAGS.participant_module_path, 'web_nav', f'{mode}.py')
 
             gin_file = os.path.join(f'configs/web_nav_{mode}.gin')

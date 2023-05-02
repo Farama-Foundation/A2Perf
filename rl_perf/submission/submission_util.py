@@ -109,7 +109,7 @@ class Submission:
                  profilers: typing.List[typing.Type[BaseProfiler]] = None,
                  mode: BenchmarkMode = BenchmarkMode.TRAIN,
                  domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
-                 base_log_dir: str = None,
+                 root_dir: str = None,
                  metric_values_dir: str = None,
                  num_inference_steps: int = 1000,
                  num_inference_episodes: int = 1,
@@ -117,14 +117,15 @@ class Submission:
                  plot_metrics: bool = True,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None):
 
-        self.base_log_dir = base_log_dir
-        if self.base_log_dir is not None:
-            os.makedirs(self.base_log_dir, exist_ok=True)
+        self.root_dir = root_dir
+        if self.root_dir is not None:
+            os.makedirs(self.root_dir, exist_ok=True)
 
         self.metric_values_dir = metric_values_dir
+        if self.metric_values_dir is None:
+            self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
+        os.makedirs(self.metric_values_dir, exist_ok=True)
         self.plot_metrics = plot_metrics
-        if self.metric_values_dir is not None:
-            os.makedirs(self.metric_values_dir, exist_ok=True)
         self.num_inference_steps = num_inference_steps
         self.num_inference_episodes = num_inference_episodes
         self.time_inference_steps = time_participant_code
@@ -225,16 +226,16 @@ class Submission:
                 metrics.append(LowerCVaRAcrossRollouts())
             else:
                 raise ValueError(f'Invalid metric: {metric}')
-            with open(os.path.join(self.metric_values_dir, 'rollouts.csv'), 'w') as f:
-                writer = csv.writer(f)
-                writer.writerow(['episode_num', 'reward'])
-                for i, value in enumerate(values):
-                    writer.writerow([i, value])
+        with open(os.path.join(self.metric_values_dir, 'rollouts.csv'), 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['episode_num', 'reward'])
+            for i, value in enumerate(values):
+                writer.writerow([i, value])
 
-            evaluator = Evaluator(metrics=metrics, dependent_variable='reward', timepoint_variable='episode_num')
-            reliability_metrics = evaluator.evaluate(
-                run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')], )
-            self.metrics_results.update(reliability_metrics)
+        evaluator = Evaluator(metrics=metrics, dependent_variable='reward', timepoint_variable='episode_num')
+        reliability_metrics = evaluator.evaluate(
+            run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')], )
+        self.metrics_results.update(reliability_metrics)
 
     def _run_reliability_metrics(self):
         # TODO make sure to write gin config for metric parameters
@@ -255,10 +256,10 @@ class Submission:
             else:
                 raise ValueError(f'Invalid metric: {metric}')
 
-        print('Log dir: ', self.base_log_dir)
+        print('Log dir: ', self.root_dir)
         assert 0 == 1
-        run_paths = [os.path.join(self.base_log_dir, run_path, 'train', 'train_summary.csv') for run_path in
-                     os.listdir(self.base_log_dir)]
+        run_paths = [os.path.join(self.root_dir, run_path, 'train', 'train_summary.csv') for run_path in
+                     os.listdir(self.root_dir)]
 
         evaluator = Evaluator(metrics=metrics, )
         self.metrics_results['reliability_metrics'] = evaluator.evaluate(run_paths=run_paths,
@@ -274,7 +275,7 @@ class Submission:
         participant_process.start()
         profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
                                      profiler_events=profilers_started_events,
-                                     participant_process=participant_process, log_dir=self.base_log_dir)
+                                     participant_process=participant_process, log_dir=self.root_dir)
         logging.info(f'Participant module process ID: {participant_process.pid}')
         participant_process.join()
         logging.info(f'Participant module process {participant_process.pid} finished')

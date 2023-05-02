@@ -47,5 +47,8 @@ METRICS=[
 #@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.UpperCVaRAcrossRollouts,
 #@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.LowerCVaRAcrossRollouts,
 ]
-METRICS = [%ReliabilityMetrics.IqrAcrossRollouts]
+METRICS = [%ReliabilityMetrics.IqrAcrossRollouts,
+       %ReliabilityMetrics.StddevAcrossRollouts,
+           %ReliabilityMetrics.UpperCVaRAcrossRollouts,
+           %ReliabilityMetrics.LowerCVaRAcrossRollouts]
 Submission.reliability_metrics  = %METRICS
