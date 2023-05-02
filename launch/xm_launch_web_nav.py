@@ -6,11 +6,11 @@ import itertools
 from absl import app
 from absl import flags
 
-# create flag for experiment name
 flags.DEFINE_string('experiment_name', 'web_nav', 'Name of experiment')
 flags.DEFINE_string('base_log_dir', '/tmp/xm_local', 'Base directory for logs and results')
-flags.DEFINE_bool('local', True, 'Run locally or on cluster')
-
+flags.DEFINE_bool('local', False, 'Run locally or on cluster')
+flags.DEFINE_bool('train', False, 'Whether to run training or inference')
+flags.DEFINE_string('participant_module_path', None, 'Path to participant module')
 FLAGS = flags.FLAGS
 
 
@@ -38,8 +38,15 @@ def main(_):
             TF_GPU_ALLOCATOR='cuda_malloc_async'
         )
 
+    mode = 'train' if FLAGS.train else 'inference'
+
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
-        web_nav_seeds = [37, 82, 14, 65, 23, 98, 51, 19, 77, 43]
+        web_nav_seeds = [
+            # 37,
+            #              82, 14, 65, 23,
+            98,
+            # 51, 19, 77, 43
+        ]
         env_batch_sizes = [4, ]
         web_nav_hparam_sweeps = list(
             dict([
@@ -65,11 +72,16 @@ def main(_):
         # Get the full path of our FLAGS.base_log_dir since it is relative to this script
         base_log_dir = os.path.abspath(FLAGS.base_log_dir)
 
-        # Define resource requirements for the job
         for hparam_config in web_nav_hparam_sweeps:
             experiment_name = f"{FLAGS.experiment_name}_seed_{hparam_config['seed']}_env_batch_size_{hparam_config['env_batch_size']}"
+
+            # Add additional arguments that are constant across all runs
             root_dir = os.path.join(base_log_dir, experiment_name)
-            hparam_config.update(dict(root_dir=root_dir))
+            participant_module_path = os.path.join(FLAGS.participant_module_path, 'web_nav', f'{mode}.py')
+
+            gin_file = os.path.join(f'configs/web_nav_{mode}.gin')
+            hparam_config.update(dict(root_dir=root_dir, gin_config=gin_file,
+                                      participant_module_path=participant_module_path))
 
             print(hparam_config)
             experiment.add(xm.Job(

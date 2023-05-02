@@ -4,6 +4,8 @@ cd ../../.. || exit
 SEED=0
 ENV_BATCH_SIZE=1
 ROOT_DIR=../logs/web_nav
+GIN_CONFIG=""
+PARTICIPANT_MODULE_PATH=""
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -19,6 +21,14 @@ for arg in "$@"; do
 
   --root_dir=*)
     ROOT_DIR="${arg#*=}"
+    shift
+    ;;
+  --gin_config=*)
+    GIN_CONFIG="${arg#*=}"
+    shift
+    ;;
+  --participant_module_path=*)
+    PARTICIPANT_MODULE_PATH="${arg#*=}"
     shift
     ;;
   *)
@@ -43,7 +53,12 @@ if [ "$(docker ps -q -f name=web_nav_container --format "{{.Names}}")" ]; then
   # if it is running, do nothing
   echo "web_nav_container is already running. Run 'docker stop web_nav_container' to stop it. Will use the running container."
 else
-  docker run -itd --gpus=all --name web_nav_container -v /dev/shm:/dev/shm -v "$(pwd)":/rl-perf rlperf/web_nav:latest
+  docker run -itd \
+    --gpus=all \
+    --name web_nav_container \
+    -v /dev/shm:/dev/shm \
+    -v "$(pwd)":/rl-perf -p 2022:22 \
+    rlperf/web_nav:latest
 fi
 
 # Install packages inside the container
@@ -62,5 +77,8 @@ export SEED=$SEED
 export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export ROOT_DIR=$ROOT_DIR
 cd /rl-perf/rl_perf/submission
-python3 main_submission.py --gin_file=configs/web_nav_train.gin
+python3 main_submission.py \
+  --gin_file=$GIN_CONFIG \
+  --participant_module_path=$PARTICIPANT_MODULE_PATH \
+  --base_log_dir=$ROOT_DIR
 EOF
