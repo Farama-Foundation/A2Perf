@@ -58,6 +58,7 @@ else
     --name web_nav_container \
     -v /dev/shm:/dev/shm \
     -v "$(pwd)":/rl-perf -p 2022:22 \
+    -v /sys/class/powercap/intel-rapl/:/sys/class/powercap/intel-rapl/ \
     rlperf/web_nav:latest
 fi
 

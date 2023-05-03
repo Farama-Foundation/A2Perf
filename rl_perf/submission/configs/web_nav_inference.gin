@@ -26,6 +26,8 @@ Submission.create_domain.seed=0
 Submission.num_inference_steps=10
 Submission.num_inference_episodes=10
 Submission.time_participant_code = True
+Submission.measure_emissions = True
+
 
 ####################################
 # Profiler setup

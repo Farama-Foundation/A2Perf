@@ -1,3 +1,4 @@
+import codecarbon
 import csv
 import enum
 import importlib
@@ -114,6 +115,7 @@ class Submission:
                  num_inference_steps: int = 1000,
                  num_inference_episodes: int = 1,
                  time_participant_code: bool = True,
+                 measure_emissions: bool = False,
                  plot_metrics: bool = True,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None):
 
@@ -125,6 +127,7 @@ class Submission:
         if self.metric_values_dir is None:
             self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
         os.makedirs(self.metric_values_dir, exist_ok=True)
+        self.measure_emissions = measure_emissions
         self.plot_metrics = plot_metrics
         self.num_inference_steps = num_inference_steps
         self.num_inference_episodes = num_inference_episodes
@@ -357,6 +360,18 @@ class Submission:
             self.metrics_results['inference_time'] = dict(values=inference_times,
                                                           mean=np.mean(inference_times),
                                                           std=np.std(inference_times))
+        ##################################################
+        # Hardware energy consumption using codecarbon
+        ##################################################
+        if self.measure_emissions:
+            @codecarbon.track_emissions(project_name='rlperf', )
+            def measure_emissions():
+                for i in range(self.num_inference_steps):
+                    # choose a random observation
+                    observation = inference_data[i]
+                    participant_module.infer_once(model=participant_model, observation=observation)
+
+            measure_emissions()
 
         ##################################################
         # Asynchronous inference metrics

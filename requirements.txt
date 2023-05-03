@@ -6,3 +6,4 @@ gin-config
 black
 scipy
 regex
+codecarbon
