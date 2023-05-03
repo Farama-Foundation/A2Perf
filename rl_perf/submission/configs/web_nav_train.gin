@@ -5,11 +5,11 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metric
 import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 
 # Set up submission object
-Submission.participant_module_path = '../rlperf_benchmark_submission/train.py'
+Submission.participant_module_path = '../rlperf_benchmark_submission/web_nav/train.py'
 
 Submission.mode = %BenchmarkMode.TRAIN
 #Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.TrainingMemoryProfiler,)
-Submission.base_log_dir = './logs'
+#Submission.base_log_dir = '../logs/web_nav/'
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
 
 # Reliability

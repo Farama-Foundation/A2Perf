@@ -1,3 +1,4 @@
+import csv
 import enum
 import importlib
 import json
@@ -17,7 +18,9 @@ from rl_perf.metrics.profiler.base_profiler import BaseProfiler
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
-                                                                        LowerCVaROnDiffs, )
+                                                                        LowerCVaROnDiffs,
+                                                                        IqrAcrossRollouts
+, StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts, LowerCVaRAcrossRollouts, )
 
 from contextlib import contextmanager
 
@@ -61,6 +64,11 @@ class ReliabilityMetrics(enum.Enum):
     LowerCVaROnDrawdown = 'LowerCVaROnDrawdown'
     LowerCVarOnAcross = 'LowerCVarOnAcross'
     MedianPerfDuringTraining = 'MedianPerfDuringTraining'
+    MadAcrossRollouts = 'MadAcrossRollouts'
+    IqrAcrossRollouts = 'IqrAcrossRollouts'
+    StddevAcrossRollouts = 'StddevAcrossRollouts'
+    UpperCVaRAcrossRollouts = 'UpperCVaRAcrossRollouts'
+    LowerCVaRAcrossRollouts = 'LowerCVaRAcrossRollouts'
 
 
 def _start_profilers(profilers: typing.List[typing.Type[BaseProfiler]],
@@ -101,22 +109,25 @@ class Submission:
                  profilers: typing.List[typing.Type[BaseProfiler]] = None,
                  mode: BenchmarkMode = BenchmarkMode.TRAIN,
                  domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
-                 base_log_dir: str = None,
+                 root_dir: str = None,
                  metric_values_dir: str = None,
                  num_inference_steps: int = 1000,
+                 num_inference_episodes: int = 1,
                  time_participant_code: bool = True,
                  plot_metrics: bool = True,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None):
 
-        self.base_log_dir = base_log_dir
-        if self.base_log_dir is not None:
-            os.makedirs(self.base_log_dir, exist_ok=True)
+        self.root_dir = root_dir
+        if self.root_dir is not None:
+            os.makedirs(self.root_dir, exist_ok=True)
 
         self.metric_values_dir = metric_values_dir
+        if self.metric_values_dir is None:
+            self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
+        os.makedirs(self.metric_values_dir, exist_ok=True)
         self.plot_metrics = plot_metrics
-        if self.metric_values_dir is not None:
-            os.makedirs(self.metric_values_dir, exist_ok=True)
         self.num_inference_steps = num_inference_steps
+        self.num_inference_episodes = num_inference_episodes
         self.time_inference_steps = time_participant_code
         self.profilers = profilers if profilers is not None else []
         self.participant_module_path = participant_module_path
@@ -127,12 +138,21 @@ class Submission:
         self.metrics_results = {}
 
     def _load_participant_module(self, function_name):
-        """Load the participant module and return the module object."""
+        """Load the participant module and return the module object.
+
+        We change to the participant module directory to ensure
+         that the participant module can import other modules with relative imports"""
+
         participant_module_dir = os.path.dirname(self.participant_module_path)
         original_dir = os.getcwd()
+
         os.chdir(participant_module_dir)
-        participant_module_spec = importlib.util.spec_from_file_location(function_name, self.participant_module_path)
+        new_participant_module_path = os.path.basename(self.participant_module_path)
+
+        participant_module_spec = importlib.util.spec_from_file_location(
+            f'{new_participant_module_path}.{function_name}', new_participant_module_path)
         participant_module = importlib.util.module_from_spec(participant_module_spec)
+
         os.chdir(original_dir)
         return participant_module, participant_module_spec
 
@@ -163,9 +183,10 @@ class Submission:
             profiler_event.wait()
 
         participant_module_spec = importlib.util.spec_from_file_location("train", self.participant_module_path)
-        participant_module = importlib.util.module_from_spec(participant_module_spec)
-        participant_module_spec.loader.exec_module(participant_module)
-        participant_module.train()
+        with working_directory(self.participant_module_dir):
+            participant_module = importlib.util.module_from_spec(participant_module_spec)
+            participant_module_spec.loader.exec_module(participant_module)
+            participant_module.train()
         participant_event.clear()
 
     def _infer_async(self, participant_event: multiprocessing.Event, num_observations: int,
@@ -186,6 +207,36 @@ class Submission:
 
         participant_event.clear()
 
+    def _run_inference_reliability_metrics(self, values=None):
+        metrics = []
+        for metric in self.reliability_metrics:
+            if metric == ReliabilityMetrics.MadAcrossRollouts:
+                metrics.append(MadAcrossRollouts())
+            elif metric == ReliabilityMetrics.IqrAcrossRollouts:
+                metrics.append(IqrAcrossRollouts())
+            elif metric == ReliabilityMetrics.UpperCVaRAcrossRollouts:
+                metrics.append(UpperCVaRAcrossRollouts())
+            elif metric == ReliabilityMetrics.LowerCVaRAcrossRollouts:
+                metrics.append(LowerCVaRAcrossRollouts())
+            elif metric == ReliabilityMetrics.StddevAcrossRollouts:
+                metrics.append(StddevAcrossRollouts())
+            elif metric == ReliabilityMetrics.UpperCVaRAcrossRollouts:
+                metrics.append(UpperCVaRAcrossRollouts())
+            elif metric == ReliabilityMetrics.LowerCVaRAcrossRollouts:
+                metrics.append(LowerCVaRAcrossRollouts())
+            else:
+                raise ValueError(f'Invalid metric: {metric}')
+        with open(os.path.join(self.metric_values_dir, 'rollouts.csv'), 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['episode_num', 'reward'])
+            for i, value in enumerate(values):
+                writer.writerow([i, value])
+
+        evaluator = Evaluator(metrics=metrics, dependent_variable='reward', timepoint_variable='episode_num')
+        reliability_metrics = evaluator.evaluate(
+            run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')], )
+        self.metrics_results.update(reliability_metrics)
+
     def _run_reliability_metrics(self):
         # TODO make sure to write gin config for metric parameters
         metrics = []
@@ -205,8 +256,10 @@ class Submission:
             else:
                 raise ValueError(f'Invalid metric: {metric}')
 
-        run_paths = [os.path.join(self.base_log_dir, run_path, 'train', 'train_summary.csv') for run_path in
-                     os.listdir(self.base_log_dir)]
+        print('Log dir: ', self.root_dir)
+        assert 0 == 1
+        run_paths = [os.path.join(self.root_dir, run_path, 'train', 'train_summary.csv') for run_path in
+                     os.listdir(self.root_dir)]
 
         evaluator = Evaluator(metrics=metrics, )
         self.metrics_results['reliability_metrics'] = evaluator.evaluate(run_paths=run_paths,
@@ -222,7 +275,7 @@ class Submission:
         participant_process.start()
         profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
                                      profiler_events=profilers_started_events,
-                                     participant_process=participant_process, log_dir=self.base_log_dir)
+                                     participant_process=participant_process, log_dir=self.root_dir)
         logging.info(f'Participant module process ID: {participant_process.pid}')
         participant_process.join()
         logging.info(f'Participant module process {participant_process.pid} finished')
@@ -312,23 +365,43 @@ class Submission:
         if self.profilers:
             done_profiler_objects = self._run_inference_benchmark_async()
 
+        ##################################################
+        # Perform rollouts with the participant module
+        ##################################################
+        all_rewards = []
+        env = self.create_domain()
+        for _ in range(self.num_inference_episodes):
+            observation = env.reset()
+            done = False
+            rewards = 0
+            while not done:
+                action = participant_module.infer_once(model=participant_model, observation=observation)
+                observation, reward, done, _ = env.step(action)
+                rewards += reward
+            all_rewards.append(rewards)
+            print(f'Episode reward: {rewards}')
+        self.metrics_results['episode_rewards'] = dict(values=all_rewards,
+                                                       mean=np.mean(all_rewards),
+                                                       std=np.std(all_rewards))
+
+        ##################################################
+        # Run reliability metrics
+        ##################################################
         if self.reliability_metrics:
-            self._run_reliability_metrics()
+            self._run_inference_reliability_metrics(values=all_rewards)
 
         ##################################################
         # Save raw metrics to disk, and plot results
         ##################################################
 
-        if not os.path.exists(os.path.join(self.base_log_dir, 'metrics')):
-            os.makedirs(os.path.join(self.base_log_dir, 'metrics'))
-        with open(os.path.join(self.base_log_dir, 'metrics', 'metric_results.json'), 'w') as f:
+        with open(os.path.join(self.metric_values_dir, 'metric_results.json'), 'w') as f:
             json.dump(self.metrics_results, f)
 
         # Plot metrics and save to file
         if self.plot_metrics:
             for profiler_object in done_profiler_objects:
                 title, fig = profiler_object.plot_results()
-                plt.savefig(os.path.join(self.base_log_dir, 'metrics', f'{title}.png'))
+                plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
             self._plot_metrics()
 
     def _plot_metrics(self):
@@ -347,4 +420,4 @@ class Submission:
         elif self.mode == BenchmarkMode.INFERENCE:
             self._run_inference_benchmark()
         else:
-            raise ValueError('Benchmark mode must be either train or infer')
+            raise ValueError('Benchmark mode must be either train or inference')

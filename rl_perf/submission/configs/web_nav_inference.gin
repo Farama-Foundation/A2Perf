@@ -1,0 +1,54 @@
+import rl_perf.submission.submission_util
+import rl_perf.metrics.profiler.memory_profiler
+import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+
+####################################
+# Set up base log directory
+####################################
+#BASE_LOG_DIR = '../logs/web_nav/'
+
+####################################
+# Set up submission object
+####################################
+Submission.mode = %BenchmarkMode.INFERENCE
+Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
+
+####################################
+# Set up domain
+####################################
+Submission.create_domain.difficulty=1
+Submission.create_domain.seed=0
+
+####################################
+# Set up benchmark mode
+####################################
+Submission.num_inference_steps=10
+Submission.num_inference_episodes=10
+Submission.time_participant_code = True
+
+####################################
+# Profiler setup
+####################################
+memory_profiler.InferenceMemoryProfiler.interval=0.5
+memory_profiler.InferenceMemoryProfiler.base_log_dir = './logs'
+memory_profiler.InferenceMemoryProfiler.log_file = 'inference_memory_profiler.csv'
+#memory_profiler.InferenceMemoryProfiler.plot_results.save_path = 'inference_memory_profiler.png'
+#Submission.profilers = (@rl_perf.metrics.profiler.memory_profiler.InferenceMemoryProfiler,)
+
+####################################
+# Reliability
+####################################
+
+METRICS=[
+#@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.MadAcrossRollouts,
+#@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.IqrAcrossRollouts,
+@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.StddevAcrossRollouts,
+#@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.UpperCVaRAcrossRollouts,
+#@rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline.LowerCVaRAcrossRollouts,
+]
+METRICS = [%ReliabilityMetrics.IqrAcrossRollouts,
+       %ReliabilityMetrics.StddevAcrossRollouts,
+           %ReliabilityMetrics.UpperCVaRAcrossRollouts,
+           %ReliabilityMetrics.LowerCVaRAcrossRollouts]
+Submission.reliability_metrics  = %METRICS

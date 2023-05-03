@@ -1,5 +1,4 @@
 psutil
-gym
 setuptools
 matplotlib
 absl-py
