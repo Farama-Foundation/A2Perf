@@ -24,3 +24,7 @@
 	url = https://github.com/google-research/rl-reliability-metrics.git
 [submodule "reliability"]
 	url = https://github.com/uchendui/rl-reliability-metrics.git
+
+[submodule "rl_perf/metrics/system/codecarbon"]
+	path = rl_perf/metrics/system/codecarbon
+	url = https://github.com/mlco2/codecarbon.git
