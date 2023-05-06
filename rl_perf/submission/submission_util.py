@@ -1,21 +1,20 @@
-import codecarbon
+from rl_perf.metrics.system import codecarbon
 import csv
 import enum
 import importlib
 import json
 import logging
 import multiprocessing
+import sys
 import os
 import timeit
 import typing
-import math
 import gin
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
-import rl_perf.domains.web_nav.web_nav
 
-from rl_perf.metrics.profiler.base_profiler import BaseProfiler
+from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
@@ -31,10 +30,12 @@ def working_directory(path):
     """Context manager for temporarily changing the working directory."""
     prev_cwd = os.getcwd()
     os.chdir(path)
+    sys.path.insert(0, path)
     try:
         yield
     finally:
         os.chdir(prev_cwd)
+        sys.path.remove(path)
 
 
 @gin.constants_from_enum
@@ -117,7 +118,16 @@ class Submission:
                  time_participant_code: bool = True,
                  measure_emissions: bool = False,
                  plot_metrics: bool = True,
-                 reliability_metrics: typing.List[ReliabilityMetrics] = None):
+                 reliability_metrics: typing.List[ReliabilityMetrics] = None,
+                 country_iso_code: str = None,
+                 region: str = None,
+                 offline: bool = False,
+                 tracking_mode: str = None):
+
+        self.offline = offline
+        self.tracking_mode = tracking_mode
+        self.country_iso_code = country_iso_code
+        self.region = region
 
         self.root_dir = root_dir
         if self.root_dir is not None:
@@ -133,31 +143,23 @@ class Submission:
         self.num_inference_episodes = num_inference_episodes
         self.time_inference_steps = time_participant_code
         self.profilers = profilers if profilers is not None else []
-        self.participant_module_path = participant_module_path
-        self.participant_module_dir = os.path.dirname(self.participant_module_path)
+        self.participant_module_path = os.path.abspath(participant_module_path)
         self.domain = domain
         self.mode = mode
         self.reliability_metrics = reliability_metrics
         self.metrics_results = {}
 
-    def _load_participant_module(self, function_name):
-        """Load the participant module and return the module object.
+    def _load_participant_spec(self, filename):
+        """Loads the participant spec from the participant module path."""
+        participant_file_path = os.path.join(self.participant_module_path, filename)
+        spec = importlib.util.spec_from_file_location("", participant_file_path)
+        return spec
 
-        We change to the participant module directory to ensure
-         that the participant module can import other modules with relative imports"""
-
-        participant_module_dir = os.path.dirname(self.participant_module_path)
-        original_dir = os.getcwd()
-
-        os.chdir(participant_module_dir)
-        new_participant_module_path = os.path.basename(self.participant_module_path)
-
-        participant_module_spec = importlib.util.spec_from_file_location(
-            f'{new_participant_module_path}.{function_name}', new_participant_module_path)
-        participant_module = importlib.util.module_from_spec(participant_module_spec)
-
-        os.chdir(original_dir)
-        return participant_module, participant_module_spec
+    def _load_participant_module(self, filename):
+        """Load the participant module and return the module object."""
+        spec = self._load_participant_spec(filename)
+        participant_module = importlib.util.module_from_spec(spec)
+        return participant_module
 
     @gin.configurable("Submission.create_domain")
     def create_domain(self, **kwargs):
@@ -186,7 +188,7 @@ class Submission:
             profiler_event.wait()
 
         participant_module_spec = importlib.util.spec_from_file_location("train", self.participant_module_path)
-        with working_directory(self.participant_module_dir):
+        with working_directory(self.participant_module_path):
             participant_module = importlib.util.module_from_spec(participant_module_spec)
             participant_module_spec.loader.exec_module(participant_module)
             participant_module.train()
@@ -337,8 +339,9 @@ class Submission:
         ##################################################
 
         # Load the participant module
-        participant_module, participant_module_spec = self._load_participant_module("infer")
-        with working_directory(self.participant_module_dir):
+        participant_module = self._load_participant_module("inference.py")
+        participant_module_spec = self._load_participant_spec("inference.py")
+        with working_directory(self.participant_module_path):
             participant_module_spec.loader.exec_module(participant_module)
 
         # Get the participant model
@@ -364,7 +367,20 @@ class Submission:
         # Hardware energy consumption using codecarbon
         ##################################################
         if self.measure_emissions:
-            @codecarbon.track_emissions(project_name='rlperf', )
+            @codecarbon.track_emissions(project_name='rlperf',
+                                        output_dir=self.metric_values_dir,
+                                        output_file='emissions.csv',
+                                        save_to_file=True,
+                                        save_to_api=False,
+                                        save_to_logger=False,
+                                        country_iso_code=self.country_iso_code,
+                                        region=self.region,
+                                        offline=self.offline,
+                                        tracking_mode=self.tracking_mode,
+                                        measure_power_secs=1,
+                                        baseline_measure_secs=10,
+
+                                        )
             def measure_emissions():
                 for i in range(self.num_inference_steps):
                     # choose a random observation
