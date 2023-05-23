@@ -8,9 +8,13 @@ from absl import flags
 
 flags.DEFINE_string('experiment_name', 'web_nav', 'Name of experiment')
 flags.DEFINE_string('root_dir', '/tmp/xm_local', 'Base directory for logs and results')
+flags.DEFINE_string('train_logs_dir', 'train',
+                    'Directory for train logs from all of the experiments that reliability metrics will be calculated on')
 flags.DEFINE_bool('local', False, 'Run locally or on cluster')
+flags.DEFINE_bool('run_offline_metrics_only', False, 'Whether to run offline metrics only.')
 flags.DEFINE_bool('train', False, 'Whether to run training or inference')
 flags.DEFINE_string('participant_module_path', None, 'Path to participant module')
+flags.DEFINE_string('gin_config', None, 'Path to gin config file that determines which experiment to run')
 FLAGS = flags.FLAGS
 
 
@@ -18,12 +22,13 @@ def main(_):
     # set directory of this script as working directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
+    web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
         binary_path = './local/web_nav/launch.sh'
         additional_args = []
         env_vars = dict(
-            WEB_NAV_DIR=os.path.join(os.getcwd(), '../rl_perf/domains/web_nav'),
+            WEB_NAV_DIR=web_nav_dir,
             TF_FORCE_GPU_ALLOW_GROWTH='true',
 
         )
@@ -38,24 +43,33 @@ def main(_):
             TF_GPU_ALLOCATOR='cuda_malloc_async'
         )
 
-    mode = 'train' if FLAGS.train else 'inference'
-
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
         web_nav_seeds = [
+            1
             # 37,
-            #              82, 14, 65, 23,
-            98,
-            # 51, 19, 77, 43
+            # 82,
+            # 14,
+            # 65,
+            # 23,
+            # 98,
+            # 51,
+            # 19,
+            # 77,
+            # 43
         ]
         env_batch_sizes = [4, ]
+        total_env_step_params = [4000, ]
         web_nav_hparam_sweeps = list(
             dict([
                 ('seed', seed),
                 ('env_batch_size', env_batch_size),
+                ('total_env_steps', total_env_steps),
+
             ])
-            for (seed, env_batch_size) in itertools.product(
+            for (seed, env_batch_size, total_env_steps) in itertools.product(
                 web_nav_seeds,
                 env_batch_sizes,
+                total_env_step_params
             )
         )
 
@@ -71,17 +85,21 @@ def main(_):
 
         # Get the full path of our FLAGS.root_dir since it is relative to this script
         root_dir = os.path.abspath(FLAGS.root_dir)
-
         for hparam_config in web_nav_hparam_sweeps:
-            experiment_name = f"{FLAGS.experiment_name}_seed_{hparam_config['seed']}_env_batch_size_{hparam_config['env_batch_size']}"
+            experiment_name = FLAGS.experiment_name + '_' + '_'.join(
+                f"{key}_{hparam_config[key]}" for key in sorted(hparam_config.keys()))
 
             # Add additional arguments that are constant across all runs
             root_dir = os.path.join(root_dir, experiment_name)
-            participant_module_path = os.path.join(FLAGS.participant_module_path, 'web_nav', f'{mode}.py')
-
-            gin_file = os.path.join(f'configs/web_nav_{mode}.gin')
-            hparam_config.update(dict(root_dir=root_dir, gin_config=gin_file,
-                                      participant_module_path=participant_module_path))
+            train_logs_dir = root_dir
+            participant_module_path = os.path.join(FLAGS.participant_module_path)
+            run_offline_metrics_only = str(FLAGS.run_offline_metrics_only)
+            hparam_config.update(dict(root_dir=root_dir,
+                                      gin_config=FLAGS.gin_config,
+                                      participant_module_path=participant_module_path,
+                                      web_nav_dir=web_nav_dir,
+                                      train_logs_dir=train_logs_dir,
+                                      run_offline_metrics_only=run_offline_metrics_only, ))
 
             print(hparam_config)
             experiment.add(xm.Job(
