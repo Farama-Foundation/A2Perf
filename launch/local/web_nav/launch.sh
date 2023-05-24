@@ -7,7 +7,7 @@ ENV_BATCH_SIZE=1
 TOTAL_ENV_STEPS=1000000
 ROOT_DIR=../logs/web_nav
 GIN_CONFIG=""
-
+DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
 WEB_NAV_DIR=""
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
@@ -25,6 +25,10 @@ for arg in "$@"; do
     ;;
   --run_offline_metrics_only=*)
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
+    shift
+    ;;
+  --difficulty_level=*)
+    DIFFICULTY_LEVEL="${arg#*=}"
     shift
     ;;
   --env_batch_size=*)
@@ -85,6 +89,7 @@ done
 SSH_KEY_PATH=$WEB_NAV_DIR/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
+echo "Difficulty Level: $DIFFICULTY_LEVEL"
 echo "Seed value: $SEED"
 echo "Root directory: $ROOT_DIR"
 echo "Gin config: $GIN_CONFIG"
@@ -141,6 +146,7 @@ export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
+export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3 main_submission.py \

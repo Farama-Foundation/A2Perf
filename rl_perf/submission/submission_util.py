@@ -76,7 +76,7 @@ class ReliabilityMetrics(enum.Enum):
 
 def _start_profilers(profilers: typing.List[typing.Type[BaseProfiler]],
                      profiler_events: typing.List[multiprocessing.Event], participant_event: multiprocessing.Event,
-                     participant_process: multiprocessing.Process, log_dir: str) -> \
+                     participant_process: multiprocessing.Process, log_dir: str, mp_context) -> \
         typing.List[multiprocessing.Process]:
     processes = []
     for profiler_class, profiler_event in zip(profilers, profiler_events):
@@ -85,13 +85,13 @@ def _start_profilers(profilers: typing.List[typing.Type[BaseProfiler]],
                                   profiler_event=profiler_event,
                                   participant_process=participant_process,
                                   base_log_dir=log_dir)
-        profiler_process = multiprocessing.Process(target=profiler.start)
+        profiler_process = mp_context.Process(target=profiler.start)
         profiler_process.start()
         processes.append(profiler_process)
     return processes
 
 
-def _start_inference_profilers(participant_event, profilers, pipes, profiler_started_events, base_log_dir):
+def _start_inference_profilers(participant_event, profilers, pipes, profiler_started_events, base_log_dir, mp_context):
     processes = []
     profiler_objects = []
     for profiler_class, pipe, profiler_event in zip(profilers, pipes, profiler_started_events):
@@ -99,7 +99,7 @@ def _start_inference_profilers(participant_event, profilers, pipes, profiler_sta
         profiler = profiler_class(pipe_for_participant_process=pipe, profiler_event=profiler_event,
                                   participant_process_event=participant_event, base_log_dir=base_log_dir)
         profiler_objects.append(profiler)
-        profiler_process = multiprocessing.Process(target=profiler.start, )
+        profiler_process = mp_context.Process(target=profiler.start, )
         profiler_process.start()
         processes.append(profiler_process)
     return processes, profiler_objects
@@ -134,7 +134,7 @@ class Submission:
         self.tracking_mode = tracking_mode
         self.country_iso_code = country_iso_code
         self.region = region
-
+        self.mp_context = multiprocessing.get_context('spawn')
         self.root_dir = root_dir
         if self.root_dir is not None:
             os.makedirs(self.root_dir, exist_ok=True)
@@ -244,7 +244,10 @@ class Submission:
                 participant_module_train()
             else:
                 participant_module.train()
+
         participant_event.clear()
+        for profiler_event in profiler_events:
+            profiler_event.clear()
 
     def _infer_async(self, participant_event: multiprocessing.Event, num_observations: int,
                      observation_pipe: multiprocessing.Pipe, ):
@@ -331,19 +334,31 @@ class Submission:
             participant_started_event = multiprocessing.Event()
             profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
 
-            participant_process = multiprocessing.Process(target=self._train,
+            participant_process = self.mp_context.Process(target=self._train,
                                                           args=(participant_started_event, profilers_started_events))
             participant_process.start()
             profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
                                          profiler_events=profilers_started_events,
-                                         participant_process=participant_process, log_dir=self.root_dir)
+                                         participant_process=participant_process, log_dir=self.root_dir,
+                                         mp_context=self.mp_context)
             logging.info(f'Participant module process ID: {participant_process.pid}')
             participant_process.join()
             logging.info(f'Participant module process {participant_process.pid} finished')
+            if participant_process.is_alive():
+                logging.error('Participant process is still running')
+            elif participant_process.exitcode != 0:
+                logging.error(f'Participant process exited with code {participant_process.exitcode}')
+            else:
+                logging.info(f'Participant process {participant_process.pid} finished')
 
             for profiler in profilers:
                 profiler.join()
-                logging.info(f'Profiler process {profiler.pid} finished')
+                if profiler.is_alive():
+                    logging.error(f'Profiler process {profiler.pid} is still running')
+                elif profiler.exitcode != 0:
+                    logging.error(f'Profiler process {profiler.pid} exited with code {profiler.exitcode}')
+                else:
+                    logging.info(f'Profiler process {profiler.pid} finished')
 
         if self.reliability_metrics:
             self._run_reliability_metrics()
@@ -386,7 +401,8 @@ class Submission:
                                                                           profilers=self.profilers,
                                                                           profiler_started_events=profiler_started_events,
                                                                           pipes=pipes_profiler,
-                                                                          base_log_dir=self.metric_values_dir)
+                                                                          base_log_dir=self.metric_values_dir,
+                                                                          mp_context=self.mp_context)
         participant_process = multiprocessing.Process(target=self._infer_async,
                                                       args=(participant_started_event, self.num_inference_steps,
                                                             observation_pipe_profiler))
@@ -405,6 +421,12 @@ class Submission:
         for profiler_process, profiler_object in zip(profiler_processes, profiler_objects):
             profiler_process.join()
             logging.info(f'Profiler process {profiler_process.pid} finished')
+
+        # Clear events
+        for event in profiler_started_events:
+            event.clear()
+        participant_started_event.clear()
+
         return profiler_objects
 
     def _run_inference_benchmark(self):

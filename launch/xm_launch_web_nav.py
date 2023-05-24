@@ -11,8 +11,8 @@ flags.DEFINE_string('root_dir', '/tmp/xm_local', 'Base directory for logs and re
 flags.DEFINE_string('train_logs_dir', 'train',
                     'Directory for train logs from all of the experiments that reliability metrics will be calculated on')
 flags.DEFINE_bool('local', False, 'Run locally or on cluster')
+flags.DEFINE_bool('debug', False, 'Debug mode')
 flags.DEFINE_bool('run_offline_metrics_only', False, 'Whether to run offline metrics only.')
-flags.DEFINE_bool('train', False, 'Whether to run training or inference')
 flags.DEFINE_string('participant_module_path', None, 'Path to participant module')
 flags.DEFINE_string('gin_config', None, 'Path to gin config file that determines which experiment to run')
 FLAGS = flags.FLAGS
@@ -40,36 +40,44 @@ def main(_):
         additional_args = []
         env_vars = dict(
             TF_FORCE_GPU_ALLOW_GROWTH='true',
-            TF_GPU_ALLOCATOR='cuda_malloc_async'
+            # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
         )
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
         web_nav_seeds = [
-            1
-            # 37,
-            # 82,
-            # 14,
-            # 65,
-            # 23,
-            # 98,
-            # 51,
-            # 19,
-            # 77,
-            # 43
+            37,
+            82,
+            14,
+            65,
+            23,
+            98,
+            51,
+            19,
+            77,
+            43
         ]
-        env_batch_sizes = [4, ]
-        total_env_step_params = [4000, ]
+        if FLAGS.debug:
+            env_batch_sizes = [8, ]
+            total_env_steps = [10000, ]
+            difficulty_levels = []
+        else:
+
+            env_batch_sizes = [8, ]
+            total_env_steps = [1000000, ]
+            difficulty_levels = [1, ]
         web_nav_hparam_sweeps = list(
             dict([
                 ('seed', seed),
                 ('env_batch_size', env_batch_size),
-                ('total_env_steps', total_env_steps),
+                ('total_env_steps', env_steps),
+                ('difficulty_level', difficulty_level),
 
             ])
-            for (seed, env_batch_size, total_env_steps) in itertools.product(
+            for (seed, env_batch_size, env_steps, difficulty_level) in itertools.product(
                 web_nav_seeds,
                 env_batch_sizes,
-                total_env_step_params
+                total_env_steps,
+                difficulty_levels,
             )
         )
 
@@ -83,13 +91,12 @@ def main(_):
             )
         ])
 
-        # Get the full path of our FLAGS.root_dir since it is relative to this script
-        root_dir = os.path.abspath(FLAGS.root_dir)
         for hparam_config in web_nav_hparam_sweeps:
             experiment_name = FLAGS.experiment_name + '_' + '_'.join(
                 f"{key}_{hparam_config[key]}" for key in sorted(hparam_config.keys()))
 
             # Add additional arguments that are constant across all runs
+            root_dir = os.path.abspath(FLAGS.root_dir)
             root_dir = os.path.join(root_dir, experiment_name)
             train_logs_dir = root_dir
             participant_module_path = os.path.join(FLAGS.participant_module_path)
