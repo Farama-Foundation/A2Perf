@@ -9,7 +9,7 @@ regex
 gym
 
 # reliabiility
--r rl_perf/metrics/reliability/requirements.txt
+-r ./rl_perf/metrics/reliability/requirements.txt
 
 # codecarbon
--r rl_perf/metrics/system/codecarbon/requirements-dev.txt
+-r ./rl_perf/metrics/system/codecarbon/requirements-dev.txt

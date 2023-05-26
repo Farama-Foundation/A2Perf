@@ -134,8 +134,14 @@ fi
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
+
+# Install requirements for the rl-perf repo
 pip install -r requirements.txt
+
+# Install RLPerf as a packages
 pip install -e .
+
+# Install packages specific to the user's training code
 pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
 EOF
 

@@ -57,17 +57,15 @@ def main(_):
             # 43
         ]
         if FLAGS.debug:
-            pass
+            num_collect_job_params = [1, ]
         else:
-            pass
+            num_collect_job_params = [4, ]
+
         circuit_training_hparam_sweeps = list(
             dict([
                 ('seed', seed),
-
             ])
-            for (seed,) in itertools.product(
-                circuit_training_seeds,
-            )
+            for seed, num_collect_jobs in itertools.product(circuit_training_seeds, num_collect_job_params)
         )
 
         # Define Executable
@@ -84,18 +82,25 @@ def main(_):
             experiment_name = FLAGS.experiment_name + '_' + '_'.join(
                 f"{key}_{hparam_config[key]}" for key in sorted(hparam_config.keys()))
 
-            # Add additional arguments that are constant across all runs
             root_dir = os.path.abspath(FLAGS.root_dir)
             root_dir = os.path.join(root_dir, experiment_name)
             train_logs_dir = root_dir
             participant_module_path = os.path.join(FLAGS.participant_module_path)
             run_offline_metrics_only = str(FLAGS.run_offline_metrics_only)
-            hparam_config.update(dict(root_dir=root_dir,
-                                      gin_config=FLAGS.gin_config,
-                                      participant_module_path=participant_module_path,
-                                      circuit_training_dir=circuit_training_dir,
-                                      train_logs_dir=train_logs_dir,
-                                      run_offline_metrics_only=run_offline_metrics_only, ))
+
+            # Add additional arguments that are constant across all runs
+            hparam_config.update(dict(
+                root_dir=root_dir,
+                gin_config=FLAGS.gin_config,
+                participant_module_path=participant_module_path,
+                circuit_training_dir=circuit_training_dir,
+                train_logs_dir=train_logs_dir,
+                run_offline_metrics_only=run_offline_metrics_only,
+                reverb_port=8008,
+                reverb_server="127.0.0.1:8008",
+                netlist_file="./circuit_training/environment/test_data/ariane/netlist.pb.txt",
+                init_placement="./circuit_training/environment/test_data/ariane/initial.plc",
+            ))
 
             print(hparam_config)
             experiment.add(xm.Job(

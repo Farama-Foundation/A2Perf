@@ -171,7 +171,7 @@ class Submission:
     def _load_participant_spec(self, filename):
         """Loads the participant spec from the participant module path."""
         participant_file_path = os.path.join(self.participant_module_path, filename)
-        spec = importlib.util.spec_from_file_location(f"filename", participant_file_path)
+        spec = importlib.util.spec_from_file_location(f"{filename}", participant_file_path)
         return spec
 
     def _load_participant_module(self, filename):

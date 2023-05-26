@@ -6,7 +6,7 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 
 # Set up submission object
 Submission.mode = %BenchmarkMode.TRAIN
-Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
+Submission.domain = %BenchmarkDomain.CIRCUIT_TRAINING
 Submission.run_offline_metrics_only=False
 Submission.measure_emissions=True
 Submission.measure_emissions_interval=1
