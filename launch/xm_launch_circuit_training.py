@@ -98,8 +98,8 @@ def main(_):
                 run_offline_metrics_only=run_offline_metrics_only,
                 reverb_port=8008,
                 reverb_server="127.0.0.1:8008",
-                netlist_file="./circuit_training/environment/test_data/ariane/netlist.pb.txt",
-                init_placement="./circuit_training/environment/test_data/ariane/initial.plc",
+                netlist_file="/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt",
+                init_placement="/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc",
             ))
 
             print(hparam_config)

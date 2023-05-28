@@ -4,13 +4,14 @@ cd ../../.. || exit
 
 # These arguments most likely do not need to chagne
 CT_VERSION=0.0.3
-PYTHON_VERSION=python3.9
+PYTHON_VERSION=python3.11
 DREAMPLACE_PATTERN=dreamplace_20230414_2835324_${PYTHON_VERSION}.tar.gz
-TF_AGENTS_PIP_VERSION="tf-agents-nightly[reverb]"
+TF_AGENTS_PIP_VERSION="tf-agents[reverb]==0.16.0"
+DM_REVERB_PIP_VERSION=""
 CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
 DOCKER_IMAGE_NAME="circuit_training:core"
 DOCKER_CONTAINER_NAME="circuit_training_container"
-DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
+DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training_cloudtop"
 REQUIREMENTS_PATH="./requirements.txt"
 
 # New Environment Variables
@@ -132,8 +133,10 @@ docker build --rm \
   --pull \
   --build-arg base_image=nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 \
   --build-arg tf_agents_version="${TF_AGENTS_PIP_VERSION}" \
+  --build-arg dm_reverb_version="${DM_REVERB_PIP_VERSION}" \
   --build-arg dreamplace_version="${DREAMPLACE_PATTERN}" \
   --build-arg placement_cost_binary="plc_wrapper_main_${CT_VERSION}" \
+  --build-arg python_version="${PYTHON_VERSION}" \
   -f "${DOCKERFILE_PATH}" \
   -t "$DOCKER_IMAGE_NAME" rl_perf/domains/circuit_training
 
@@ -145,7 +148,6 @@ else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   docker run -itd \
     --rm \
-    --gpus=all \
     -p 2022:22 \
     -v "$(pwd)":/rl-perf \
     --workdir /workspace \
@@ -158,7 +160,7 @@ cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 
 # Install requirements for the rl-perf repo
-pip install --no-cache-dir -r $REQUIREMENTS_PATH
+pip install -r $REQUIREMENTS_PATH
 
 # Install RLPerf as a package
 pip install -e .
@@ -176,8 +178,8 @@ export NETLIST_FILE=$NETLIST_FILE
 export INIT_PLACEMENT=$INIT_PLACEMENT
 export NUM_COLLECT_JOBS=$NUM_COLLECT_JOBS
 
-cd /rl-perf/rl_perf/submission
-$PYTHON_VERSION main_submission.py \
+cd /rl-perf
+$PYTHON_VERSION rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
@@ -196,9 +198,17 @@ docker run \
   --workdir /rl-perf/rl_perf/domains/circuit_training \
   circuit_training:core
 
+docker run \
+  -it \
+  --rm \
+  -v "$(pwd)":/rl-perf \
+  --workdir /rl-perf/rl_perf/domains/circuit_training \
+  circuit_training:core
 pip install -e ../../../
 mkdir -p ./logs
-tools/e2e_smoke_test.sh --root_dir ./logs
+cd ../../../
+rl_perf/domains/circuit_training/tools/e2e_smoke_test.sh --root_dir ./logs
+# tools/e2e_smoke_test.sh --root_dir ./logs
 
 exit 0
 
@@ -206,10 +216,21 @@ exit 0
 docker run \
   -it \
   --rm \
-  --gpus=all \
   -v /home/ike2030/workspace/rl-perf:/rl-perf \
   --workdir /rl-perf/rl_perf/domains/circuit_training \
   circuit_training:core
 
 cd /rl-perf/rl_perf/domains/circuit_training/ || exit
 tox -e py39-stable -- circuit_training/grouping/grouping_test.py
+
+cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
+cd /rl-perf
+
+# Install requirements for the rl-perf repo
+pip install -r $REQUIREMENTS_PATH
+
+# Install RLPerf as a package
+pip install -e .
+
+# Install packages specific to the user's training code
+EOF
