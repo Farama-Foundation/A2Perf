@@ -59,11 +59,12 @@ def main(_):
         if FLAGS.debug:
             num_collect_job_params = [1, ]
         else:
-            num_collect_job_params = [4, ]
+            num_collect_job_params = [10, ]
 
         circuit_training_hparam_sweeps = list(
             dict([
                 ('seed', seed),
+                ('num_collect_jobs', num_collect_jobs),
             ])
             for seed, num_collect_jobs in itertools.product(circuit_training_seeds, num_collect_job_params)
         )

@@ -4,14 +4,17 @@ cd ../../.. || exit
 
 # These arguments most likely do not need to chagne
 CT_VERSION=0.0.3
-PYTHON_VERSION=python3.11
+PYTHON_VERSION=python3.9
 DREAMPLACE_PATTERN=dreamplace_20230414_2835324_${PYTHON_VERSION}.tar.gz
 TF_AGENTS_PIP_VERSION="tf-agents[reverb]==0.16.0"
+#TENSORFLOW_PROBABILITY_PIP_VERSION="tensorflow_probability"
+#TF_AGENTS_PIP_VERSION="tf-agents-nightly[reverb]"
+#TENSORFLOW_PROBABILITY_PIP_VERSION="tfp-nightly"
 DM_REVERB_PIP_VERSION=""
 CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
 DOCKER_IMAGE_NAME="circuit_training:core"
 DOCKER_CONTAINER_NAME="circuit_training_container"
-DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training_cloudtop"
+DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
 
 # New Environment Variables
@@ -105,23 +108,31 @@ for arg in "$@"; do
 done
 
 SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/.ssh/id_rsa
-
-echo "Env Batch Size: $ENV_BATCH_SIZE"
-echo "Difficulty Level: $DIFFICULTY_LEVEL"
-echo "Seed value: $SEED"
-echo "Root directory: $ROOT_DIR"
-echo "Gin config: $GIN_CONFIG"
-echo "Participant module path: $PARTICIPANT_MODULE_PATH"
-echo "Circuit training directory: $CIRCUIT_TRAINING_DIR"
-echo "Docker image name: $DOCKER_IMAGE_NAME"
-echo "Docker container name: $DOCKER_CONTAINER_NAME"
-echo "Dockerfile path: $DOCKERFILE_PATH"
-echo "SSH key path: $SSH_KEY_PATH"
-echo "Requirements path: $REQUIREMENTS_PATH"
-echo "Reverb Port: $REVERB_PORT"
-echo "Reverb Server: $REVERB_SERVER"
-echo "Netlist File: $NETLIST_FILE"
-echo "Initial Placement: $INIT_PLACEMENT"
+echo "CT_VERSION: $CT_VERSION"
+echo "PYTHON_VERSION: $PYTHON_VERSION"
+echo "DREAMPLACE_PATTERN: $DREAMPLACE_PATTERN"
+echo "TF_AGENTS_PIP_VERSION: $TF_AGENTS_PIP_VERSION"
+#echo "TENSORFLOW_PROBABILITY_PIP_VERSION: $TENSORFLOW_PROBABILITY_PIP_VERSION"
+#echo "TF_AGENTS_PIP_VERSION: $TF_AGENTS_PIP_VERSION"
+#echo "TENSORFLOW_PROBABILITY_PIP_VERSION: $TFP_NIGHTLY"
+echo "DM_REVERB_PIP_VERSION: $DM_REVERB_PIP_VERSION"
+echo "CIRCUIT_TRAINING_DIR: $CIRCUIT_TRAINING_DIR"
+echo "DOCKER_IMAGE_NAME: $DOCKER_IMAGE_NAME"
+echo "DOCKER_CONTAINER_NAME: $DOCKER_CONTAINER_NAME"
+echo "DOCKERFILE_PATH: $DOCKERFILE_PATH"
+echo "REQUIREMENTS_PATH: $REQUIREMENTS_PATH"
+echo "SEED: $SEED"
+echo "ROOT_DIR: $ROOT_DIR"
+echo "GIN_CONFIG: $GIN_CONFIG"
+echo "PARTICIPANT_MODULE_PATH: $PARTICIPANT_MODULE_PATH"
+echo "REVERB_PORT: $REVERB_PORT"
+echo "REVERB_SERVER: $REVERB_SERVER"
+echo "NETLIST_FILE: $NETLIST_FILE"
+echo "INIT_PLACEMENT: $INIT_PLACEMENT"
+echo "RUN_OFFLINE_METRICS_ONLY: $RUN_OFFLINE_METRICS_ONLY"
+echo "NUM_COLLECT_JOBS: $NUM_COLLECT_JOBS"
+#echo "TRAIN_LOGS_DIR: $TRAIN_LOGS_DIR"
+#echo "SSH_KEY_PATH: $SSH_KEY_PATH"
 
 # create ssh-key in CIRCUIT_TRAINING_DIR without password
 mkdir -p "$CIRCUIT_TRAINING_DIR/.ssh"
@@ -133,6 +144,7 @@ docker build --rm \
   --pull \
   --build-arg base_image=nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 \
   --build-arg tf_agents_version="${TF_AGENTS_PIP_VERSION}" \
+  --build-arg tensorflow_probability_version="${TENSORFLOW_PROBABILITY_PIP_VERSION}" \
   --build-arg dm_reverb_version="${DM_REVERB_PIP_VERSION}" \
   --build-arg dreamplace_version="${DREAMPLACE_PATTERN}" \
   --build-arg placement_cost_binary="plc_wrapper_main_${CT_VERSION}" \
@@ -148,6 +160,8 @@ else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   docker run -itd \
     --rm \
+    --gpus=all \
+    --privileged \
     -p 2022:22 \
     -v "$(pwd)":/rl-perf \
     --workdir /workspace \
@@ -170,6 +184,8 @@ EOF
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export TF_GPU_ALLOCATOR=cuda_malloc_async
 export ROOT_DIR=$ROOT_DIR
 export GLOBAL_SEED=$SEED
 export REVERB_PORT=$REVERB_PORT
@@ -177,8 +193,9 @@ export REVERB_SERVER=$REVERB_SERVER
 export NETLIST_FILE=$NETLIST_FILE
 export INIT_PLACEMENT=$INIT_PLACEMENT
 export NUM_COLLECT_JOBS=$NUM_COLLECT_JOBS
-
+export WRAPT_DISABLE_EXTENSIONS=true
 cd /rl-perf
+
 $PYTHON_VERSION rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
