@@ -195,6 +195,7 @@ class Submission:
             env = None
         elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
             env = None
+            print("WE MADE IT!\n\n\n\n\n\n\n\n")
         else:
             raise NotImplementedError(f'Domain {self.domain} not implemented')
         return env
