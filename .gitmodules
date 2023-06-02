@@ -25,3 +25,5 @@
 [submodule "rl_perf/metrics/system/codecarbon"]
     path = rl_perf/metrics/system/codecarbon
     url = https://github.com/harvard-edge/codecarbon.git
+[submodule "reliability"]
+	url = https://github.com/harvard-edge/rl-reliability-metrics.git
