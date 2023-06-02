@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -n 32                  # Number of cores requested
-#SBATCH -t 1-12:00:00          # Runtime in D-HH:MM:SS, minimum of 10 minutes
+#SBATCH -n 80                  # Number of cores requested
+#SBATCH -t 1-00:00:00          # Runtime in D-HH:MM:SS, minimum of 10 minutes
 #SBATCH -p seas_gpu            # Partition to submit to
 #SBATCH --mem=64000            # Memory per core in MB
-#SBATCH --gres=gpu:1           # Number of GPUs to use
-#SBATCH -o ../logs/quadruped_locomotion/%j.log  # File to which output and errors will be written, %j inserts jobid
+#SBATCH --gres=gpu:2           # Number of GPUs to use
+#SBATCH -o ../logs/circuit_training/%j.log  # File to which output and errors will be written, %j inserts jobid
 
-# These arguments most likely do not need to chagne
+# These arguments most likely do not need to change
 CT_VERSION=0.0.3
 PYTHON_VERSION=python3.9
 DREAMPLACE_PATTERN=dreamplace_20230414_2835324_${PYTHON_VERSION}.tar.gz
@@ -19,16 +19,16 @@ DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_
 REQUIREMENTS_PATH="./requirements.txt"
 
 # New Environment Variables
-SEED=0
-ROOT_DIR=../logs/web_nav
+SEED=""
+ROOT_DIR=""
 GIN_CONFIG=""
 PARTICIPANT_MODULE_PATH=""
-REVERB_PORT=8008
-REVERB_SERVER="<IP Address of the Reverb Server>:${REVERB_PORT}"
-NETLIST_FILE=./circuit_training/environment/test_data/ariane/netlist.pb.txt
-INIT_PLACEMENT=./circuit_training/environment/test_data/ariane/initial.plc
+REVERB_PORT=""
+REVERB_SERVER=""
+NETLIST_FILE=""
+INIT_PLACEMENT=""
 RUN_OFFLINE_METRICS_ONLY=""
-NUM_COLLECT_JOBS=0
+NUM_COLLECT_JOBS=""
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -109,6 +109,7 @@ for arg in "$@"; do
 done
 
 SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/.ssh/id_rsa
+REVERB_SERVER=$REVERB_SERVER:$REVERB_PORT
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
 echo "Difficulty Level: $DIFFICULTY_LEVEL"
@@ -135,7 +136,8 @@ singularity instance start \
   --nv \
   --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
-  launch/singularity/web_nav/web_nav.sif circuit_training_"$SLURM_JOB_ID"
+  --bind /sys/class/powercap/:/sys/class/powercap/ \
+  launch/singularity/circuit_training/circuit_training.sif circuit_training_"$SLURM_JOB_ID"
 
 singularity exec instance://circuit_training_"$SLURM_JOB_ID" bash <<EOF
 
@@ -172,10 +174,10 @@ exit 0
 singularity instance start \
   --nv --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
-  launch/singularity/web_nav/web_nav.sif circuit_training_"$SLURM_JOB_ID"
+  launch/singularity/circuit_training/circuit_training.sif circuit_training_"$SLURM_JOB_ID"
 
 singularity exec instance://circuit_training_"$SLURM_JOB_ID" bash <<EOF
-python3 -m venv  --system-site-packages  ~/.circuit_training
+python3.9 -m venv  --system-site-packages  ~/.circuit_training
 source ~/.circuit_training/bin/activate
 pip install --upgrade pip
 pip install --upgrade setuptools
