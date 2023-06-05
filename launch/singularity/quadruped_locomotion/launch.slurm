@@ -1,6 +1,9 @@
 #!/bin/bash
-cd "$(dirname "$0")" || exit
-cd ../../.. || exit
+#SBATCH -n 128                  # Number of cores requested
+#SBATCH -t 1-00:00:00          # Runtime in D-HH:MM:SS, minimum of 10 minutes
+#SBATCH -p seas_compute        # Partition to submit to
+#SBATCH --mem=64000            # Memory per core in MB
+#SBATCH -o ../logs/quadruped_locomotion/%j.log  # File to which output and errors will be written, %j inserts jobid
 
 SEED=0
 ENV_BATCH_SIZE=1
@@ -101,62 +104,59 @@ echo "Dockerfile path: $DOCKERFILE_PATH"
 echo "SSH key path: $SSH_KEY_PATH"
 echo "Requirements path: $REQUIREMENTS_PATH"
 
-# create ssh-key in WEB_NAV_DIR without password
-mkdir -p "$QUAD_LOCO_DIR/.ssh"
-yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
+# Move the top level directory
+cd ..
 
-# --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
+# Start a singularity instance in the background and bind /dev/shm and /var/run/
+# to the host machine's /dev/shm and /var/run/ directories
+# the instance should be named with the job id
 
-# install xhost
-sudo apt-get install x11-xserver-utils
 
-# Build the Docker image
-docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
-  -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/quadruped_locomotion
+singularity instance start \
+  --nv --bind /dev/shm:/dev/shm \
+  --bind /var/run/:/var/run/ \
+  launch/singularity/quadruped_locomotion/quadruped_locomotion.sif quadruped_locomotion_"$SLURM_JOB_ID"
 
-if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
-  # if it is running, do nothing
-  echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
-else
-  xhost + local: # Allow docker to access the display
-  docker run -itd \
-    --rm \
-    --name "$DOCKER_CONTAINER_NAME" \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -e DISPLAY="$DISPLAY" \
-    -v "${HOME}/.Xauthority:/user/.Xauthority:rw" \
-    -v /dev/shm:/dev/shm \
-    --privileged \
-    -v "$(pwd)":/rl-perf \
-    -p 2022:22 \
-    "$DOCKER_IMAGE_NAME"
-fi
-# --gpus=all \
+singularity exec instance://quadruped_locomotion_"$SLURM_JOB_ID" bash <<EOF
+source ~/.quadruped_locomotion/bin/activate
 
-# Install packages inside the container
-cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
-cd /rl-perf
-pip install -r requirements.txt
-pip install -e .
-EOF
-
-# pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
-
-# Run the benchmarking code
-cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
+# Pass in the command-line arguments
 export SEED=$SEED
 export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
-cd /rl-perf/rl_perf/submission
-export DISPLAY=:0
-python main_submission.py \
+
+python3.7 rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dir=$TRAIN_LOGS_DIR \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
 EOF
+
+# Set the python path to a hidden directory in the home directory.
+# When we run multiple jobs on the same machine, we do not want them to interfere with each other.
+# This also helps us avoid installing packages repeatedly.
+
+#IMPORTANT: Run these commands first to get the environment set up
+exit 0
+
+singularity instance start \
+  --nv --bind /dev/shm:/dev/shm \
+  --bind /var/run/:/var/run/ \
+  launch/singularity/quadruped_locomotion/quadruped_locomotion.sif quadruped_locomotion_"$SLURM_JOB_ID"
+
+singularity exec instance://quadruped_locomotion_"$SLURM_JOB_ID" bash <<EOF
+python3 -m venv  --system-site-packages  ~/.quadruped_locomotion
+source ~/.quadruped_locomotion/bin/activate
+pip install --upgrade pip
+pip install --upgrade setuptools
+pip install -r requirements.txt
+pip install -e .
+EOF
+
+# Run a python shell if you need...
+singularity shell instance://quadruped_locomotion_"$SLURM_JOB_ID"
+source ~/.quadruped_locomotion/bin/activate

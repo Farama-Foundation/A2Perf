@@ -13,6 +13,7 @@ import gin
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
@@ -160,7 +161,7 @@ class Submission:
         self.domain = domain
         self.mode = mode
         self.reliability_metrics = reliability_metrics
-
+        
         self.metrics_results = {}
         if os.path.exists(os.path.join(self.metric_values_dir, 'metric_results.json')):
             logging.info(
@@ -195,7 +196,6 @@ class Submission:
             env = None
         elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
             env = None
-            print("WE MADE IT!\n\n\n\n\n\n\n\n")
         else:
             raise NotImplementedError(f'Domain {self.domain} not implemented')
         return env
@@ -220,8 +220,7 @@ class Submission:
 
         with working_directory(self.participant_module_path):
             participant_module, participant_module_spec = self._load_participant_module('train.py')
-            print(self.participant_module_path)
-            print(participant_module_spec)
+
             participant_module_spec.loader.exec_module(participant_module)
 
             if self.measure_emissions:
