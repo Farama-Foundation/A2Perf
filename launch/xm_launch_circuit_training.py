@@ -21,7 +21,6 @@ FLAGS = flags.FLAGS
 def main(_):
     # set directory of this script as working directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    repo_root = os.path.abspath(os.path.join(os.getcwd(), '../'))
     circuit_training_dir = os.path.join(os.getcwd(), '../rl_perf/domains/circuit_training')
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
@@ -32,8 +31,10 @@ def main(_):
             TF_FORCE_GPU_ALLOW_GROWTH='true',
 
         )
+        repo_root = '/rl-perf/'
     else:
         # Create log dirs since singularity needs them to exist
+        repo_root = os.path.abspath(os.path.join(os.getcwd(), '../'))
         executable_path = '/usr/bin/sbatch'
         binary_path = './singularity/circuit_training/launch.slurm'
         additional_args = []
@@ -89,18 +90,19 @@ def main(_):
                 circuit_training_dir=circuit_training_dir,
                 train_logs_dir=train_logs_dir,
                 run_offline_metrics_only=run_offline_metrics_only,
-                reverb_port='8008',
-                reverb_server="127.0.0.1",
-
-                # netlist_file=os.path.join(repo_root,
-                #                           'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
-                # init_placement=os.path.join(repo_root,
-                #                             'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
+                reverb_port='8000',
+                reverb_server_ip="127.0.0.1",
 
                 netlist_file=os.path.join(repo_root,
-                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
+                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
                 init_placement=os.path.join(repo_root,
-                                            'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'),
+                                            'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
+
+                # netlist_file=os.path.join(repo_root,
+                #                           'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
+                # init_placement=os.path.join(repo_root,
+                #                             'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'),
+                #
             ))
 
             print(hparam_config)
