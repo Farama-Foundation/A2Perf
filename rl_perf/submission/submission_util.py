@@ -1,29 +1,29 @@
-from rl_perf.metrics.system import codecarbon
 import csv
 import enum
 import importlib
 import json
 import logging
 import multiprocessing
-import sys
 import os
+import sys
 import timeit
 import typing
+from contextlib import contextmanager
+
 import gin
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
 
-from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
+from rl_perf.domains.web_nav.CoDE import vocabulary_node
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
                                                                         LowerCVaROnDiffs,
                                                                         IqrAcrossRollouts, MedianPerfDuringTraining
 , StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts, LowerCVaRAcrossRollouts, )
-
-from contextlib import contextmanager
-from rl_perf.domains.web_nav.CoDE import vocabulary_node
+from rl_perf.metrics.system import codecarbon
+from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
 
 
 @contextmanager
@@ -119,26 +119,19 @@ class Submission:
                  num_inference_episodes: int = 1,
                  time_participant_code: bool = True,
                  measure_emissions: bool = False,
-                 measure_emissions_interval: float = 1,
                  baseline_measure_sec: float = 0,
                  plot_metrics: bool = True,
                  run_offline_metrics_only: bool = False,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None,
-                 country_iso_code: str = None,
-                 region: str = None,
-                 code_carbon_offline_mode: bool = False,
                  tracking_mode: str = None):
         self.run_offline_metrics_only = run_offline_metrics_only
-        self.code_carbon_offline_mode = code_carbon_offline_mode
         self.baseline_measure_sec = baseline_measure_sec
         self.tracking_mode = tracking_mode
-        self.country_iso_code = country_iso_code
-        self.region = region
         self.mp_context = multiprocessing.get_context('spawn')
         self.root_dir = root_dir
         if self.root_dir is not None:
             os.makedirs(self.root_dir, exist_ok=True)
-
+        self.gin_config_str = None
         self.metric_values_dir = metric_values_dir
         self.train_logs_dir = train_logs_dir
         if self.metric_values_dir is None:
@@ -147,7 +140,6 @@ class Submission:
             self.train_logs_dir = os.path.join(self.root_dir, 'train')
         os.makedirs(self.metric_values_dir, exist_ok=True)
         os.makedirs(self.train_logs_dir, exist_ok=True)
-        self.measure_emissions_interval = measure_emissions_interval
         self.measure_emissions = measure_emissions
         self.plot_metrics = plot_metrics
         self.num_inference_steps = num_inference_steps
@@ -211,6 +203,7 @@ class Submission:
         return data
 
     def _train(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event]):
+        gin.parse_config(self.gin_config_str)
         participant_event.set()
 
         # Wait for all profilers to start up before continuing
@@ -224,24 +217,11 @@ class Submission:
             participant_module_spec.loader.exec_module(participant_module)
 
             if self.measure_emissions:
+                @codecarbon.track_emissions(output_dir=self.metric_values_dir, output_file='train_emissions.csv', )
+                def train():
+                    return participant_module.train()
 
-                @codecarbon.track_emissions(project_name='rlperf_training',
-                                            output_dir=self.metric_values_dir,
-                                            output_file='train_emissions.csv',
-                                            save_to_file=True,
-                                            save_to_api=False,
-                                            save_to_logger=False,
-                                            api_call_interval=1,
-                                            country_iso_code=self.country_iso_code,
-                                            region=self.region,
-                                            offline=self.code_carbon_offline_mode,
-                                            tracking_mode=self.tracking_mode,
-                                            measure_power_secs=self.measure_emissions_interval,
-                                            baseline_measure_sec=self.baseline_measure_sec, )
-                def participant_module_train():
-                    participant_module.train()
-
-                participant_module_train()
+                train()
             else:
                 participant_module.train()
 
@@ -339,7 +319,8 @@ class Submission:
             participant_process.start()
             profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
                                          profiler_events=profilers_started_events,
-                                         participant_process=participant_process, log_dir=self.root_dir,
+                                         participant_process=participant_process,
+                                         log_dir=self.root_dir,
                                          mp_context=self.mp_context)
             logging.info(f'Participant module process ID: {participant_process.pid}')
             participant_process.join()
@@ -543,6 +524,7 @@ class Submission:
             plt.savefig(os.path.join(self.metric_values_dir, f'{metric_name}.png'))
 
     def run_benchmark(self):
+        self.gin_config_str = gin.config_str()  # save gin configs for multiprocessing
         if self.mode == BenchmarkMode.TRAIN:
             self._run_training_benchmark()
         elif self.mode == BenchmarkMode.INFERENCE:

@@ -103,7 +103,7 @@ for arg in "$@"; do
   esac
 done
 
-SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/.ssh/id_rsa
+SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/tools/docker/.ssh/id_rsa
 echo "CT_VERSION: $CT_VERSION"
 echo "PYTHON_VERSION: $PYTHON_VERSION"
 echo "TF_AGENTS_PIP_VERSION: $TF_AGENTS_PIP_VERSION"
@@ -130,27 +130,26 @@ echo "NUM_COLLECT_JOBS: $NUM_COLLECT_JOBS"
 #echo "SSH_KEY_PATH: $SSH_KEY_PATH"
 
 # create ssh-key in CIRCUIT_TRAINING_DIR without password
-mkdir -p "$CIRCUIT_TRAINING_DIR/.ssh"
+mkdir -p "$CIRCUIT_TRAINING_DIR/tools/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "circuit_training" -f "$SSH_KEY_PATH" -N ""
 
 echo "Successfully parsed command-line arguments."
 
 docker build \
-  --rm --no-cache \
+  --rm \
   --pull \
   --build-arg base_image=nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 \
   -f "${DOCKERFILE_PATH}" \
   -t "$DOCKER_IMAGE_NAME" rl_perf/domains/circuit_training/tools/docker
 
 echo "Successfully built docker image."
-exit 0
+
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   docker run -itd \
     --rm \
-    --gpus=all \
     --privileged \
     -p 2022:22 \
     -v "$(pwd)":/rl-perf \
@@ -159,6 +158,8 @@ else
     --name "$DOCKER_CONTAINER_NAME" \
     "$DOCKER_IMAGE_NAME"
 fi
+
+exit 0
 
 # Install required packages inside the container
 docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF

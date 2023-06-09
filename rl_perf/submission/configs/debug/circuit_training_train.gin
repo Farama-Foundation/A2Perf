@@ -1,5 +1,6 @@
 import rl_perf.submission.submission_util
 import rl_perf.metrics.system.profiler.memory_profiler
+import rl_perf.metrics.system.codecarbon
 
 import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
 import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
@@ -9,12 +10,7 @@ Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.CIRCUIT_TRAINING
 Submission.run_offline_metrics_only=False
 Submission.measure_emissions=True
-Submission.measure_emissions_interval=1
-Submission.baseline_measure_sec=10
-Submission.code_carbon_offline_mode=True
-Submission.country_iso_code='USA'
-Submission.region='Massachusetts'
-Submission.tracking_mode='process'
+
 
 # Reliability
 METRICS = [
@@ -52,3 +48,18 @@ metrics_online.MedianPerfDuringTraining.window_size = %WINDOW_SIZE
 metrics_online.MedianPerfDuringTraining.eval_points = %EVAL_POINTS
 
 
+# Set up codecarbon for system metrics
+track_emissions.project_name = 'rlperf_circuit_training_train_debug'
+track_emissions.measure_power_secs = 1
+#track_emissions.output_file = 'emissions.csv'  # Output file name
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if known
+#track_emissions.experiment_id = 'rlperf_ct_train_debug'  # Experiment ID
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'
