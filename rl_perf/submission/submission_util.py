@@ -182,13 +182,13 @@ class Submission:
                 global_vocab.restore(dict(global_vocab=global_vocab_dict))
                 kwargs['global_vocabulary'] = global_vocab
                 kwargs.pop('reload_vocab')
-            env = gym.make(self.domain.value, **kwargs)
         elif self.domain == BenchmarkDomain.CIRCUIT_TRAINING:
-            env = None
+            pass
         elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
             env = None
         else:
             raise NotImplementedError(f'Domain {self.domain} not implemented')
+        env = gym.make(self.domain.value, **kwargs)
         return env
 
     def _get_observation_data(self):
