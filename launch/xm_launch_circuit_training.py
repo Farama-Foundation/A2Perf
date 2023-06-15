@@ -8,7 +8,7 @@ from absl import flags
 
 flags.DEFINE_string('experiment_name', 'circuit_training', 'Name of experiment')
 flags.DEFINE_string('root_dir', '/tmp/xm_local', 'Base directory for logs and results')
-flags.DEFINE_string('train_logs_dir', 'train',
+flags.DEFINE_string('train_logs_dirs', 'train',
                     'Directory for train logs from all of the experiments that reliability metrics will be calculated on')
 flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 flags.DEFINE_bool('debug', False, 'Debug mode')
@@ -46,13 +46,21 @@ def main(_):
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
 
         if FLAGS.debug:
-            circuit_training_seeds = [0]
+            circuit_training_seeds = [19]
             num_collect_job_params = [4, ]
+            netlist_file = os.path.join(repo_root,
+                                        'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
+            init_placement = os.path.join(repo_root,
+                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
         else:
             circuit_training_seeds = [
                 37, 82, 14, 65, 23, 98, 51, 19, 77, 43
             ]
             num_collect_job_params = [4, ]
+            netlist_file = os.path.join(repo_root,
+                                        'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
+            init_placement = os.path.join(repo_root,
+                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'),
 
         circuit_training_hparam_sweeps = list(
             dict([
@@ -78,31 +86,23 @@ def main(_):
 
             root_dir = os.path.abspath(FLAGS.root_dir)
             root_dir = os.path.join(root_dir, experiment_name)
-            train_logs_dir = root_dir
+            train_logs_dirs = root_dir
             participant_module_path = os.path.join(FLAGS.participant_module_path)
             run_offline_metrics_only = str(FLAGS.run_offline_metrics_only)
 
+            train_logs_dirs = os.path.join(train_logs_dirs, str(hparam_config['seed']), FLAGS.train_logs_dirs, 'eval')
             # Add additional arguments that are constant across all runs
             hparam_config.update(dict(
                 root_dir=root_dir,
                 gin_config=FLAGS.gin_config,
                 participant_module_path=participant_module_path,
                 circuit_training_dir=circuit_training_dir,
-                train_logs_dir=train_logs_dir,
+                train_logs_dirs=train_logs_dirs,
                 run_offline_metrics_only=run_offline_metrics_only,
                 reverb_port='8000',
                 reverb_server_ip="127.0.0.1",
-
-                netlist_file=os.path.join(repo_root,
-                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
-                init_placement=os.path.join(repo_root,
-                                            'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
-
-                # netlist_file=os.path.join(repo_root,
-                #                           'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
-                # init_placement=os.path.join(repo_root,
-                #                             'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'),
-                #
+                netlist_file=netlist_file,
+                init_placement=init_placement
             ))
 
             print(hparam_config)
