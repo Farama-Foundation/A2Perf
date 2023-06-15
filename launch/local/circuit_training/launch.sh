@@ -40,8 +40,8 @@ for arg in "$@"; do
     ROOT_DIR="${arg#*=}"
     shift
     ;;
-  --train_logs_dir=*)
-    TRAIN_LOGS_DIR="${arg#*=}"
+  --train_logs_dirs=*)
+    TRAIN_LOGS_DIRS="${arg#*=}"
     shift
     ;;
   --gin_config=*)
@@ -126,7 +126,7 @@ echo "NETLIST_FILE: $NETLIST_FILE"
 echo "INIT_PLACEMENT: $INIT_PLACEMENT"
 echo "RUN_OFFLINE_METRICS_ONLY: $RUN_OFFLINE_METRICS_ONLY"
 echo "NUM_COLLECT_JOBS: $NUM_COLLECT_JOBS"
-#echo "TRAIN_LOGS_DIR: $TRAIN_LOGS_DIR"
+#echo "TRAIN_LOGS_DIRS: $TRAIN_LOGS_DIRS"
 #echo "SSH_KEY_PATH: $SSH_KEY_PATH"
 
 # create ssh-key in CIRCUIT_TRAINING_DIR without password
@@ -150,8 +150,8 @@ else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   docker run -itd \
     --rm \
-    --privileged \
     -p 2022:22 \
+    --gpus all \
     -v "$(pwd)":/rl-perf \
     -v /sys/class/powercap:/sys/class/powercap \
     --workdir /rl-perf \
@@ -160,7 +160,7 @@ else
 fi
 
 exit 0
-
+#
 # Install required packages inside the container
 docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF
 # Install requirements for the rl-perf repo
@@ -185,7 +185,7 @@ $PYTHON_VERSION rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
-  --train_logs_dir=$TRAIN_LOGS_DIR \
+  --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
 EOF
 
@@ -236,3 +236,14 @@ pip install --no-deps --ignore-installed -e .
 
 # Install packages specific to the user's training code
 EOF
+
+export PYTHONPATH=/rl-perf:$PYTHONPATH
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export WRAPT_DISABLE_EXTENSIONS=true
+export ROOT_DIR=--root_dir=/rl-perf/logs/circuit_training/debug
+export GLOBAL_SEED=0
+export REVERB_PORT=8000
+export REVERB_SERVER_IP=127.0.0.1
+export NETLIST_FILE=/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc
+export INIT_PLACEMENT=/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt
+export NUM_COLLECT_JOBS=4

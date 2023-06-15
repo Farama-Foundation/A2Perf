@@ -45,8 +45,8 @@ for arg in "$@"; do
     ROOT_DIR="${arg#*=}"
     shift
     ;;
-  --train_logs_dir=*)
-    TRAIN_LOGS_DIR="${arg#*=}"
+  --train_logs_dirs=*)
+    TRAIN_LOGS_DIRS="${arg#*=}"
     shift
     ;;
   --gin_config=*)
@@ -158,7 +158,7 @@ $PYTHON_VERSION rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
-  --train_logs_dir=$TRAIN_LOGS_DIR \
+  --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
 EOF
 

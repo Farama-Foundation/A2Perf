@@ -114,7 +114,7 @@ class Submission:
                  domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
                  root_dir: str = None,
                  metric_values_dir: str = None,
-                 train_logs_dir: str = None,
+                 train_logs_dirs: typing.List[str] = None,
                  num_inference_steps: int = 1000,
                  num_inference_episodes: int = 1,
                  time_participant_code: bool = True,
@@ -133,13 +133,14 @@ class Submission:
             os.makedirs(self.root_dir, exist_ok=True)
         self.gin_config_str = None
         self.metric_values_dir = metric_values_dir
-        self.train_logs_dir = train_logs_dir
+        self.train_logs_dirs = train_logs_dirs
         if self.metric_values_dir is None:
             self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
-        if self.train_logs_dir is None:
-            self.train_logs_dir = os.path.join(self.root_dir, 'train')
+        if self.train_logs_dirs is None:
+            self.train_logs_dirs = os.path.join(self.root_dir, 'train')
         os.makedirs(self.metric_values_dir, exist_ok=True)
-        os.makedirs(self.train_logs_dir, exist_ok=True)
+        for dir in self.train_logs_dirs:
+            os.makedirs(dir, exist_ok=True)
         self.measure_emissions = measure_emissions
         self.plot_metrics = plot_metrics
         self.num_inference_steps = num_inference_steps
@@ -277,7 +278,7 @@ class Submission:
             run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')], )
         self.metrics_results.update(reliability_metrics)
 
-    def _run_reliability_metrics(self):
+    def _run_train_reliability_metrics(self):
         # TODO make sure to write gin config for metric parameters
         metrics = []
         for metric in self.reliability_metrics:
@@ -300,9 +301,8 @@ class Submission:
         logging.info(f'Logging to {self.metric_values_dir}')
 
         # TODO: match with regex
-        run_paths = [os.path.join(self.train_logs_dir, d) for d in os.listdir(self.train_logs_dir) if
-                     os.path.isdir(os.path.join(self.train_logs_dir, d)) and d.startswith('train')]
-        logging.info(f'Found {len(run_paths)} runs in {self.train_logs_dir}')
+        run_paths = self.train_logs_dirs
+        logging.info(f'Found {len(run_paths)} runs in {self.train_logs_dirs}')
         logging.info(f'Run paths: {run_paths}')
         evaluator = Evaluator(metrics=metrics, )
         reliability_metrics = evaluator.evaluate(run_paths=run_paths, )
@@ -342,7 +342,7 @@ class Submission:
                     logging.info(f'Profiler process {profiler.pid} finished')
 
         if self.reliability_metrics:
-            self._run_reliability_metrics()
+            self._run_train_reliability_metrics()
 
             ##################################################
             # Save raw metrics to disk, and plot results
