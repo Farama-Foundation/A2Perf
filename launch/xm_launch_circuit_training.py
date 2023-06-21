@@ -46,8 +46,12 @@ def main(_):
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
 
         if FLAGS.debug:
-            circuit_training_seeds = [19]
-            num_collect_job_params = [4, ]
+            circuit_training_seeds = [
+                37,
+                # 82,
+                # 14,
+            ]
+            num_collect_job_params = [16, ]
             netlist_file = os.path.join(repo_root,
                                         'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,
@@ -100,7 +104,7 @@ def main(_):
                 train_logs_dirs=train_logs_dirs,
                 run_offline_metrics_only=run_offline_metrics_only,
                 reverb_port='8000',
-                reverb_server_ip="127.0.0.1",
+                reverb_server_ip='localhost',
                 netlist_file=netlist_file,
                 init_placement=init_placement
             ))

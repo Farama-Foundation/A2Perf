@@ -153,14 +153,24 @@ else
     -p 2022:22 \
     --gpus all \
     -v "$(pwd)":/rl-perf \
-    -v /sys/class/powercap:/sys/class/powercap \
     --workdir /rl-perf \
     --name "$DOCKER_CONTAINER_NAME" \
     "$DOCKER_IMAGE_NAME"
+
+# Use this one if you have /sys/class/powercap on your host machine
+#  docker run -itd \
+#    --rm \
+#    -p 2022:22 \
+#    --gpus all \
+#    -v "$(pwd)":/rl-perf \
+#    -v /sys/class/powercap:/sys/class/powercap \
+#    --workdir /rl-perf \
+#    --name "$DOCKER_CONTAINER_NAME" \
+#    "$DOCKER_IMAGE_NAME"
 fi
 
 exit 0
-#
+
 # Install required packages inside the container
 docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF
 # Install requirements for the rl-perf repo

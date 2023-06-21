@@ -1,30 +1,28 @@
 #!/bin/bash
-#SBATCH -n 80                  # Number of cores requested
-#SBATCH -t 1-00:00:00          # Runtime in D-HH:MM:SS, minimum of 10 minutes
+#SBATCH -c 64                # Number of cores requested
+#SBATCG -J circuit_training_64_cpu_2_gpu_512_mem
+#SBATCH -t 0-12:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
 #SBATCH -p seas_gpu            # Partition to submit to
-#SBATCH --mem=64000            # Memory per core in MB
+#SBATCH --mem-per-cpu=512     # Memory per core in MB
 #SBATCH --gres=gpu:2           # Number of GPUs to use
 #SBATCH -o ../logs/circuit_training/%j.log  # File to which output and errors will be written, %j inserts jobid
 
 # These arguments most likely do not need to change
-CT_VERSION=0.0.3
 PYTHON_VERSION=python3.9
-DREAMPLACE_PATTERN=dreamplace_20230414_2835324_${PYTHON_VERSION}.tar.gz
-TF_AGENTS_PIP_VERSION="tf-agents[reverb]==0.16.0"
-DM_REVERB_PIP_VERSION=""
 CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
 DOCKER_IMAGE_NAME="circuit_training:core"
 DOCKER_CONTAINER_NAME="circuit_training_container"
 DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
-
+#SBATCH -N 4                  # Number of nodes requested
+#SBATCH -n 250                  # Number of nodes requested
 # New Environment Variables
 SEED=""
 ROOT_DIR=""
 GIN_CONFIG=""
 PARTICIPANT_MODULE_PATH=""
 REVERB_PORT=""
-REVERB_SERVER=""
+REVERB_SERVER_IP=""
 NETLIST_FILE=""
 INIT_PLACEMENT=""
 RUN_OFFLINE_METRICS_ONLY=""
@@ -85,8 +83,8 @@ for arg in "$@"; do
     REVERB_PORT="${arg#*=}"
     shift
     ;;
-  --reverb_server=*)
-    REVERB_SERVER="${arg#*=}"
+  --reverb_server_ip=*)
+    REVERB_SERVER_IP="${arg#*=}"
     shift
     ;;
   --netlist_file=*)
@@ -109,7 +107,7 @@ for arg in "$@"; do
 done
 
 SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/.ssh/id_rsa
-REVERB_SERVER=$REVERB_SERVER:$REVERB_PORT
+REVERB_SERVER=$REVERB_SERVER_IP:$REVERB_PORT
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
 echo "Difficulty Level: $DIFFICULTY_LEVEL"
@@ -131,15 +129,16 @@ echo "Initial Placement: $INIT_PLACEMENT"
 # Move the top level directory
 cd ..
 
-# Start a singularity instance. The instance should be named with the job id
-singularity instance start \
-  --nv \
+singularity exec \
   --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
+  --bind /usr/bin/scontrol:/usr/bin/scontrol \
   --bind /sys/class/powercap/:/sys/class/powercap/ \
-  launch/singularity/circuit_training/circuit_training.sif circuit_training_"$SLURM_JOB_ID"
-
-singularity exec instance://circuit_training_"$SLURM_JOB_ID" bash <<EOF
+  --bind /usr/lib64/slurm/libslurmfull.so:/usr/lib64/slurm/libslurmfull.so \
+  --bind /lib64/libreadline.so.7:/lib64/libreadline.so.7 \
+  --bind /lib64/libhistory.so.7:/lib64/libhistory.so.7 \
+  --bind /etc/slurm/slurm.conf:/etc/slurm/slurm.conf \
+  launch/singularity/circuit_training/circuit_training.sif bash <<EOF
 
 source ~/.circuit_training/bin/activate
 
@@ -147,12 +146,14 @@ source ~/.circuit_training/bin/activate
 export ROOT_DIR=$ROOT_DIR
 export GLOBAL_SEED=$SEED
 export REVERB_PORT=$REVERB_PORT
-export REVERB_SERVER=$REVERB_SERVER
+export REVERB_SERVER_IP=$REVERB_SERVER_IP
 export NETLIST_FILE=$NETLIST_FILE
 export INIT_PLACEMENT=$INIT_PLACEMENT
 export NUM_COLLECT_JOBS=$NUM_COLLECT_JOBS
 export WRAPT_DISABLE_EXTENSIONS=true
+export PYTHONPATH=$(pwd):\$PYTHONPATH
 
+echo $PYTHONPATH
 
 $PYTHON_VERSION rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
@@ -160,7 +161,40 @@ $PYTHON_VERSION rl_perf/submission/main_submission.py \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
+
 EOF
+
+# Cluster changed, so we need to use exec...
+# Start a singularity instance. The instance should be named with the job id
+#singularity instance start \
+#  --nv \
+#  --bind /dev/shm:/dev/shm \
+#  --bind /var/run/:/var/run/ \
+#  --bind /sys/class/powercap/:/sys/class/powercap/ \
+#  launch/singularity/circuit_training/circuit_training.sif circuit_training_"$SLURM_JOB_ID"
+#
+#singularity exec instance://circuit_training_"$SLURM_JOB_ID" bash <<EOF
+#
+#source ~/.circuit_training/bin/activate
+#
+## Pass in the command line arguments
+#export ROOT_DIR=$ROOT_DIR
+#export GLOBAL_SEED=$SEED
+#export REVERB_PORT=$REVERB_PORT
+#export REVERB_SERVER=$REVERB_SERVER
+#export NETLIST_FILE=$NETLIST_FILE
+#export INIT_PLACEMENT=$INIT_PLACEMENT
+#export NUM_COLLECT_JOBS=$NUM_COLLECT_JOBS
+#export WRAPT_DISABLE_EXTENSIONS=true
+#
+#
+#$PYTHON_VERSION rl_perf/submission/main_submission.py \
+#  --gin_file=$GIN_CONFIG \
+#  --participant_module_path=$PARTICIPANT_MODULE_PATH \
+#  --root_dir=$ROOT_DIR \
+#  --train_logs_dirs=$TRAIN_LOGS_DIRS \
+#  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
+#EOF
 
 exit 0
 
@@ -171,9 +205,39 @@ exit 0
 #IMPORTANT: Run these commands first to get the environment set up
 exit 0
 
-singularity instance start \
-  --nv --bind /dev/shm:/dev/shm \
+export SINGULARITYENV_LD_LIBRARY_PATH=/lib64:$LD_LIBRARY_PATH
+singularity shell --nv \
+  --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
+  --bind /usr/bin/scontrol:/usr/bin/scontrol \
+  --bind /sys/class/powercap/:/sys/class/powercap/ \
+  --bind /usr/lib64/slurm/libslurmfull.so:/usr/lib64/slurm/libslurmfull.so \
+  --bind /lib64/libreadline.so.7:/lib64/libreadline.so.7 \
+  --bind /lib64/libhistory.so.7:/lib64/libhistory.so.7 \
+  --bind /etc/slurm/slurm.conf:/etc/slurm/slurm.conf \
+  launch/singularity/circuit_training/circuit_training.sif
+
+singularity shell --nv \
+  --bind /dev/shm:/dev/shm \
+  --bind /var/run/:/var/run/ \
+  --bind /usr/bin/scontrol:/usr/bin/scontrol \
+  --bind /usr/lib64/slurm/libslurmfull.so:/usr/lib64/slurm/libslurmfull.so \
+  --bind /lib64/libdl.so.2:/lib64/libdl.so.2 \
+  --bind /lib64/libreadline.so.7:/lib64/libreadline.so.7 \
+  --bind /lib64/libhistory.so.7:/lib64/libhistory.so.7 \
+  --bind /lib64/libpthread.so.0:/lib64/libpthread.so.0 \
+  --bind /lib64/libm.so.6:/lib64/libm.so.6 \
+  --bind /lib64/libresolv.so.2:/lib64/libresolv.so.2 \
+  --bind /lib64/libc.so.6:/lib64/libc.so.6 \
+  --bind /lib64/libtinfo.so.6:/lib64/libtinfo.so.6 \
+  --bind /sys/class/powercap/:/sys/class/powercap/ \
+  launch/singularity/circuit_training/circuit_training.sif
+
+singularity instance start \
+  --nv \
+  --bind /dev/shm:/dev/shm \
+  --bind /var/run/:/var/run/ \
+  --bind /sys/class/powercap/:/sys/class/powercap/ \
   launch/singularity/circuit_training/circuit_training.sif circuit_training_"$SLURM_JOB_ID"
 
 singularity exec instance://circuit_training_"$SLURM_JOB_ID" bash <<EOF

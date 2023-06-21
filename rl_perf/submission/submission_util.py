@@ -108,11 +108,11 @@ def _start_inference_profilers(participant_event, profilers, pipes, profiler_sta
 @gin.configurable
 class Submission:
     def __init__(self,
+                 root_dir: str,
                  participant_module_path: str = None,
                  profilers: typing.List[typing.Type[BaseProfiler]] = None,
                  mode: BenchmarkMode = BenchmarkMode.TRAIN,
                  domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
-                 root_dir: str = None,
                  metric_values_dir: str = None,
                  train_logs_dirs: typing.List[str] = None,
                  num_inference_steps: int = 1000,
@@ -124,23 +124,42 @@ class Submission:
                  run_offline_metrics_only: bool = False,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None,
                  tracking_mode: str = None):
+        """Object that represents a submission to the benchmark.
+
+        Args:
+            participant_module_path: Path to the module that contains the participant's code.
+            profilers: List of profilers to use.
+            mode: Benchmark mode (train or inference).
+            domain: Benchmark domain (web navigation, circuit training or quadruped locomotion).
+            root_dir: Root directory for the submission.
+            metric_values_dir: Directory where the metric values will be saved.
+            train_logs_dirs: List of directories where the training logs are saved. Relative to the root directory.
+            num_inference_steps: Number of steps to run inference for.
+            num_inference_episodes: Number of episodes to run inference for.
+            time_participant_code: Whether to time the participant's code.
+            measure_emissions: Whether to measure emissions.
+            baseline_measure_sec: Baseline time to measure emissions for.
+            plot_metrics: Whether to plot the metrics.
+            run_offline_metrics_only: Whether to run only the offline metrics.
+            reliability_metrics: List of reliability metrics to compute.
+            tracking_mode: Tracking mode for the participant's code.
+        """
+        self.root_dir = root_dir
+        self.metric_values_dir = metric_values_dir
+        self.train_logs_dirs = train_logs_dirs
+        os.makedirs(self.root_dir, exist_ok=True)
+        if self.metric_values_dir is None:
+            self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
+        os.makedirs(self.metric_values_dir, exist_ok=True)
+        if self.train_logs_dirs is not None:
+            self.train_logs_dirs = [os.path.join(self.root_dir, train_logs_dir) for train_logs_dir in
+                                    self.train_logs_dirs]
         self.run_offline_metrics_only = run_offline_metrics_only
         self.baseline_measure_sec = baseline_measure_sec
         self.tracking_mode = tracking_mode
         self.mp_context = multiprocessing.get_context('spawn')
-        self.root_dir = root_dir
-        if self.root_dir is not None:
-            os.makedirs(self.root_dir, exist_ok=True)
         self.gin_config_str = None
-        self.metric_values_dir = metric_values_dir
-        self.train_logs_dirs = train_logs_dirs
-        if self.metric_values_dir is None:
-            self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
-        if self.train_logs_dirs is None:
-            self.train_logs_dirs = os.path.join(self.root_dir, 'train')
-        os.makedirs(self.metric_values_dir, exist_ok=True)
-        for dir in self.train_logs_dirs:
-            os.makedirs(dir, exist_ok=True)
+
         self.measure_emissions = measure_emissions
         self.plot_metrics = plot_metrics
         self.num_inference_steps = num_inference_steps
@@ -300,12 +319,16 @@ class Submission:
         logging.info(f'Running reliability metrics: {metrics}')
         logging.info(f'Logging to {self.metric_values_dir}')
 
-        # TODO: match with regex
-        run_paths = self.train_logs_dirs
-        logging.info(f'Found {len(run_paths)} runs in {self.train_logs_dirs}')
-        logging.info(f'Run paths: {run_paths}')
-        evaluator = Evaluator(metrics=metrics, )
-        reliability_metrics = evaluator.evaluate(run_paths=run_paths, )
+        if self.train_logs_dirs:
+            run_paths = self.train_logs_dirs
+            logging.info(f'Found {len(run_paths)} runs in {self.train_logs_dirs}')
+            logging.info(f'Run paths: {run_paths}')
+
+            evaluator = Evaluator(metrics=metrics, )
+            reliability_metrics = evaluator.evaluate(run_paths=run_paths, )
+        else:
+            logging.warning(f'No runs found in {self.train_logs_dirs}')
+            reliability_metrics = {}
         self.metrics_results.update(reliability_metrics)
 
     def _run_training_benchmark(self):
