@@ -48,17 +48,18 @@ def main(_):
         if FLAGS.debug:
             circuit_training_seeds = [
                 37,
-                # 82,
-                # 14,
+                82,
+                14,
             ]
-            num_collect_job_params = [16, ]
+            num_collect_job_params = [16, 32]
             netlist_file = os.path.join(repo_root,
                                         'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,
                                           'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
         else:
             circuit_training_seeds = [
-                37, 82, 14, 65, 23, 98, 51, 19, 77, 43
+                37, 82, 14,
+                65, 23, 98, 51, 19, 77, 43
             ]
             num_collect_job_params = [4, ]
             netlist_file = os.path.join(repo_root,
