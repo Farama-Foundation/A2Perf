@@ -1,10 +1,11 @@
 #!/bin/bash
 #SBATCH -c 64                # Number of cores requested
-#SBATCG -J circuit_training_64_cpu_2_gpu_512_mem
-#SBATCH -t 0-12:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
+#SBATCH -N 3                 # Use 4 nodes so we can get 256 cores
+#SBATCH -J circuit_training_64_cpu_2_gpu_512_mem
+#SBATCH -t 0-04:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
 #SBATCH -p seas_gpu            # Partition to submit to
 #SBATCH --mem-per-cpu=512     # Memory per core in MB
-#SBATCH --gres=gpu:2           # Number of GPUs to use
+#SBATCH --gres=gpu:1           # Number of GPUs to use
 #SBATCH -o ../logs/circuit_training/%j.log  # File to which output and errors will be written, %j inserts jobid
 
 # These arguments most likely do not need to change
@@ -14,8 +15,7 @@ DOCKER_IMAGE_NAME="circuit_training:core"
 DOCKER_CONTAINER_NAME="circuit_training_container"
 DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
-#SBATCH -N 4                  # Number of nodes requested
-#SBATCH -n 250                  # Number of nodes requested
+
 # New Environment Variables
 SEED=""
 ROOT_DIR=""
