@@ -25,6 +25,8 @@ from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcros
 from rl_perf.metrics.system import codecarbon
 from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
 
+from rl_perf.domains import web_nav, circuit_training
+
 
 @contextmanager
 def working_directory(path):
@@ -174,10 +176,12 @@ class Submission:
         self.reliability_metrics = reliability_metrics
 
         self.metrics_results = {}
-        if os.path.exists(os.path.join(self.metric_values_dir, 'metric_results.json')):
+        metrics_path = os.path.join(self.metric_values_dir,
+                                    'inference_metrics.json' if self.mode == BenchmarkMode.INFERENCE else 'train_metrics.json')
+        if os.path.exists(metrics_path):
             logging.info(
-                f'Loading pre-existing metric results from {os.path.join(self.metric_values_dir, "metric_results.json")}')
-            with open(os.path.join(self.metric_values_dir, 'metric_results.json'), 'r') as f:
+                f'Loading pre-existing metric results from {metrics_path}')
+            with open(metrics_path, 'r') as f:
                 self.metrics_results = json.load(f)
 
     def _load_participant_spec(self, filename):
@@ -205,21 +209,18 @@ class Submission:
         elif self.domain == BenchmarkDomain.CIRCUIT_TRAINING:
             pass
         elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
-            env = None
+            pass
         else:
             raise NotImplementedError(f'Domain {self.domain} not implemented')
         env = gym.make(self.domain.value, **kwargs)
         return env
 
     def _get_observation_data(self):
-        if self.domain == BenchmarkDomain.WEB_NAVIGATION:
-            env = self.create_domain()
-            data = []
-            for _ in range(self.num_inference_steps):
-                observation = env.observation_space.sample()
-                data.append(observation)
-        else:
-            raise NotImplementedError
+        env = self.create_domain()
+        data = []
+        for _ in range(self.num_inference_steps):
+            observation = env.observation_space.sample()
+            data.append(observation)
         return data
 
     def _train(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event]):
@@ -249,23 +250,65 @@ class Submission:
         for profiler_event in profiler_events:
             profiler_event.clear()
 
-    def _infer_async(self, participant_event: multiprocessing.Event, num_observations: int,
-                     observation_pipe: multiprocessing.Pipe, ):
-        # Profilers start after participant event is set
+    def _inference(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event],
+                   inference_data: typing.List[typing.Any], rollout_data_queue: multiprocessing.Queue):
+        gin.parse_config(self.gin_config_str)
         participant_event.set()
 
         with working_directory(self.participant_module_path):
             participant_module, participant_module_spec = self._load_participant_module('inference.py')
+            print(self.participant_module_path)
+            print(participant_module_spec)
             participant_module_spec.loader.exec_module(participant_module)
+            participant_model = participant_module.load_model()
 
-            model = participant_module.load_model()
-            counter = 0
-            while counter < num_observations:
-                observation = observation_pipe.recv()
-                participant_module.infer_once(model, observation)
-                counter += 1
+            preprocessed_data = [participant_module.preprocess_observation(x) for x in inference_data]
 
-            participant_event.clear()
+            def inference_step():
+                # print(i, preprocessed_data[i])
+                return participant_module.infer_once(model=participant_model, observation=preprocessed_data[i])
+
+            if self.time_inference_steps:
+                inference_times = []
+                for i in range(self.num_inference_steps):
+                    inference_times.append(timeit.timeit(inference_step, number=1))
+
+                self.metrics_results['inference_time'] = dict(values=inference_times,
+                                                              mean=np.mean(inference_times),
+                                                              std=np.std(inference_times))
+
+            def perform_rollouts():
+                all_rewards = []
+                env = self.create_domain()
+                for _ in range(self.num_inference_episodes):
+                    observation = env.reset()
+                    done = False
+                    rewards = 0
+                    while not done:
+                        preprocessed_obs = participant_module.preprocess_observation(observation)
+                        action = participant_module.infer_once(model=participant_model, observation=preprocessed_obs)
+                        observation, reward, done, _ = env.step(action)
+                        rewards += reward
+                    all_rewards.append(rewards)
+                    print(f'Episode reward: {rewards}')
+                return all_rewards
+
+            if self.measure_emissions:
+                @codecarbon.track_emissions(output_dir=self.metric_values_dir, output_file='inference_emissions.csv', )
+                def perform_rollouts_and_track_emissions():
+                    return perform_rollouts()
+
+                all_rewards = perform_rollouts_and_track_emissions()
+            else:
+                all_rewards = perform_rollouts()
+
+            metric_results = dict(values=all_rewards,
+                                  mean=np.mean(all_rewards),
+                                  std=np.std(all_rewards))
+            rollout_data_queue.put(metric_results)
+        participant_event.clear()
+        for profiler_event in profiler_events:
+            profiler_event.clear()
 
     def _run_inference_reliability_metrics(self, values=None):
         metrics = []
@@ -381,160 +424,49 @@ class Submission:
                     plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
                 self._plot_metrics()
 
-    def _run_inference_benchmark_async(self):
-        """Run inference benchmark with asynchronous observation sending to participant process.
-
-        This method creates a participant process and a number of profiler processes. The participant process
-        runs the participant module's `infer_once` method on each observation.
-
-        Returns:
-            profiler_objects: List of profiler objects. Use these objects to load the profiler results.
-        """
-        # Create pipes to communicate with the profilers
-        pipes = [multiprocessing.Pipe() for _ in self.profilers]
-        pipes_local, pipes_profiler = zip(*pipes)
-
-        # Create a pipe to send observations to the participant process
-        observation_pipe_local, observation_pipe_profiler = multiprocessing.Pipe()
-
-        # Create event to signal to profilers that participant has started
-        participant_started_event = multiprocessing.Event()
-        profiler_started_events = [multiprocessing.Event() for _ in self.profilers]
-
-        profiler_processes, profiler_objects = _start_inference_profilers(participant_event=participant_started_event,
-                                                                          profilers=self.profilers,
-                                                                          profiler_started_events=profiler_started_events,
-                                                                          pipes=pipes_profiler,
-                                                                          base_log_dir=self.metric_values_dir,
-                                                                          mp_context=self.mp_context)
-        participant_process = multiprocessing.Process(target=self._infer_async,
-                                                      args=(participant_started_event, self.num_inference_steps,
-                                                            observation_pipe_profiler))
-        participant_process.start()
-        logging.info(f'Participant module process ID: {participant_process.pid}')
-        for pipe in pipes_local:
-            pipe.send(participant_process.pid)
-
-        # Send observations to the participant process
-        for observation in self._get_observation_data():
-            observation_pipe_local.send(observation)
-
-        participant_process.join()
-        logging.info(f'Participant module process {participant_process.pid} finished')
-
-        for profiler_process, profiler_object in zip(profiler_processes, profiler_objects):
-            profiler_process.join()
-            logging.info(f'Profiler process {profiler_process.pid} finished')
-
-        # Clear events
-        for event in profiler_started_events:
-            event.clear()
-        participant_started_event.clear()
-
-        return profiler_objects
-
     def _run_inference_benchmark(self):
-        ##################################################
-        # Setting up the participants code
-        ##################################################
+        if not self.run_offline_metrics_only:
 
-        # Load the participant module
-        participant_module, participant_module_spec = self._load_participant_module('inference.py')
+            inference_data = self._get_observation_data()
 
-        with working_directory(self.participant_module_path):
-            participant_module_spec.loader.exec_module(participant_module)
+            # Need a participant event to signal to profilers
+            participant_started_event = multiprocessing.Event()
+            profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
 
-        # Get the participant model
-        participant_model = participant_module.load_model()
+            rollout_data_queue = self.mp_context.Queue()
+            participant_process = self.mp_context.Process(target=self._inference,
+                                                          args=(participant_started_event, profilers_started_events,
+                                                                inference_data, rollout_data_queue))
 
-        ##################################################
-        # Timing metrics for single inference steps
-        ##################################################
-        inference_data = self._get_observation_data()
+            participant_process.start()
+            profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
+                                         profiler_events=profilers_started_events,
+                                         participant_process=participant_process,
+                                         log_dir=self.root_dir,
+                                         mp_context=self.mp_context)
 
-        def inference_step():
-            return participant_module.infer_once(model=participant_model, observation=inference_data[i])
+            logging.info(f'Participant module process ID: {participant_process.pid}')
+            participant_process.join()
+            logging.info(f'Participant module process {participant_process.pid} finished')
+            if participant_process.is_alive():
+                logging.error('Participant process is still running')
+            elif participant_process.exitcode != 0:
+                logging.error(f'Participant process exited with code {participant_process.exitcode}')
+            else:
+                logging.info(f'Participant process {participant_process.pid} finished')
 
-        if self.time_inference_steps:
-            inference_times = []
-            for i in range(self.num_inference_steps):
-                inference_times.append(timeit.timeit(inference_step, number=1))
+            for profiler in profilers:
+                profiler.join()
+                if profiler.is_alive():
+                    logging.error(f'Profiler process {profiler.pid} is still running')
+                elif profiler.exitcode != 0:
+                    logging.error(f'Profiler process {profiler.pid} exited with code {profiler.exitcode}')
+                else:
+                    logging.info(f'Profiler process {profiler.pid} finished')
 
-            self.metrics_results['inference_time'] = dict(values=inference_times,
-                                                          mean=np.mean(inference_times),
-                                                          std=np.std(inference_times))
-        ##################################################
-        # Hardware energy consumption using codecarbon
-        ##################################################
-        if self.measure_emissions:
-            @codecarbon.track_emissions(project_name='rlperf_inference',
-                                        output_dir=self.metric_values_dir,
-                                        output_file='inference_emissions.csv',
-                                        save_to_file=True,
-                                        save_to_api=False,
-                                        save_to_logger=False,
-                                        api_call_interval=1,
-                                        country_iso_code=self.country_iso_code,
-                                        region=self.region,
-                                        offline=self.code_carbon_offline_mode,
-                                        tracking_mode=self.tracking_mode,
-                                        measure_power_secs=self.measure_emissions_interval,
-                                        baseline_measure_sec=self.baseline_measure_sec,
-
-                                        )
-            def measure_emissions():
-                for i in range(self.num_inference_steps):
-                    # choose a random observation
-                    observation = inference_data[i]
-                    participant_module.infer_once(model=participant_model, observation=observation)
-
-            measure_emissions()
-
-        ##################################################
-        # Asynchronous inference metrics
-        ##################################################
-        done_profiler_objects = []
-        if self.profilers:
-            done_profiler_objects = self._run_inference_benchmark_async()
-
-        ##################################################
-        # Perform rollouts with the participant module
-        ##################################################
-        all_rewards = []
-        env = self.create_domain()
-        for _ in range(self.num_inference_episodes):
-            observation = env.reset()
-            done = False
-            rewards = 0
-            while not done:
-                action = participant_module.infer_once(model=participant_model, observation=observation)
-                observation, reward, done, _ = env.step(action)
-                rewards += reward
-            all_rewards.append(rewards)
-            print(f'Episode reward: {rewards}')
-        self.metrics_results['episode_rewards'] = dict(values=all_rewards,
-                                                       mean=np.mean(all_rewards),
-                                                       std=np.std(all_rewards))
-
-        ##################################################
-        # Run reliability metrics
-        ##################################################
-        if self.reliability_metrics:
-            self._run_inference_reliability_metrics(values=all_rewards)
-
-        ##################################################
-        # Save raw metrics to disk, and plot results
-        ##################################################
-
-        with open(os.path.join(self.metric_values_dir, 'metric_results.json'), 'w') as f:
-            json.dump(self.metrics_results, f)
-
-        # Plot metrics and save to file
-        if self.plot_metrics:
-            for profiler_object in done_profiler_objects:
-                title, fig = profiler_object.plot_results()
-                plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
-            self._plot_metrics()
+            self.metrics_results['episode_rewards'] = rollout_data_queue.get()
+            if self.reliability_metrics:
+                self._run_inference_reliability_metrics(values=self.metrics_results['episode_rewards']['values'])
 
     def _plot_metrics(self):
         if not self.metrics_results:

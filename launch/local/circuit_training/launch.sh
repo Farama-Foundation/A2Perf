@@ -135,11 +135,19 @@ yes | ssh-keygen -t rsa -b 4096 -C "circuit_training" -f "$SSH_KEY_PATH" -N ""
 
 echo "Successfully parsed command-line arguments."
 
+# check for gpu with nvidia-smi. if gpu doesn't exist use cpu base image
+if nvidia-smi; then
+  echo "GPU exists. Will use gpu base image."
+  BASE_IMAGE="nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
+else
+  echo "GPU does not exist. Will use cpu base image."
+  BASE_IMAGE="ubuntu:20.04"
+fi
+
 docker build \
   --rm \
   --pull \
-  --build-arg base_image=nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 \
-  -f "${DOCKERFILE_PATH}" \
+  --build-arg base_image=$BASE_IMAGE -f "${DOCKERFILE_PATH}" \
   -t "$DOCKER_IMAGE_NAME" rl_perf/domains/circuit_training/tools/docker
 
 echo "Successfully built docker image."
@@ -148,28 +156,32 @@ if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ];
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
-  docker run -itd \
-    --rm \
-    -p 2022:22 \
-    --gpus all \
-    -v "$(pwd)":/rl-perf \
-    --workdir /rl-perf \
-    --name "$DOCKER_CONTAINER_NAME" \
-    "$DOCKER_IMAGE_NAME"
+  # initial command
+  docker_run_command="docker run -itd --rm -p 2022:22"
 
-# Use this one if you have /sys/class/powercap on your host machine
-#  docker run -itd \
-#    --rm \
-#    -p 2022:22 \
-#    --gpus all \
-#    -v "$(pwd)":/rl-perf \
-#    -v /sys/class/powercap:/sys/class/powercap \
-#    --workdir /rl-perf \
-#    --name "$DOCKER_CONTAINER_NAME" \
-#    "$DOCKER_IMAGE_NAME"
+  # check to see if /sys/class/powercap exists. if so, mount it
+  if [ -d "/sys/class/powercap" ]; then
+    docker_run_command+=" -v /sys/class/powercap:/sys/class/powercap"
+  else
+    echo "No powercap directory found. Will not mount it."
+  fi
+
+  # check for GPU and add the necessary flag if found
+  if command -v nvidia-smi &>/dev/null; then
+    docker_run_command+=" --gpus all"
+  fi
+
+  # append the rest of the flags
+  docker_run_command+=" -v \"$(pwd)\":/rl-perf"
+  docker_run_command+=" --workdir /rl-perf"
+  docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
+  docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+
+  echo "Running command: $docker_run_command"
+  eval "$docker_run_command"
 fi
 
-exit 0
+#exit 0
 
 # Install required packages inside the container
 docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF
@@ -178,7 +190,11 @@ pip install  --no-cache-dir -r "$REQUIREMENTS_PATH"
 
 # Install RLPerf as a package
 pip install --no-cache-dir -e .
+EOF
 
+exit 0
+
+docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF
 export PYTHONPATH=/rl-perf:\$PYTHONPATH
 export TF_FORCE_GPU_ALLOW_GROWTH=true
 #export TF_GPU_ALLOCATOR=cuda_malloc_async
