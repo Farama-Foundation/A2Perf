@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -c 64                # Number of cores requested
-#SBATCH -N 3                 # Use 4 nodes so we can get 256 cores
+#SBATCH -N 4                 # Use 4 nodes so we can get 256 cores
 #SBATCH -J circuit_training_64_cpu_2_gpu_512_mem
-#SBATCH -t 0-04:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
+#SBATCH -t 0-02:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
 #SBATCH -p seas_gpu            # Partition to submit to
 #SBATCH --mem-per-cpu=512     # Memory per core in MB
 #SBATCH --gres=gpu:1           # Number of GPUs to use

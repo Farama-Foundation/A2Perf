@@ -44,14 +44,13 @@ def main(_):
         )
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
-
         if FLAGS.debug:
             circuit_training_seeds = [
-                37,
-                82,
-                14,
+                37, 82, 14,
+                65, 23, 98, 51, 19, 77, 43
             ]
-            num_collect_job_params = [16, 32]
+            num_collect_job_params = [16,
+                                      ]
             netlist_file = os.path.join(repo_root,
                                         'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,
@@ -61,7 +60,7 @@ def main(_):
                 37, 82, 14,
                 65, 23, 98, 51, 19, 77, 43
             ]
-            num_collect_job_params = [4, ]
+            num_collect_job_params = [16, ]
             netlist_file = os.path.join(repo_root,
                                         'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,
@@ -95,7 +94,8 @@ def main(_):
             participant_module_path = os.path.join(FLAGS.participant_module_path)
             run_offline_metrics_only = str(FLAGS.run_offline_metrics_only)
 
-            train_logs_dirs = os.path.join(train_logs_dirs, str(hparam_config['seed']), FLAGS.train_logs_dirs, 'eval')
+            train_logs_dirs = os.path.join(train_logs_dirs, str(hparam_config['seed']), 'train',
+                                           '0'),  # add more train logs dirs here if needed
             # Add additional arguments that are constant across all runs
             hparam_config.update(dict(
                 root_dir=root_dir,

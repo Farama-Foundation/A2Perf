@@ -28,13 +28,9 @@ eval_metrics.Evaluator.dependent_variable='Metrics/AverageReturn'
 eval_metrics.Evaluator.align_on_global_step = True
 
 FREQ_THRESH = 0.01
-WINDOW_SIZE = 50 # window size can be used to capture eval points in small window around eval points
-
-#EVAL_POINTS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000]
-
-WINDOW_SIZE = 310
-WINDOW_SIZE_TRIMMED = 310
-EVAL_POINTS =[ 342,  648,  958, 1220, 1492, 1764, 2042, 2298, 2568, 2834, 3104]
+WINDOW_SIZE = 100
+WINDOW_SIZE_TRIMMED = 100
+EVAL_POINTS =[ 344,  648,  958, 1234, 1552, 1894, 2224, 2540, 2836, 3158, 3464]
 
 metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
 metrics_online.IqrWithinRuns.eval_points = %EVAL_POINTS
