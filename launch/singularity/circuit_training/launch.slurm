@@ -1,10 +1,9 @@
 #!/bin/bash
-#SBATCH -c 64                # Number of cores requested
-#SBATCH -N 4                 # Use 4 nodes so we can get 256 cores
-#SBATCH -J circuit_training_64_cpu_2_gpu_512_mem
-#SBATCH -t 0-02:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
+#SBATCH -c 16                # Number of cores requested
+#SBATCH -N 12               # Spread 24 cores over 8 nodes
+#SBATCH -t 0-12:00:00           # Runtime in D-HH:MM:SS, minimum of 10 minutes
 #SBATCH -p seas_gpu            # Partition to submit to
-#SBATCH --mem-per-cpu=512     # Memory per core in MB
+#SBATCH --mem=64GB               # Total memory for the job (across all cores)
 #SBATCH --gres=gpu:1           # Number of GPUs to use
 #SBATCH -o ../logs/circuit_training/%j.log  # File to which output and errors will be written, %j inserts jobid
 
@@ -130,6 +129,7 @@ echo "Initial Placement: $INIT_PLACEMENT"
 cd ..
 
 singularity exec \
+  --nv \
   --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
   --bind /usr/bin/scontrol:/usr/bin/scontrol \
@@ -139,6 +139,8 @@ singularity exec \
   --bind /lib64/libhistory.so.7:/lib64/libhistory.so.7 \
   --bind /etc/slurm/slurm.conf:/etc/slurm/slurm.conf \
   launch/singularity/circuit_training/circuit_training.sif bash <<EOF
+
+
 
 source ~/.circuit_training/bin/activate
 

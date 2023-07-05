@@ -60,7 +60,7 @@ def main(_):
                 37, 82, 14,
                 65, 23, 98, 51, 19, 77, 43
             ]
-            num_collect_job_params = [16, ]
+            num_collect_job_params = [48, ]
             netlist_file = os.path.join(repo_root,
                                         'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,

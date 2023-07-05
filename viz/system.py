@@ -9,7 +9,7 @@ import numpy as np
 from absl import flags
 
 _SMOOTHING_WINDOW_SIZE = flags.DEFINE_integer('smoothing_window_size', 1, 'Size of the window for the moving average')
-_BASE_DIR = flags.DEFINE_string('base_dir', '../logs/circuit_training/debug/test_code_carbon/',
+_BASE_DIR = flags.DEFINE_string('base_dir', '../logs/circuit_training/debug/64_cores_3_nodes_1_gpu_test/',
                                 'Base directory where CSV files are located')
 _SUBTRACT_BASELINE = flags.DEFINE_boolean('subtract_baseline', False,
                                           'Whether or not to subtract the baseline from the data')
@@ -20,7 +20,7 @@ def main(argv):
     del argv  # Unused.
 
     units = {
-        'duration': 's',
+        # 'duration': 's',
         'cpu_power': 'Watts',
         'gpu_power': 'Watts',
         'ram_power': 'Watts',
@@ -31,12 +31,12 @@ def main(argv):
         'ram_process': 'GB'
     }
 
-    dir_list = glob.glob(_BASE_DIR.value + 'circuit_training_num_collect_jobs_4_seed_*')
+    dir_list = glob.glob(_BASE_DIR.value + 'circuit_training_num_collect_jobs_16_seed_*')
 
     # Initialize an empty DataFrame to hold all of the CSV data
     all_data = pd.DataFrame()
     all_data_minus_baseline = pd.DataFrame()
-
+    duration_vals = []
     # Loop over the directories
     for dir in dir_list:
         # Define the CSV file path
@@ -51,7 +51,7 @@ def main(argv):
 
             df['steps'] = range(0, len(df['duration']))
             df['seed'] = int(seed)
-
+            duration_vals.append(df['duration'].max())
             # check the earliest and latest timestamp for the df
             print('Logging data for seed: ' + seed)
             print(f'Earliest timestamp: {df["timestamp"].min()}')
@@ -91,6 +91,23 @@ def main(argv):
     max_step_count = all_data.groupby('seed')['steps'].max().min()
     all_data = all_data[all_data['steps'] <= max_step_count]
 
+    # Considering 'units.keys()' as the list of columns you want to calculate mean and std
+    statistics = all_data[list(units.keys())].agg([np.mean, np.std])
+
+    # Print the statistics in the format "mean ± std"
+    for col in statistics.columns:
+        mean = statistics.loc['mean', col]
+        std = statistics.loc['std', col]
+        unit = units[col]
+
+        # Convert the column name to CamelCase
+        col_camel_case = ''.join(word.title() for word in col.split('_'))
+
+        print(f"{col_camel_case} ({unit}): {mean:.10f} ± {std:.10f}")
+    # print duration with mean std
+    print(f"Duration (m): {np.mean(duration_vals) / 60:.2f} ± {np.std(duration_vals) / 60:.2f}")
+
+    return
     to_plot = list(units.keys())  # Get the keys (metric names) from the units dictionary
 
     if not os.path.exists(_OUTPUT_DIR.value):
