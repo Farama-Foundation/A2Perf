@@ -1,5 +1,6 @@
 import rl_perf.submission.submission_util
 import rl_perf.metrics.system.profiler.memory_profiler
+import rl_perf.metrics.system.codecarbon
 
 import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
 import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
@@ -7,14 +8,9 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 # Set up submission object
 Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-Submission.run_offline_metrics_only=False
+Submission.run_offline_metrics_only=True
 Submission.measure_emissions=True
-Submission.measure_emissions_interval=1
-Submission.baseline_measure_sec=10
-Submission.code_carbon_offline_mode=True
-Submission.country_iso_code='USA'
-Submission.region='Massachusetts'
-Submission.tracking_mode='process'
+
 
 # Reliability
 METRICS = [
@@ -22,10 +18,6 @@ METRICS = [
 %ReliabilityMetrics.IqrWithinRuns,
 %ReliabilityMetrics.LowerCVaROnDiffs,
 %ReliabilityMetrics.MedianPerfDuringTraining,
-
-# across runs
-#%ReliabilityMetrics.IqrAcrossRuns,
-#%ReliabilityMetrics.LowerCVaROnAcross,
 ]
 Submission.reliability_metrics  = %METRICS
 
@@ -36,9 +28,11 @@ eval_metrics.Evaluator.dependent_variable='Metrics/AverageReturn'
 eval_metrics.Evaluator.align_on_global_step = True
 
 FREQ_THRESH = 0.01
-WINDOW_SIZE=100
-EVAL_POINTS = [1000,  2000, 3000,]
-metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE
+WINDOW_SIZE = 100
+WINDOW_SIZE_TRIMMED = 100
+EVAL_POINTS =[ 344,  648,  958, 1234, 1552, 1894, 2224, 2540, 2836, 3158, 3464]
+
+metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
 metrics_online.IqrWithinRuns.eval_points = %EVAL_POINTS
 
 
@@ -50,15 +44,22 @@ metrics_online.IqrWithinRuns.baseline = None
 metrics_online.LowerCVaROnDiffs.baseline = None
 metrics_online.LowerCVaROnDrawdown.baseline = None
 
-#metrics_online.IqrAcrossRuns.lowpass_thresh = %FREQ_THRESH
-#metrics_online.IqrAcrossRuns.eval_points = %EVAL_POINTS
-#metrics_online.IqrAcrossRuns.baseline = None
-
-#metrics_online.LowerCVaROnAcross.lowpass_thresh = %FREQ_THRESH
-#metrics_online.LowerCVaROnAcross.eval_points = %EVAL_POINTS
-#metrics_online.LowerCVaROnAcross.baseline = 'curve_range'
-
 metrics_online.MedianPerfDuringTraining.window_size = %WINDOW_SIZE
 metrics_online.MedianPerfDuringTraining.eval_points = %EVAL_POINTS
 
 
+# Set up codecarbon for system metrics
+track_emissions.project_name = 'rlperf_circuit_training_train_debug'
+track_emissions.measure_power_secs = 1
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+track_emissions.baseline_measure_sec=10
+track_emissions.default_cpu_tdp = 58 # if your CPU cannot be detected, set it manually
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'
