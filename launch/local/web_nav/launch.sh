@@ -105,30 +105,42 @@ echo "Requirements path: $REQUIREMENTS_PATH"
 mkdir -p "$WEB_NAV_DIR/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
-# Build the Docker image
-docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
+docker build \
+  --rm \
+  --pull \
+  --build-arg base_image=$BASE_IMAGE -f "${DOCKERFILE_PATH}" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
-  -f "$DOCKERFILE_PATH" \
   -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_nav
 
+echo "Successfully built docker image."
+
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
-  # if it is running, do nothing
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
-  xhost + local: # Allow docker to access the display
-  docker run -itd \
-    --rm \
-    --gpus=all \
-    --name "$DOCKER_CONTAINER_NAME" \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -e DISPLAY="$DISPLAY" \
-    -v "${HOME}/.Xauthority:/user/.Xauthority:rw" \
-    -v /dev/shm:/dev/shm \
-    --privileged \
-    --gpus=all \
-    -v "$(pwd)":/rl-perf \
-    -p 2022:22 \
-    "$DOCKER_IMAGE_NAME"
+  echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
+  # initial command
+  docker_run_command="docker run -itd --rm -p 2022:22"
+
+  # check to see if /sys/class/powercap exists. if so, mount it
+  if [ -d "/sys/class/powercap" ]; then
+    docker_run_command+=" -v /sys/class/powercap:/sys/class/powercap"
+  else
+    echo "No powercap directory found. Will not mount it."
+  fi
+
+  # check for GPU and add the necessary flag if found
+  if command -v nvidia-smi &>/dev/null; then
+    docker_run_command+=" --gpus all"
+  fi
+
+  # append the rest of the flags
+  docker_run_command+=" -v \"$(pwd)\":/rl-perf"
+  docker_run_command+=" --workdir /rl-perf"
+  docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
+  docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+
+  echo "Running command: $docker_run_command"
+  eval "$docker_run_command"
 fi
 
 # Install packages inside the container
@@ -144,6 +156,8 @@ pip install -e .
 # Install packages specific to the user's training code
 pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
 EOF
+
+exit 0
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash

@@ -44,24 +44,27 @@ def main(_):
         )
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
-        web_nav_seeds = [
-            37,
-            82,
-            14,
-            65,
-            23,
-            98,
-            51,
-            19,
-            77,
-            43
-        ]
+
         if FLAGS.debug:
+            web_nav_seeds = [
+                37,
+            ]
             env_batch_sizes = [8, ]
             total_env_steps = [10000, ]
-            difficulty_levels = []
+            difficulty_levels = [1, ]
         else:
-
+            web_nav_seeds = [
+                37,
+                82,
+                14,
+                65,
+                23,
+                98,
+                51,
+                19,
+                77,
+                43
+            ]
             env_batch_sizes = [8, ]
             total_env_steps = [1000000, ]
             difficulty_levels = [1, ]
