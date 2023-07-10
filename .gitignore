@@ -127,3 +127,13 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ignore singularity images
+*.simg
+*.sif
+
+# Ignore Intellij IDE files
+.idea/
+
+# Ignore Logs directory since it's used for running experiments
+logs/

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src='https://d3js.org/d3.v5.min.js'></script>
+    <style>
+        div.environment {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+        }
+
+        div.environment div.text {
+            width: 300px;  /* adjust this value as needed */
+            /*margin-right: 5px;*/
+        }
+
+        div.environment div.text h2 {
+            font-weight: bold;
+            font-size: 1.55em;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        div.environment div.image img {
+            width: 300px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+<script>
+    // Define your data
+    const environments = [
+        {
+            name: 'CircuitTraining-v0:',
+            imageUrl: '../../media/ariane_placements.png'
+        },
+        {
+            name: 'QuadrupedLocomotion-v0:',
+            imageUrl: '../../media/a3_robot_sideview.png'
+        },
+        {
+            name: 'WebNavigation-v0:',
+            imageUrl: '../../media/gminiwob_scene.png'
+        }
+    ];
+
+    // Select the body and append a div for each environment
+    const divs = d3.select('body')
+        .selectAll('div.environment')
+        .data(environments)
+        .enter()
+        .append('div')
+        .attr('class', 'environment');
+
+    // Append a div element for the environment name
+    const textDivs = divs.append('div')
+        .attr('class', 'text');
+
+    textDivs.append('h2')
+        .text(d => d.name);
+
+    // Append a div element for the environment image
+    const imageDivs = divs.append('div')
+        .attr('class', 'image');
+
+    imageDivs.append('img')
+        .attr('src', d => d.imageUrl);
+</script>
+</body>
+</html>
+
