@@ -23,6 +23,7 @@ def main(_):
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
+    dockerfile_path = os.path.join(web_nav_dir, 'docker/Dockerfile')
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
         binary_path = './local/web_nav/launch.sh'
@@ -107,6 +108,7 @@ def main(_):
             hparam_config.update(dict(root_dir=root_dir,
                                       gin_config=FLAGS.gin_config,
                                       participant_module_path=participant_module_path,
+                                      dockerfile_path=dockerfile_path,
                                       web_nav_dir=web_nav_dir,
                                       train_logs_dirs=train_logs_dirs,
                                       run_offline_metrics_only=run_offline_metrics_only, ))

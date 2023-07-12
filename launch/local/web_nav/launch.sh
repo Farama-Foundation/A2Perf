@@ -9,10 +9,10 @@ ROOT_DIR=../logs/web_nav
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
-WEB_NAV_DIR=""
+WEB_NAV_DIR="$(pwd)/rl_perf/domains/web_nav"
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
-DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/rl_perf/domains/web_nav/docker/Dockerfile"
+DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 
@@ -104,6 +104,7 @@ echo "Requirements path: $REQUIREMENTS_PATH"
 # create ssh-key in WEB_NAV_DIR without password
 mkdir -p "$WEB_NAV_DIR/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
+
 
 docker build \
   --rm \
