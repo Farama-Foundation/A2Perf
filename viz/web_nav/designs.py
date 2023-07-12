@@ -8,17 +8,20 @@ import matplotlib.pyplot as plt
 from absl import app
 from absl import flags
 
-
-_DESIGN_FILE_PATH = flags.DEFINE_string('design_file_path', None, 'Path to design file')
+_DESIGN_FILE_PATH = flags.DEFINE_string('design_file_path',
+                                        '../../rl_perf/domains/web_nav/web_nav/environment_generation/data/',
+                                        'Path to directory containing design files')
 _DIFFICULTY_LEVELS_TO_PLOT = flags.DEFINE_list('difficulty_levels_to_plot',
-                                               ['1', '2', '3'],
+                                               ['1', '5', '10'],
                                                'Difficulty levels to plot')
 
 
 def main(_):
     # glob the design file path to get all designs
     design_file_path = _DESIGN_FILE_PATH.value
-    design_file_paths = glob.glob(os.path.join(design_file_path, '*.pkl'))
+
+    # the file should end with pkl and include "websites" in the name
+    design_file_paths = glob.glob(os.path.join(design_file_path, '*websites*.pkl'))
     difficulty_levels_to_plot = _DIFFICULTY_LEVELS_TO_PLOT.value
     # Prepare dictionaries to hold data for each difficulty level
     num_primitives = collections.defaultdict(list)
@@ -39,7 +42,7 @@ def main(_):
         for website in dataset:
             num_primitives[difficulty_level].append(website._total_num_primitives)
             difficulty_numbers[difficulty_level].append(website.difficulty)
-            num_pages[difficulty_level].append(website._num_pages)
+            num_pages[difficulty_level].append(website.num_pages)
 
     # Now plot histograms for the number of primitives and the difficulty number for each difficulty level
     plt.figure(figsize=(18, 5))
