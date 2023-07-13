@@ -8,7 +8,7 @@ from absl import flags
 
 flags.DEFINE_string('experiment_name', 'quadruped_locomotion', 'Name of experiment')
 flags.DEFINE_string('root_dir', '/tmp/xm_local', 'Base directory for logs and results')
-flags.DEFINE_string('train_logs_dir', 'train',
+flags.DEFINE_string('train_logs_dirs', 'train',
                     'Directory for train logs from all of the experiments that reliability metrics will be calculated on')
 flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 flags.DEFINE_bool('debug', False, 'Debug mode')
@@ -46,15 +46,15 @@ def main(_):
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
         quadruped_locomotion_seeds = [
             37,
-            82,
-            14,
-            65,
-            23,
-            98,
-            51,
-            19,
-            77,
-            43
+            # 82,
+            # 14,
+            # 65,
+            # 23,
+            # 98,
+            # 51,
+            # 19,
+            # 77,
+            # 43
         ]
         if FLAGS.debug:
             pass 
@@ -86,7 +86,7 @@ def main(_):
 
             root_dir = os.path.abspath(FLAGS.root_dir)
             root_dir = os.path.join(root_dir, experiment_name)
-            train_logs_dir = root_dir
+            train_logs_dirs = root_dir
             participant_module_path = os.path.join(FLAGS.participant_module_path)
             run_offline_metrics_only = str(FLAGS.run_offline_metrics_only)
 
@@ -96,7 +96,7 @@ def main(_):
                 gin_config=FLAGS.gin_config,
                 participant_module_path=participant_module_path,
                 quad_loco_dir=quadruped_locomotion_dir,
-                train_logs_dir=train_logs_dir,
+                train_logs_dirs=train_logs_dirs,
                 run_offline_metrics_only=run_offline_metrics_only,
             ))
 
