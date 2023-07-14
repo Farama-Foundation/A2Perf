@@ -4,7 +4,7 @@ cd ../../.. || exit
 
 SEED=0
 ENV_BATCH_SIZE=1
-TOTAL_ENV_STEPS=100000000
+TOTAL_ENV_STEPS=200000000
 ROOT_DIR="../logs/quadruped_locomotion"
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
@@ -15,6 +15,12 @@ DOCKER_CONTAINER_NAME="quadruped_locomotion_container"
 DOCKERFILE_PATH="/home/jasonlinux22/Jason/A2Perf/rl-perf/rl_perf/domains/quadruped_locomotion/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
+PARALLEL_MODE=true
+PARALLEL_CORES=1
+MODE='train'
+VISUALIZE=true
+INT_SAVE_FREQ=10000000
+SETUP_PATH='setup_model_env.py'
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -79,6 +85,30 @@ for arg in "$@"; do
     DOCKERFILE_PATH="${arg#*=}"
     shift
     ;;
+  --parallel_mode=*)
+      PARALLEL_MODE="${arg#*=}"
+      shift
+      ;;
+  --parallel_cores=*)
+      PARALLEL_CORES="${arg#*=}"
+      shift
+      ;;
+  --mode=*)
+      MODE="${arg#*=}"
+      shift
+      ;;
+  --visualize=*)
+      VISUALIZE="${arg#*=}"
+      shift
+      ;;
+  --int_save_freq=*)
+      INT_SAVE_FREQ="${arg#*=}"
+      shift
+      ;;
+  --setup_path=*)
+      SETUP_PATH="${arg#*=}"
+      shift
+      ;;
   *)
     echo "Invalid option: $arg"
     exit 1
@@ -100,6 +130,12 @@ echo "Docker container name: $DOCKER_CONTAINER_NAME"
 echo "Dockerfile path: $DOCKERFILE_PATH"
 echo "SSH key path: $SSH_KEY_PATH"
 echo "Requirements path: $REQUIREMENTS_PATH"
+echo "Parallel Mode: $PARALLEL_MODE"
+echo "Parallel Cores: $PARALLEL_CORES"
+echo "Mode: $MODE"
+echo "Visualize: $VISUALIZE"
+echo "Int Save Freq: $INT_SAVE_FREQ"
+echo "Setup Path: $SETUP_PATH"
 
 # create ssh-key in WEB_NAV_DIR without password
 mkdir -p "$QUAD_LOCO_DIR/.ssh"
@@ -151,6 +187,13 @@ export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
+export PARALLEL_MODE="$PARALLEL_MODE"
+export PARALLEL_CORES="$PARALLEL_CORES"
+export MODE="$MODE"
+export VISUALIZE="$VISUALIZE"
+export INT_SAVE_FREQ="$INT_SAVE_FREQ"
+export SETUP_PATH="$SETUP_PATH"
+
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python main_submission.py \
