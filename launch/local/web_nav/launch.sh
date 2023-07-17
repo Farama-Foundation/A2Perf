@@ -15,6 +15,7 @@ DOCKER_CONTAINER_NAME="web_nav_container"
 DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
+BASE_IMAGE="nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04"
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -105,13 +106,14 @@ echo "Requirements path: $REQUIREMENTS_PATH"
 mkdir -p "$WEB_NAV_DIR/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
-
 docker build \
   --rm \
   --pull \
-  --build-arg base_image=$BASE_IMAGE -f "${DOCKERFILE_PATH}" \
+  --build-arg base_image=$BASE_IMAGE \
+  -f "${DOCKERFILE_PATH}" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_nav
+  -t "$DOCKER_IMAGE_NAME" \
+  rl_perf/domains/web_nav
 
 echo "Successfully built docker image."
 
@@ -135,7 +137,7 @@ else
   fi
 
   # append the rest of the flags
-  docker_run_command+=" -v \"$(pwd)\":/rl-perf"
+  docker_run_command+=" -v $(pwd):/rl-perf"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
@@ -143,13 +145,14 @@ else
   echo "Running command: $docker_run_command"
   eval "$docker_run_command"
 fi
+exit 0
 
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 
 # Install requirements for the rl-perf repo
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 # Install RLPerf as a packages
 pip install -e .
