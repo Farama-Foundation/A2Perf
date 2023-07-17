@@ -30,7 +30,9 @@ eval_metrics.Evaluator.align_on_global_step = True
 FREQ_THRESH = 0.01
 WINDOW_SIZE = 100
 WINDOW_SIZE_TRIMMED = 100
-EVAL_POINTS =[ 344,  648,  958, 1234, 1552, 1894, 2224, 2540, 2836, 3158, 3464]
+
+# TODO: Change these eval points when we have the interval
+EVAL_POINTS =[ 0, 1200, 2400, 3600, 4800, 6000, 7200, 8400, 9600]
 
 metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
 metrics_online.IqrWithinRuns.eval_points = %EVAL_POINTS
@@ -49,7 +51,7 @@ metrics_online.MedianPerfDuringTraining.eval_points = %EVAL_POINTS
 
 
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'rlperf_circuit_training_train_debug'
+track_emissions.project_name = 'rlperf_web_nav_train_debug'
 track_emissions.measure_power_secs = 1
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
