@@ -14,10 +14,9 @@ Submission.measure_emissions=True
 
 # Reliability
 METRICS = [
-# within runs
-%ReliabilityMetrics.IqrWithinRuns,
-%ReliabilityMetrics.LowerCVaROnDiffs,
-%ReliabilityMetrics.MedianPerfDuringTraining,
+%ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
+%ReliabilityMetrics.LowerCVaROnDiffs, # Short-Term Risk across time
+#%ReliabilityMetrics.MedianPerfDuringTraining,
 ]
 Submission.reliability_metrics  = %METRICS
 
