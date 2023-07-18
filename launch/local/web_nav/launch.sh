@@ -2,6 +2,7 @@
 cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
+echo $(pwd)
 SEED=0
 ENV_BATCH_SIZE=1
 TOTAL_ENV_STEPS=1000000
@@ -87,7 +88,7 @@ for arg in "$@"; do
   esac
 done
 
-SSH_KEY_PATH=$WEB_NAV_DIR/.ssh/id_rsa
+SSH_KEY_PATH=$WEB_NAV_DIR/docker/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
 echo "Difficulty Level: $DIFFICULTY_LEVEL"
@@ -103,7 +104,7 @@ echo "SSH key path: $SSH_KEY_PATH"
 echo "Requirements path: $REQUIREMENTS_PATH"
 
 # create ssh-key in WEB_NAV_DIR without password
-mkdir -p "$WEB_NAV_DIR/.ssh"
+mkdir -p "$WEB_NAV_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
 docker build \
@@ -113,7 +114,7 @@ docker build \
   -f "${DOCKERFILE_PATH}" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -t "$DOCKER_IMAGE_NAME" \
-  rl_perf/domains/web_nav
+  ./rl_perf/domains/web_nav/web_nav/docker
 
 echo "Successfully built docker image."
 
@@ -145,7 +146,6 @@ else
   echo "Running command: $docker_run_command"
   eval "$docker_run_command"
 fi
-exit 0
 
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -157,11 +157,12 @@ python3 -m pip install -r requirements.txt
 # Install RLPerf as a packages
 pip install -e .
 
+
 # Install packages specific to the user's training code
 pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
 EOF
 
-exit 0
+#exit 0
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -171,10 +172,11 @@ export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
+export PYTHONPATH=\$(pwd):\$PYTHONPATH
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
-  --gin_file=$GIN_CONFIG \
+  --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \

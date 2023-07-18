@@ -1,25 +1,28 @@
 import csv
 import enum
+import gin
+import glob
+import gym
 import importlib
 import json
 import logging
+import matplotlib.pyplot as plt
 import multiprocessing
+import numpy as np
 import os
+import pandas as pd
 import sys
 import timeit
 import typing
 from contextlib import contextmanager
-
-import gin
-import gym
-import matplotlib.pyplot as plt
-import numpy as np
 
 from rl_perf.domains.web_nav.CoDE import vocabulary_node
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
                                                                         LowerCVaROnDiffs,
+                                                                        LowerCVaROnDrawdown,
+                                                                        UpperCVaROnDrawdown,
                                                                         IqrAcrossRollouts, MedianPerfDuringTraining
 , StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts, LowerCVaRAcrossRollouts, )
 from rl_perf.metrics.system import codecarbon
@@ -63,16 +66,15 @@ class SystemMetrics(enum.Enum):
 
 @gin.constants_from_enum
 class ReliabilityMetrics(enum.Enum):
+    # Train
     IqrWithinRuns = 'IqrWithinRuns'
     IqrAcrossRuns = 'IqrAcrossRuns'
     LowerCVaROnDiffs = 'LowerCVaROnDiffs'
-    LowerCVaROnDrawdown = 'LowerCVaROnDrawdown'
     LowerCVarOnAcross = 'LowerCVarOnAcross'
-    MedianPerfDuringTraining = 'MedianPerfDuringTraining'
-    MadAcrossRollouts = 'MadAcrossRollouts'
+    UpperCVaROnDrawdown = 'UpperCVaROnDrawdown'
+
+    # Inference
     IqrAcrossRollouts = 'IqrAcrossRollouts'
-    StddevAcrossRollouts = 'StddevAcrossRollouts'
-    UpperCVaRAcrossRollouts = 'UpperCVaRAcrossRollouts'
     LowerCVaRAcrossRollouts = 'LowerCVaRAcrossRollouts'
 
 
@@ -105,6 +107,59 @@ def _start_inference_profilers(participant_event, profilers, pipes, profiler_sta
         profiler_process.start()
         processes.append(profiler_process)
     return processes, profiler_objects
+
+
+def collect_system_metrics(emissions_file_path: str, benchmark_mode: BenchmarkMode, metric_values_dict: dict,
+                           ):
+    df = pd.read_csv(emissions_file_path)
+
+    df['all_energy'] = df['cpu_energy'] + df['gpu_energy'] + df['ram_energy']
+    df['all_power'] = df['cpu_power'] + df['gpu_power'] + df['ram_power']
+
+    df['total_energy'] = df['all_energy'].sum()
+    df['total_power'] = df['all_power'].sum()
+    df['total_cpu_energy'] = df['cpu_energy'].sum()
+    df['total_gpu_energy'] = df['gpu_energy'].sum()
+    df['total_ram_energy'] = df['ram_energy'].sum()
+    df['total_cpu_power'] = df['cpu_power'].sum()
+    df['total_gpu_power'] = df['gpu_power'].sum()
+    df['total_ram_power'] = df['ram_power'].sum()
+
+    if benchmark_mode == BenchmarkMode.TRAIN:
+        metric_values_dict = {
+            "cpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "gpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "ram_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "cpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "gpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "ram_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "ram_process": {"values": [], "mean": None, "std": None, "units": "GB"},
+            "duration": {"values": [], "mean": None, "std": None, "units": "min"},
+            "all_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "all_power": {"values": [], "mean": None, "std": None, "units": "W"},
+        }
+
+        for key in metric_values_dict.keys():
+            if key in ('duration',):
+                start_time = pd.to_datetime(df['timestamp'].iloc[0])
+                end_time = pd.to_datetime(df['timestamp'].iloc[-1])
+                duration = (end_time - start_time).total_seconds()
+                duration = duration / 60
+
+                metric_values_dict[key]["values"].append(duration)
+                metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
+                metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
+            else:
+                metric_values_dict[key]["values"].extend(df[key].tolist())
+                metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
+                metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
+
+
+    elif benchmark_mode == BenchmarkMode.INFERENCE:
+        pass
+    else:
+        raise ValueError(f'Unknown benchmark mode: {benchmark_mode}')
+    return metric_values_dict
 
 
 @gin.configurable
@@ -341,7 +396,6 @@ class Submission:
         self.metrics_results.update(reliability_metrics)
 
     def _run_train_reliability_metrics(self):
-        # TODO make sure to write gin config for metric parameters
         metrics = []
         for metric in self.reliability_metrics:
             if metric == ReliabilityMetrics.IqrWithinRuns:
@@ -350,12 +404,10 @@ class Submission:
                 metrics.append(IqrAcrossRuns())
             elif metric == ReliabilityMetrics.LowerCVaROnDiffs:
                 metrics.append(LowerCVaROnDiffs())
-            elif metric == ReliabilityMetrics.LowerCVaROnDrawdown:
-                metrics.append(LowerCVaROnDiffs())
+            elif metric == ReliabilityMetrics.UpperCVaROnDrawdown:
+                metrics.append(UpperCVaROnDrawdown())
             elif metric == ReliabilityMetrics.LowerCVarOnAcross:
                 metrics.append(LowerCVaROnAcross())
-            elif metric == ReliabilityMetrics.MedianPerfDuringTraining:
-                metrics.append(MedianPerfDuringTraining())
             else:
                 raise ValueError(f'Invalid metric: {metric}')
 
@@ -364,15 +416,21 @@ class Submission:
 
         if self.train_logs_dirs:
             run_paths = self.train_logs_dirs
+
+            # glob each train_logs_dirs to get all tensorboard event files
+            run_paths = [os.path.dirname(path) for run_path in run_paths
+                         for path in glob.glob(os.path.join(run_path, '**', 'events.out.tfevents.*'), recursive=True) if
+                         'eval' not in path
+                         ]
+
             logging.info(f'Found {len(run_paths)} runs in {self.train_logs_dirs}')
             logging.info(f'Run paths: {run_paths}')
-
             evaluator = Evaluator(metrics=metrics, )
             reliability_metrics = evaluator.evaluate(run_paths=run_paths, )
         else:
             logging.warning(f'No runs found in {self.train_logs_dirs}')
             reliability_metrics = {}
-        self.metrics_results.update(reliability_metrics)
+        return reliability_metrics
 
     def _run_training_benchmark(self):
         if not self.run_offline_metrics_only:
@@ -407,22 +465,36 @@ class Submission:
                 else:
                     logging.info(f'Profiler process {profiler.pid} finished')
 
+        # try to collect system metrics from train_emissions.csv
+        emissions_path = os.path.join(self.metric_values_dir, 'train_emissions.csv')
+        if os.path.exists(emissions_path):
+            system_metrics = collect_system_metrics(emissions_file_path=emissions_path,
+                                                    benchmark_mode=BenchmarkMode.TRAIN,
+                                                    metric_values_dict=self.metrics_results)
+
+            self.metrics_results.update(system_metrics)
+        else:
+            logging.warning(f'No train_emissions.csv found in {self.metric_values_dir}')
+
         if self.reliability_metrics:
-            self._run_train_reliability_metrics()
+            reliability_metrics = self._run_train_reliability_metrics()
+            self.metrics_results.update(reliability_metrics)
+        else:
+            logging.warning('No reliability metrics specified')
 
-            ##################################################
-            # Save raw metrics to disk, and plot results
-            ##################################################
+        ##################################################
+        # Save raw metrics to disk, and plot results
+        ##################################################
 
-            with open(os.path.join(self.metric_values_dir, 'metric_results.json'), 'w') as f:
-                json.dump(self.metrics_results, f)
+        with open(os.path.join(self.metric_values_dir, 'metric_results.json'), 'w') as f:
+            json.dump(self.metrics_results, f)
 
-            # Plot metrics and save to file
-            if self.plot_metrics:
-                for profiler_object in self.profilers:
-                    title, fig = profiler_object.plot_results()
-                    plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
-                self._plot_metrics()
+        # Plot metrics and save to file
+        if self.plot_metrics:
+            for profiler_object in self.profilers:
+                title, fig = profiler_object.plot_results()
+                plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
+            self._plot_metrics()
 
     def _run_inference_benchmark(self):
         if not self.run_offline_metrics_only:

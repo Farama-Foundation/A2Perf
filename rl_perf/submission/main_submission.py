@@ -7,7 +7,7 @@ from absl import logging
 import gin
 from rl_perf.submission.submission_util import Submission
 
-flags.DEFINE_string('gin_file', None, 'Path to the gin-config file.')
+flags.DEFINE_string('gin_config', None, 'Path to the gin-config file.')
 flags.DEFINE_string(
     'participant_module_path', None, 'Path to participant module.'
 )
@@ -35,10 +35,10 @@ def main(_):
   os.chdir(os.path.dirname(os.path.abspath(__file__)))
   multiprocessing.set_start_method('spawn', force=True)
 
-  print('FLAGS.gin_file', FLAGS.gin_file)
+  print('FLAGS.gin_config', FLAGS.gin_config)
   print('FLAGS.participant_module_path', FLAGS.participant_module_path)
 
-  gin.parse_config_file(FLAGS.gin_file)
+  gin.parse_config_file(FLAGS.gin_config)
   logging.set_verbosity(logging.INFO)
 
   submission = Submission(

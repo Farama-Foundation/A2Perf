@@ -45,124 +45,121 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-  # set directory of this script as working directory
-  os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # set directory of this script as working directory
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-  web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
-  dockerfile_path = os.path.join(web_nav_dir, 'docker/Dockerfile')
-  if _LOCAL.value:
-    executable_path = '/usr/bin/bash'
-    binary_path = './local/web_nav/launch.sh'
-    additional_args = []
-    env_vars = dict(
-        WEB_NAV_DIR=web_nav_dir,
-        TF_FORCE_GPU_ALLOW_GROWTH='true',
-    )
-
-  else:
-    # Create log dirs since singularity needs them to exist
-    executable_path = '/usr/bin/sbatch'
-    binary_path = './singularity/web_nav/launch.slurm'
-    additional_args = []
-    env_vars = dict(
-        TF_FORCE_GPU_ALLOW_GROWTH='true',
-        # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
-    )
-
-  with xm_local.create_experiment(
-      experiment_title=_EXPERIMENT_NAME.value
-  ) as experiment:
-    if _DEBUG.value:
-      web_nav_seeds = [37]
-      difficulty_levels = [1]
-      env_batch_sizes = [8]
-      total_env_steps = [10000]
-    else:
-      web_nav_seeds = [37, 82, 14, 65, 23, 98, 51, 19, 77, 43]
-      env_batch_sizes = [8]
-      total_env_steps = [1000000]
-      difficulty_levels = [1]
-
-    web_nav_hparam_sweeps = list(
-        dict([
-            ('seed', seed),
-            ('env_batch_size', env_batch_size),
-            ('total_env_steps', env_steps),
-            ('difficulty_level', difficulty_level),
-        ])
-        for (
-            seed,
-            env_batch_size,
-            env_steps,
-            difficulty_level,
-        ) in itertools.product(
-            web_nav_seeds,
-            env_batch_sizes,
-            total_env_steps,
-            difficulty_levels,
+    web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
+    dockerfile_path = os.path.join(web_nav_dir, 'docker/Dockerfile')
+    if _LOCAL.value:
+        executable_path = '/usr/bin/bash'
+        binary_path = './local/web_nav/launch.sh'
+        additional_args = []
+        env_vars = dict(
+            WEB_NAV_DIR=web_nav_dir,
+            TF_FORCE_GPU_ALLOW_GROWTH='true',
         )
-    )
 
-    # Define Executable
-    [executable] = experiment.package(
-        [
-            xm.binary(
-                path=executable_path,
-                args=[binary_path] + additional_args,
-                executor_spec=xm_local.LocalSpec(),
-                env_vars=env_vars,
+    else:
+        # Create log dirs since singularity needs them to exist
+        executable_path = '/usr/bin/sbatch'
+        binary_path = './singularity/web_nav/launch.slurm'
+        additional_args = []
+        env_vars = dict(
+            TF_FORCE_GPU_ALLOW_GROWTH='true',
+            # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
+        )
+
+    with xm_local.create_experiment(
+            experiment_title=_EXPERIMENT_NAME.value
+    ) as experiment:
+        if _DEBUG.value:
+            web_nav_seeds = [14, 82, 37]
+            difficulty_levels = [1]
+            env_batch_sizes = [8]
+            total_env_steps = [10000]
+        else:
+            web_nav_seeds = [37, 82, 14, 65, 23, 98, 51, 19, 77, 43]
+            env_batch_sizes = [8]
+            total_env_steps = [1000000]
+            difficulty_levels = [1]
+
+        web_nav_hparam_sweeps = list(
+            dict([
+                ('seed', seed),
+                ('env_batch_size', env_batch_size),
+                ('total_env_steps', env_steps),
+                ('difficulty_level', difficulty_level),
+            ])
+            for (
+                seed,
+                env_batch_size,
+                env_steps,
+                difficulty_level,
+            ) in itertools.product(
+                web_nav_seeds,
+                env_batch_sizes,
+                total_env_steps,
+                difficulty_levels,
             )
-        ]
-    )
+        )
 
-    for hparam_config in web_nav_hparam_sweeps:
-      experiment_name = (
-          _EXPERIMENT_NAME.value
-          + '_'
-          + '_'.join(
-              f'{key}_{hparam_config[key]}'
-              for key in sorted(hparam_config.keys())
-          )
-      )
+        # Define Executable
+        [executable] = experiment.package(
+            [
+                xm.binary(
+                    path=executable_path,
+                    args=[binary_path] + additional_args,
+                    executor_spec=xm_local.LocalSpec(),
+                    env_vars=env_vars,
+                )
+            ]
+        )
 
-      # Add additional arguments that are constant across all runs
-      root_dir = os.path.abspath(_ROOT_DIR.value)
-      root_dir = os.path.join(root_dir, experiment_name)
+        for hparam_config in web_nav_hparam_sweeps:
+            experiment_name = ('_'.join(
+                f'{key}={hparam_config[key]}'
+                for key in sorted(hparam_config.keys())
+            )
+            )
 
-      train_logs_dirs = []
+            # Add additional arguments that are constant across all runs
+            root_dir = os.path.abspath(_ROOT_DIR.value)
+            root_dir = os.path.join(root_dir, experiment_name)
 
-      if _RUN_OFFLINE_METRICS_ONLY.value:
-        for dir in _TRAIN_LOGS_DIRS.value:
-          full_dir = os.path.join(root_dir, dir, 'event*')
-          event_files = glob.glob(full_dir)
-          train_logs_dirs.extend(os.path.dirname(f) for f in event_files)
-      print(train_logs_dirs)
-      print(root_dir)
-      # assert 0 == 1
-      participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
-      run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
-      hparam_config.update(
-          dict(
-              root_dir=root_dir,
-              gin_config=_GIN_CONFIG.value,
-              participant_module_path=participant_module_path,
-              dockerfile_path=dockerfile_path,
-              web_nav_dir=web_nav_dir,
-              train_logs_dirs=train_logs_dirs,
-              run_offline_metrics_only=run_offline_metrics_only,
-          )
-      )
+            train_logs_dirs = [_TRAIN_LOGS_DIRS.value]
 
-      print(hparam_config)
-      experiment.add(
-          xm.Job(
-              executable=executable,
-              executor=xm_local.Local(),
-              args=hparam_config,
-              env_vars=env_vars,
-          )
-      )
+            # if _RUN_OFFLINE_METRICS_ONLY.value:
+            #   for dir in _TRAIN_LOGS_DIRS.value:
+            #     full_dir = os.path.join(root_dir, dir, 'event*')
+            #     event_files = glob.glob(full_dir)
+            #     train_logs_dirs.extend(os.path.dirname(f) for f in event_files)
+            print(train_logs_dirs)
+            print(root_dir)
+            # assert 0 == 1
+            participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
+            run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
+            hparam_config.update(
+                dict(
+                    root_dir=root_dir,
+                    gin_config=_GIN_CONFIG.value,
+                    participant_module_path=participant_module_path,
+                    dockerfile_path=dockerfile_path,
+                    web_nav_dir=web_nav_dir,
+                    train_logs_dirs=train_logs_dirs[0],
+                    run_offline_metrics_only=run_offline_metrics_only,
+                )
+            )
+
+            print(hparam_config)
+            experiment.add(
+                xm.Job(
+                    executable=executable,
+                    executor=xm_local.Local(),
+                    args=hparam_config,
+                    env_vars=env_vars,
+                )
+            )
 
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
