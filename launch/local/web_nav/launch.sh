@@ -162,7 +162,7 @@ pip install -e .
 pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
 EOF
 
-#exit 0
+exit 0
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash

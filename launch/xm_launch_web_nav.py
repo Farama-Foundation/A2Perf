@@ -73,7 +73,11 @@ def main(_):
             experiment_title=_EXPERIMENT_NAME.value
     ) as experiment:
         if _DEBUG.value:
-            web_nav_seeds = [14, 82, 37]
+            web_nav_seeds = [
+                14,
+                # 82,
+                # 37
+            ]
             difficulty_levels = [1]
             env_batch_sizes = [8]
             total_env_steps = [10000]

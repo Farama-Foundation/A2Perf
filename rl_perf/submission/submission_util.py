@@ -170,6 +170,7 @@ class Submission:
                  profilers: typing.List[typing.Type[BaseProfiler]] = None,
                  mode: BenchmarkMode = BenchmarkMode.TRAIN,
                  domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
+                 domain_config_paths: str = None,
                  metric_values_dir: str = None,
                  train_logs_dirs: typing.List[str] = None,
                  num_inference_steps: int = 1000,
@@ -216,7 +217,6 @@ class Submission:
         self.tracking_mode = tracking_mode
         self.mp_context = multiprocessing.get_context('spawn')
         self.gin_config_str = None
-
         self.measure_emissions = measure_emissions
         self.plot_metrics = plot_metrics
         self.num_inference_steps = num_inference_steps
@@ -238,6 +238,16 @@ class Submission:
                 f'Loading pre-existing metric results from {metrics_path}')
             with open(metrics_path, 'r') as f:
                 self.metrics_results = json.load(f)
+
+        if domain_config_paths:
+            self.domain_config_paths = glob.glob(domain_config_paths)
+            if self.domain_config_paths:
+                logging.info(f'Using domain config paths: {self.domain_config_paths}')
+            else:
+                logging.warning(f'No domain config paths found in {domain_config_paths}')
+        else:
+            self.domain_config_paths = []
+            logging.warning(f'No domain config paths provided. Using default environment configuration')
 
     def _load_participant_spec(self, filename):
         """Loads the participant spec from the participant module path."""
@@ -333,7 +343,7 @@ class Submission:
                                                               std=np.std(inference_times))
 
             def perform_rollouts():
-                all_rewards = []
+                rollout_rewards = []
                 env = self.create_domain()
                 for _ in range(self.num_inference_episodes):
                     observation = env.reset()
@@ -344,9 +354,9 @@ class Submission:
                         action = participant_module.infer_once(model=participant_model, observation=preprocessed_obs)
                         observation, reward, done, _ = env.step(action)
                         rewards += reward
-                    all_rewards.append(rewards)
+                    rollout_rewards.append(rewards)
                     print(f'Episode reward: {rewards}')
-                return all_rewards
+                return rollout_rewards
 
             if self.measure_emissions:
                 @codecarbon.track_emissions(output_dir=self.metric_values_dir, output_file='inference_emissions.csv', )
@@ -361,6 +371,7 @@ class Submission:
                                   mean=np.mean(all_rewards),
                                   std=np.std(all_rewards))
             rollout_data_queue.put(metric_results)
+
         participant_event.clear()
         for profiler_event in profiler_events:
             profiler_event.clear()
@@ -497,48 +508,57 @@ class Submission:
             self._plot_metrics()
 
     def _run_inference_benchmark(self):
+
         if not self.run_offline_metrics_only:
+            # iterate over all domain configs for generalization
 
-            inference_data = self._get_observation_data()
+            for domain_config_path in self.domain_config_paths:
+                logging.info(f'Running inference benchmark for domain config: {domain_config_path}')
 
-            # Need a participant event to signal to profilers
-            participant_started_event = multiprocessing.Event()
-            profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
+                # Parsing gin config so that "create_domain" can receive different arguments
+                gin.parse_config_file(domain_config_path)
 
-            rollout_data_queue = self.mp_context.Queue()
-            participant_process = self.mp_context.Process(target=self._inference,
-                                                          args=(participant_started_event, profilers_started_events,
-                                                                inference_data, rollout_data_queue))
+                inference_data = self._get_observation_data()
 
-            participant_process.start()
-            profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
-                                         profiler_events=profilers_started_events,
-                                         participant_process=participant_process,
-                                         log_dir=self.root_dir,
-                                         mp_context=self.mp_context)
+                # Need a participant event to signal to profilers
+                participant_started_event = multiprocessing.Event()
+                profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
 
-            logging.info(f'Participant module process ID: {participant_process.pid}')
-            participant_process.join()
-            logging.info(f'Participant module process {participant_process.pid} finished')
-            if participant_process.is_alive():
-                logging.error('Participant process is still running')
-            elif participant_process.exitcode != 0:
-                logging.error(f'Participant process exited with code {participant_process.exitcode}')
-            else:
-                logging.info(f'Participant process {participant_process.pid} finished')
+                rollout_data_queue = self.mp_context.Queue()
+                participant_process = self.mp_context.Process(target=self._inference,
+                                                              args=(participant_started_event, profilers_started_events,
+                                                                    inference_data, rollout_data_queue))
 
-            for profiler in profilers:
-                profiler.join()
-                if profiler.is_alive():
-                    logging.error(f'Profiler process {profiler.pid} is still running')
-                elif profiler.exitcode != 0:
-                    logging.error(f'Profiler process {profiler.pid} exited with code {profiler.exitcode}')
+                participant_process.start()
+                profilers = _start_profilers(profilers=self.profilers,
+                                             participant_event=participant_started_event,
+                                             profiler_events=profilers_started_events,
+                                             participant_process=participant_process,
+                                             log_dir=self.root_dir,
+                                             mp_context=self.mp_context)
+
+                logging.info(f'Participant module process ID: {participant_process.pid}')
+                participant_process.join()
+                logging.info(f'Participant module process {participant_process.pid} finished')
+                if participant_process.is_alive():
+                    logging.error('Participant process is still running')
+                elif participant_process.exitcode != 0:
+                    logging.error(f'Participant process exited with code {participant_process.exitcode}')
                 else:
-                    logging.info(f'Profiler process {profiler.pid} finished')
+                    logging.info(f'Participant process {participant_process.pid} finished')
 
-            self.metrics_results['episode_rewards'] = rollout_data_queue.get()
-            if self.reliability_metrics:
-                self._run_inference_reliability_metrics(values=self.metrics_results['episode_rewards']['values'])
+                for profiler in profilers:
+                    profiler.join()
+                    if profiler.is_alive():
+                        logging.error(f'Profiler process {profiler.pid} is still running')
+                    elif profiler.exitcode != 0:
+                        logging.error(f'Profiler process {profiler.pid} exited with code {profiler.exitcode}')
+                    else:
+                        logging.info(f'Profiler process {profiler.pid} finished')
+
+                self.metrics_results['episode_rewards'] = rollout_data_queue.get()
+                if self.reliability_metrics:
+                    self._run_inference_reliability_metrics(values=self.metrics_results['episode_rewards']['values'])
 
     def _plot_metrics(self):
         if not self.metrics_results:
