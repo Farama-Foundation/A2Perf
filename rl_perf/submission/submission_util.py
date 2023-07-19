@@ -109,7 +109,7 @@ def _start_inference_profilers(participant_event, profilers, pipes, profiler_sta
     return processes, profiler_objects
 
 
-def collect_system_metrics(emissions_file_path: str, benchmark_mode: BenchmarkMode, metric_values_dict: dict,
+def collect_system_metrics(emissions_file_path: str, benchmark_mode: BenchmarkMode,
                            ):
     df = pd.read_csv(emissions_file_path)
 
@@ -124,37 +124,36 @@ def collect_system_metrics(emissions_file_path: str, benchmark_mode: BenchmarkMo
     df['total_cpu_power'] = df['cpu_power'].sum()
     df['total_gpu_power'] = df['gpu_power'].sum()
     df['total_ram_power'] = df['ram_power'].sum()
+    metric_values_dict = {
+        "cpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+        "gpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+        "ram_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+        "cpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
+        "gpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
+        "ram_power": {"values": [], "mean": None, "std": None, "units": "W"},
+        "ram_process": {"values": [], "mean": None, "std": None, "units": "GB"},
+        "duration": {"values": [], "mean": None, "std": None, "units": "min"},
+        "all_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+        "all_power": {"values": [], "mean": None, "std": None, "units": "W"},
+    }
+
+    for key in metric_values_dict.keys():
+        if key in ('duration',):
+            start_time = pd.to_datetime(df['timestamp'].iloc[0])
+            end_time = pd.to_datetime(df['timestamp'].iloc[-1])
+            duration = (end_time - start_time).total_seconds()
+            duration = duration / 60
+
+            metric_values_dict[key]["values"].append(duration)
+            metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
+            metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
+        else:
+            metric_values_dict[key]["values"].extend(df[key].tolist())
+            metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
+            metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
 
     if benchmark_mode == BenchmarkMode.TRAIN:
-        metric_values_dict = {
-            "cpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-            "gpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-            "ram_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-            "cpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
-            "gpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
-            "ram_power": {"values": [], "mean": None, "std": None, "units": "W"},
-            "ram_process": {"values": [], "mean": None, "std": None, "units": "GB"},
-            "duration": {"values": [], "mean": None, "std": None, "units": "min"},
-            "all_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-            "all_power": {"values": [], "mean": None, "std": None, "units": "W"},
-        }
-
-        for key in metric_values_dict.keys():
-            if key in ('duration',):
-                start_time = pd.to_datetime(df['timestamp'].iloc[0])
-                end_time = pd.to_datetime(df['timestamp'].iloc[-1])
-                duration = (end_time - start_time).total_seconds()
-                duration = duration / 60
-
-                metric_values_dict[key]["values"].append(duration)
-                metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
-                metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
-            else:
-                metric_values_dict[key]["values"].extend(df[key].tolist())
-                metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
-                metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
-
-
+        pass
     elif benchmark_mode == BenchmarkMode.INFERENCE:
         pass
     else:
@@ -178,7 +177,7 @@ class Submission:
                  time_participant_code: bool = True,
                  measure_emissions: bool = False,
                  baseline_measure_sec: float = 0,
-                 plot_metrics: bool = True,
+                 plot_metrics: bool = False,
                  run_offline_metrics_only: bool = False,
                  reliability_metrics: typing.List[ReliabilityMetrics] = None,
                  tracking_mode: str = None):
@@ -315,9 +314,16 @@ class Submission:
         for profiler_event in profiler_events:
             profiler_event.clear()
 
-    def _inference(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event],
-                   inference_data: typing.List[typing.Any], rollout_data_queue: multiprocessing.Queue):
-        gin.parse_config(self.gin_config_str)
+    def _inference(self,
+                   participant_event: multiprocessing.Event,
+                   profiler_events: typing.List[multiprocessing.Event],
+                   inference_data: typing.List[typing.Any],
+                   metrics_queue: multiprocessing.Queue,
+                   metric_values_dir: str,
+                   domain_config: str):
+
+        metric_results = {}
+        gin.parse_config(domain_config)
         participant_event.set()
 
         with working_directory(self.participant_module_path):
@@ -330,7 +336,6 @@ class Submission:
             preprocessed_data = [participant_module.preprocess_observation(x) for x in inference_data]
 
             def inference_step():
-                # print(i, preprocessed_data[i])
                 return participant_module.infer_once(model=participant_model, observation=preprocessed_data[i])
 
             if self.time_inference_steps:
@@ -338,9 +343,9 @@ class Submission:
                 for i in range(self.num_inference_steps):
                     inference_times.append(timeit.timeit(inference_step, number=1))
 
-                self.metrics_results['inference_time'] = dict(values=inference_times,
-                                                              mean=np.mean(inference_times),
-                                                              std=np.std(inference_times))
+                metric_results['inference_time'] = dict(values=inference_times,
+                                                        mean=np.mean(inference_times),
+                                                        std=np.std(inference_times))
 
             def perform_rollouts():
                 rollout_rewards = []
@@ -359,7 +364,7 @@ class Submission:
                 return rollout_rewards
 
             if self.measure_emissions:
-                @codecarbon.track_emissions(output_dir=self.metric_values_dir, output_file='inference_emissions.csv', )
+                @codecarbon.track_emissions(output_dir=metric_values_dir, output_file='inference_emissions.csv', )
                 def perform_rollouts_and_track_emissions():
                     return perform_rollouts()
 
@@ -367,35 +372,26 @@ class Submission:
             else:
                 all_rewards = perform_rollouts()
 
-            metric_results = dict(values=all_rewards,
-                                  mean=np.mean(all_rewards),
-                                  std=np.std(all_rewards))
-            rollout_data_queue.put(metric_results)
+            metric_results['rollout_returns'] = dict(values=all_rewards,
+                                                     mean=np.mean(all_rewards),
+                                                     std=np.std(all_rewards))
+            metrics_queue.put(metric_results)
 
         participant_event.clear()
         for profiler_event in profiler_events:
             profiler_event.clear()
 
-    def _run_inference_reliability_metrics(self, values=None):
+    def _run_inference_reliability_metrics(self, values, metric_values_dir):
         metrics = []
         for metric in self.reliability_metrics:
-            if metric == ReliabilityMetrics.MadAcrossRollouts:
-                metrics.append(MadAcrossRollouts())
-            elif metric == ReliabilityMetrics.IqrAcrossRollouts:
+            if metric == ReliabilityMetrics.IqrAcrossRollouts:
                 metrics.append(IqrAcrossRollouts())
-            elif metric == ReliabilityMetrics.UpperCVaRAcrossRollouts:
-                metrics.append(UpperCVaRAcrossRollouts())
-            elif metric == ReliabilityMetrics.LowerCVaRAcrossRollouts:
-                metrics.append(LowerCVaRAcrossRollouts())
-            elif metric == ReliabilityMetrics.StddevAcrossRollouts:
-                metrics.append(StddevAcrossRollouts())
-            elif metric == ReliabilityMetrics.UpperCVaRAcrossRollouts:
-                metrics.append(UpperCVaRAcrossRollouts())
             elif metric == ReliabilityMetrics.LowerCVaRAcrossRollouts:
                 metrics.append(LowerCVaRAcrossRollouts())
             else:
                 raise ValueError(f'Invalid metric: {metric}')
-        with open(os.path.join(self.metric_values_dir, 'rollouts.csv'), 'w') as f:
+
+        with open(os.path.join(metric_values_dir, 'rollouts.csv'), 'w') as f:
             writer = csv.writer(f)
             writer.writerow(['episode_num', 'reward'])
             for i, value in enumerate(values):
@@ -403,8 +399,9 @@ class Submission:
 
         evaluator = Evaluator(metrics=metrics, )
         reliability_metrics = evaluator.evaluate(
-            run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')], )
-        self.metrics_results.update(reliability_metrics)
+            run_paths=[os.path.join(metric_values_dir, 'rollouts.csv')], )
+
+        return reliability_metrics
 
     def _run_train_reliability_metrics(self):
         metrics = []
@@ -497,7 +494,7 @@ class Submission:
         # Save raw metrics to disk, and plot results
         ##################################################
 
-        with open(os.path.join(self.metric_values_dir, 'metric_results.json'), 'w') as f:
+        with open(os.path.join(self.metric_values_dir, 'train_metric_results.json'), 'w') as f:
             json.dump(self.metrics_results, f)
 
         # Plot metrics and save to file
@@ -515,8 +512,15 @@ class Submission:
             for domain_config_path in self.domain_config_paths:
                 logging.info(f'Running inference benchmark for domain config: {domain_config_path}')
 
+                metric_results = {}
+                domain_config_name = os.path.splitext(os.path.basename(domain_config_path))[0]
+                metric_values_dir = os.path.join(self.metric_values_dir, domain_config_name)
+                if not os.path.exists(metric_values_dir):
+                    os.makedirs(metric_values_dir)
+
                 # Parsing gin config so that "create_domain" can receive different arguments
                 gin.parse_config_file(domain_config_path)
+                gin_config_str = gin.config_str()  # save gin configs for multiprocessing
 
                 inference_data = self._get_observation_data()
 
@@ -524,10 +528,14 @@ class Submission:
                 participant_started_event = multiprocessing.Event()
                 profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
 
-                rollout_data_queue = self.mp_context.Queue()
+                metrics_data_queue = self.mp_context.Queue()
                 participant_process = self.mp_context.Process(target=self._inference,
-                                                              args=(participant_started_event, profilers_started_events,
-                                                                    inference_data, rollout_data_queue))
+                                                              args=(participant_started_event,
+                                                                    profilers_started_events,
+                                                                    inference_data,
+                                                                    metrics_data_queue,
+                                                                    metric_values_dir,
+                                                                    gin_config_str))
 
                 participant_process.start()
                 profilers = _start_profilers(profilers=self.profilers,
@@ -556,9 +564,24 @@ class Submission:
                     else:
                         logging.info(f'Profiler process {profiler.pid} finished')
 
-                self.metrics_results['episode_rewards'] = rollout_data_queue.get()
+                inference_metrics = metrics_data_queue.get()
+                metric_results.update(inference_metrics)
+                emissions_path = os.path.join(metric_values_dir, 'inference_emissions.csv')
+                if os.path.exists(emissions_path):
+                    system_metrics = collect_system_metrics(emissions_file_path=emissions_path,
+                                                            benchmark_mode=BenchmarkMode.INFERENCE,
+                                                            )
+
+                    metric_results.update(system_metrics)
                 if self.reliability_metrics:
-                    self._run_inference_reliability_metrics(values=self.metrics_results['episode_rewards']['values'])
+                    reliability_metrics = self._run_inference_reliability_metrics(
+                        values=metric_results['rollout_returns']['values'],
+                        metric_values_dir=metric_values_dir)
+                    metric_results.update(reliability_metrics)
+                self.metrics_results[domain_config_name] = metric_results
+
+        with open(os.path.join(self.metric_values_dir, 'inference_metric_results.json'), 'w') as f:
+            json.dump(self.metrics_results, f)
 
     def _plot_metrics(self):
         if not self.metrics_results:

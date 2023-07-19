@@ -114,7 +114,7 @@ docker build \
   -f "${DOCKERFILE_PATH}" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -t "$DOCKER_IMAGE_NAME" \
-  ./rl_perf/domains/web_nav/web_nav/docker
+  "$WEB_NAV_DIR"/docker
 
 echo "Successfully built docker image."
 
