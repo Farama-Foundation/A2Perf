@@ -478,7 +478,7 @@ class Submission:
         if os.path.exists(emissions_path):
             system_metrics = collect_system_metrics(emissions_file_path=emissions_path,
                                                     benchmark_mode=BenchmarkMode.TRAIN,
-                                                    metric_values_dict=self.metrics_results)
+                                                    )
 
             self.metrics_results.update(system_metrics)
         else:
