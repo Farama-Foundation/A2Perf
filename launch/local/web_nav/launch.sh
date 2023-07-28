@@ -147,6 +147,7 @@ else
   eval "$docker_run_command"
 fi
 
+#exit 0
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
