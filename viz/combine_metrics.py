@@ -6,18 +6,26 @@ import os
 import numpy as np
 from collections import defaultdict
 
-_ROOT_DIR = flags.DEFINE_string(
-    'root_dir',
+_BASE_DIR = flags.DEFINE_string(
+    'base_dir',
     'train',
     'Root directory for train logs from all of the experiments that reliability'
     ' metrics will be calculated on',
 )
 
+_PATTERN = flags.DEFINE_string(
+    'pattern',
+    '**',
+    'Pattern to match in the root directory',
+)
+
 
 def main(_):
     # glob for metrics_results.json in each directory
-    glob_path = os.path.join(_ROOT_DIR.value, '**', 'metric_results.json')
+    glob_path = os.path.join(_BASE_DIR.value, _PATTERN.value, )
     paths = glob.glob(glob_path, recursive=True)
+
+    print(paths)
 
     # We will keep a mapping between metrics and their corresponding values
     metric_values = defaultdict(list)
@@ -55,6 +63,7 @@ def main(_):
             overall_mean = np.mean(non_nan_values)
             overall_std = np.std(non_nan_values)
             print(f'{metric}: {overall_mean:.2f} ± {overall_std:.2f} {metric_units[metric]}')
+
 
 if __name__ == '__main__':
     app.run(main)

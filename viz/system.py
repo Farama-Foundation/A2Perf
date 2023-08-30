@@ -15,7 +15,13 @@ _SUBTRACT_BASELINE = flags.DEFINE_boolean('subtract_baseline', False,
                                           'Whether or not to subtract the baseline from the data')
 _OUTPUT_DIR = flags.DEFINE_string('output_dir', 'output_plots', 'Directory to save the plots to')
 
+_PATTERN = flags.DEFINE_string('pattern', 'circuit_training_num_collect_jobs_16_seed_*',
+                               'Pattern to match the directories to plot')
 
+
+# run with
+# python system.py --base_dir=/home/ikechukwuu/workspace/gcs/a2perf/web_nav/difficulty_1/0026/ --pattern=difficulty_1_seed=*
+# glob to find metrics dir:
 def main(argv):
     del argv  # Unused.
 
@@ -31,61 +37,61 @@ def main(argv):
         'ram_process': 'GB'
     }
 
-    dir_list = glob.glob(_BASE_DIR.value + 'circuit_training_num_collect_jobs_16_seed_*')
+    full_pattern = _BASE_DIR.value + _PATTERN.value
+    dir_list = glob.glob(full_pattern)
+    print(full_pattern)
+    print(dir_list)
 
     # Initialize an empty DataFrame to hold all of the CSV data
     all_data = pd.DataFrame()
     all_data_minus_baseline = pd.DataFrame()
     duration_vals = []
     # Loop over the directories
-    for dir in dir_list:
+    for f in dir_list:
         # Define the CSV file path
-        csv_file_path = dir + '/metrics/train_emissions.csv'
-        baseline_csv_file_path = dir + '/metrics/baseline_emissions.csv'
-        seed = dir.split('seed_')[1]
-        seed = seed.split('/')[0]
 
-        if os.path.exists(csv_file_path):
-            # Load the data from the CSV file
-            df = pd.read_csv(csv_file_path)
+        seed = f.split('seed=')[1]
+        seed = seed.split('_')[0]
+        print(seed)
 
-            df['steps'] = range(0, len(df['duration']))
-            df['seed'] = int(seed)
-            duration_vals.append(df['duration'].max())
-            # check the earliest and latest timestamp for the df
-            print('Logging data for seed: ' + seed)
-            print(f'Earliest timestamp: {df["timestamp"].min()}')
-            print(f'Latest timestamp: {df["timestamp"].max()}')
+        # Load the data from the CSV file
+        df = pd.read_csv(f)
 
-            # convert these to timestamps and subtract to get the duration
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            print(f'Duration: {df["timestamp"].max() - df["timestamp"].min()}')
+        df['steps'] = range(0, len(df['duration']))
+        df['seed'] = int(seed)
+        duration_vals.append(df['duration'].max())
+        # check the earliest and latest timestamp for the df
+        print('Logging data for seed: ' + seed)
+        print(f'Earliest timestamp: {df["timestamp"].min()}')
+        print(f'Latest timestamp: {df["timestamp"].max()}')
 
-            # Fix the energy columns by creating diff columns
-            df['cpu_energy_total'] = df['cpu_energy']
-            df['gpu_energy_total'] = df['gpu_energy']
-            df['ram_energy_total'] = df['ram_energy']
+        # convert these to timestamps and subtract to get the duration
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        print(f'Duration: {df["timestamp"].max() - df["timestamp"].min()}')
 
-            df['cpu_energy'] = df['cpu_energy_total'].diff()
-            df['gpu_energy'] = df['gpu_energy_total'].diff()
-            df['ram_energy'] = df['ram_energy_total'].diff()
+        # Fix the energy columns by creating diff columns
+        df['cpu_energy_total'] = df['cpu_energy']
+        df['gpu_energy_total'] = df['gpu_energy']
+        df['ram_energy_total'] = df['ram_energy']
 
-            df['computed_cpu_energy'] = df['cpu_power'] * df['duration']
-            df['computed_gpu_energy'] = df['gpu_power'] * df['duration']
-            df['computed_ram_energy'] = df['ram_power'] * df['duration']
+        df['cpu_energy'] = df['cpu_energy_total'].diff()
+        df['gpu_energy'] = df['gpu_energy_total'].diff()
+        df['ram_energy'] = df['ram_energy_total'].diff()
 
-            all_data = pd.concat([all_data, df], ignore_index=True, copy=False)
-            if _SUBTRACT_BASELINE.value and os.path.exists(baseline_csv_file_path):
-                baseline_df = pd.read_csv(baseline_csv_file_path)
-                baseline_df['steps'] = range(0, len(baseline_df['duration']))
-                avgs = baseline_df[units.keys()].mean()
-                df_minus_baseline = df.subtract(avgs, axis='columns')
-                all_data_minus_baseline = pd.concat([all_data_minus_baseline, df_minus_baseline], ignore_index=True,
-                                                    copy=False)
-            else:
-                print(f'Baseline CSV file not found at {baseline_csv_file_path}')
-        else:
-            raise Exception(f'CSV file not found at {csv_file_path}')
+        df['computed_cpu_energy'] = df['cpu_power'] * df['duration']
+        df['computed_gpu_energy'] = df['gpu_power'] * df['duration']
+        df['computed_ram_energy'] = df['ram_power'] * df['duration']
+
+        all_data = pd.concat([all_data, df], ignore_index=True, copy=False)
+        # if _SUBTRACT_BASELINE.value and os.path.exists(baseline_csv_file_path):
+        #     baseline_df = pd.read_csv(baseline_csv_file_path)
+        #     baseline_df['steps'] = range(0, len(baseline_df['duration']))
+        #     avgs = baseline_df[units.keys()].mean()
+        #     df_minus_baseline = df.subtract(avgs, axis='columns')
+        #     all_data_minus_baseline = pd.concat([all_data_minus_baseline, df_minus_baseline], ignore_index=True,
+        #                                         copy=False)
+        #     else:
+        #         print(f'Baseline CSV file not found at {baseline_csv_file_path}')
 
     # trim the dataframe so that all seeds have the same number of steps
     max_step_count = all_data.groupby('seed')['steps'].max().min()

@@ -20,13 +20,14 @@ Submission.measure_emissions = True
 # Set up domain
 ####################################
 
-Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
+#Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
+Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/debug/domain_configs/difficulty_01.gin'
 
 ####################################
 # Set up benchmark mode
 ####################################
-Submission.num_inference_steps = 10
-Submission.num_inference_episodes = 10
+Submission.num_inference_steps = 10000
+Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
 
 ####################################
@@ -72,7 +73,7 @@ track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
 track_emissions.baseline_measure_sec = 10
-track_emissions.default_cpu_tdp = 58  # If your CPU cannot be detected, set it manually
+track_emissions.default_cpu_tdp = 125  # If your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write = 'append'
