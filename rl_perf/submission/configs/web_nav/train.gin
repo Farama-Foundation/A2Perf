@@ -15,6 +15,7 @@ Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
 Submission.run_offline_metrics_only=True
 Submission.measure_emissions=True
+Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/domain_configs/difficulty_01.gin'
 
 # ----------------------
 # RELIABILITY METRICS
@@ -32,10 +33,12 @@ Submission.reliability_metrics  = %METRICS
 # RELIABILITY PARAMETERS
 # ----------------------
 FREQ_THRESH = 0.01
-WINDOW_SIZE = 900
-WINDOW_SIZE_TRIMMED = 900
-EVAL_POINTS =[990, 1185, 1380, 1575, 1770, 1965, 2160, 2355, 2550, 2745, 2940, 3135, 3330, 3525, 3720, 3915, 4110, 4305, 4500, 4695, 4890, 5085, 5280, 5475, 5670, 5865, 6060, 6255, 6450, 6645, 6840, 7035, 7230, 7425, 7620, 7815, 8010, 8205, 8400, 8595, 8790, 8985, 9180, 9375, 9570, 9765]
-RISK_ACROSS_RUNS_EVAL_POINTS = [9765]
+WINDOW_SIZE = 9000
+WINDOW_SIZE_TRIMMED = 9000
+
+EVAL_POINTS = [20258.0, 29882.0, 39507.0, 49124.0, 58741.0, 68349.0, 77942.0, 87542.0, 97145.0, 106747.0, 116357.0, 125965.0, 135566.0, 145156.0, 154739.0, 164311.0, 173873.0, 183453.0, 193015.0, 202605.0, 212176.0, 221748.0, 231326.0, 240904.0, 250496.0, 260072.0, 269648.0, 279234.0, 288821.0, 298397.0, 307976.0, 317554.0, 327126.0, 336689.0, 346263.0, 355834.0, 365408.0, 374978.0, 384554.0, 394139.0, 403709.0, 413279.0, 422853.0, 432431.0, 442009.0, 451592.0, 461171.0, 470755.0, 480327.0, 489914.0, 499495.0, 509062.0, 518635.0, 528218.0, 537766.0, 547334.0, 556905.0, 566482.0, 576059.0, 585619.0, 595198.0, 604771.0, 614339.0, 623917.0, 633487.0, 643052.0, 652616.0, 662179.0, 671746.0, 681309.0, 690873.0, 700431.0, 709998.0, 719546.0, 729110.0, 738682.0, 748249.0, 757815.0, 767385.0, 776962.0, 786521.0, 796085.0, 805643.0, 815213.0, 824783.0, 834339.0, 843897.0, 853454.0, 863008.0, 872577.0, 882143.0, 891711.0, 901272.0, 910833.0, 920402.0, 929954.0, 939520.0, 949082.0]
+RISK_ACROSS_RUNS_EVAL_POINTS = [949082.0]
+
 # ----------------------
 # RELIABILITY METRICS CONFIGURATION
 # ----------------------
@@ -78,7 +81,7 @@ track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
 track_emissions.baseline_measure_sec=10
-track_emissions.default_cpu_tdp = 58 # if your CPU cannot be detected, set it manually
+track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'

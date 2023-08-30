@@ -1,4 +1,4 @@
-INSTANCE_NAME="web-nav"
+INSTANCE_NAME="web-nav-0"
 
 expect <<EOD
         set timeout 10

@@ -10,12 +10,13 @@ ROOT_DIR=../logs/web_nav
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
+WORK_UNIT_ID=0
 WEB_NAV_DIR="$(pwd)/rl_perf/domains/web_nav"
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
 DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
-RUN_OFFLINE_METRICS_ONLY=""
+RUN_OFFLINE_METRICS_ONLY="False"
 BASE_IMAGE="nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04"
 
 # parse command-line arguments
@@ -31,6 +32,10 @@ for arg in "$@"; do
     ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
+    shift
+    ;;
+  --work_unit_id=*)
+    WORK_UNIT_ID="${arg#*=}"
     shift
     ;;
   --env_batch_size=*)
@@ -102,6 +107,7 @@ echo "Docker container name: $DOCKER_CONTAINER_NAME"
 echo "Dockerfile path: $DOCKERFILE_PATH"
 echo "SSH key path: $SSH_KEY_PATH"
 echo "Requirements path: $REQUIREMENTS_PATH"
+echo "Work unit id: $WORK_UNIT_ID"
 
 # create ssh-key in WEB_NAV_DIR without password
 mkdir -p "$WEB_NAV_DIR/docker/.ssh"
@@ -123,7 +129,8 @@ if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ];
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   # initial command
-  docker_run_command="docker run -itd --rm -p 2022:22"
+  #  docker_run_command="docker run -itd --rm -p 2022:22 --privileged"
+  docker_run_command="docker run -itd --rm  --privileged"
 
   # check to see if /sys/class/powercap exists. if so, mount it
   if [ -d "/sys/class/powercap" ]; then
@@ -134,11 +141,21 @@ else
 
   # check for GPU and add the necessary flag if found
   if command -v nvidia-smi &>/dev/null; then
-    docker_run_command+=" --gpus all"
+    #    docker_run_command+=" --gpus all"
+    # give two GPUs depending on the docker_container_name last digit
+    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
   fi
 
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
+  docker_run_command+=" -v /dev/shm:/dev/shm"
+  docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
+  #  docker_run_command+=" -v /var/run/:/var/run/"
+  #  docker_run_command+=" -v /tmp/:/tmp/"
+  #  docker_run_command+=" -v /var/tmp/:/var/tmp/"
+  docker_run_command+=" -v /sys/fs/cgroup:/sys/fs/cgroup:rw"
+  #  docker_run_command+=" -e DISPLAY=$DISPLAY"
+  docker_run_command+=" -v $HOME/.Xauthority:/user/.Xauthority:rw"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
@@ -146,6 +163,15 @@ else
   echo "Running command: $docker_run_command"
   eval "$docker_run_command"
 fi
+
+#exit 0
+
+EXTRA_GIN_BINDINGS=$(
+  cat <<EOF
+  --extra_gin_bindings='track_emissions.default_cpu_tdp=125' \
+  --extra_gin_bindings='track_emissions.gpu_ids=[$WORK_UNIT_ID]' 
+EOF
+)
 
 #exit 0
 # Install packages inside the container
@@ -163,23 +189,25 @@ pip install -e .
 pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
 EOF
 
-exit 0
-
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 export SEED=$SEED
+export CUDA_VISIBLE_DEVICES=$WORK_UNIT_ID
 export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export TF_CUDA_MALLOC_ASYNC=1
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
 export PYTHONPATH=\$(pwd):\$PYTHONPATH
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
-python3 main_submission.py \
+python3 -u main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
-  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
-EOF
+  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
+  $EXTRA_GIN_BINDINGS
+EO

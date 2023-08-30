@@ -57,6 +57,8 @@ def main(_):
         env_vars = dict(
             WEB_NAV_DIR=web_nav_dir,
             TF_FORCE_GPU_ALLOW_GROWTH='true',
+            TF_GPU_ALLOCATOR='cuda_malloc_async'  # doesn't work on some of the FASRC machines???
+
         )
 
     else:
@@ -66,7 +68,7 @@ def main(_):
         additional_args = []
         env_vars = dict(
             TF_FORCE_GPU_ALLOW_GROWTH='true',
-            # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
+            TF_GPU_ALLOCATOR='cuda_malloc_async'  # doesn't work on some of the FASRC machines???
         )
 
     with xm_local.create_experiment(
@@ -75,15 +77,19 @@ def main(_):
         if _DEBUG.value:
             web_nav_seeds = [
                 14,
-                # 82,
-                # 37
+                82,
+                37
             ]
             difficulty_levels = [1]
             env_batch_sizes = [8]
             total_env_steps = [10000]
         else:
-            web_nav_seeds = [37, 82, 14, 65, 23, 98, 51, 19, 77, 43]
-            env_batch_sizes = [8]
+            web_nav_seeds = [
+                37,
+                14,
+                82
+            ]
+            env_batch_sizes = [16]
             total_env_steps = [1000000]
             difficulty_levels = [1]
 
@@ -119,7 +125,7 @@ def main(_):
             ]
         )
 
-        for hparam_config in web_nav_hparam_sweeps:
+        for i, hparam_config in enumerate(web_nav_hparam_sweeps):
             experiment_name = ('_'.join(
                 f'{key}={hparam_config[key]}'
                 for key in sorted(hparam_config.keys())
@@ -132,35 +138,38 @@ def main(_):
 
             train_logs_dirs = [_TRAIN_LOGS_DIRS.value]
 
-            # if _RUN_OFFLINE_METRICS_ONLY.value:
-            #   for dir in _TRAIN_LOGS_DIRS.value:
-            #     full_dir = os.path.join(root_dir, dir, 'event*')
-            #     event_files = glob.glob(full_dir)
-            #     train_logs_dirs.extend(os.path.dirname(f) for f in event_files)
+            if _RUN_OFFLINE_METRICS_ONLY.value:
+                for dir in _TRAIN_LOGS_DIRS.value:
+                    full_dir = os.path.join(root_dir, dir, 'event*')
+                    event_files = glob.glob(full_dir)
+                    train_logs_dirs.extend(os.path.dirname(f) for f in event_files)
             print(train_logs_dirs)
             print(root_dir)
-            # assert 0 == 1
+
             participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
             run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
             hparam_config.update(
                 dict(
                     root_dir=root_dir,
                     gin_config=_GIN_CONFIG.value,
+                    docker_container_name=f'web_nav_container_{i}',
                     participant_module_path=participant_module_path,
                     dockerfile_path=dockerfile_path,
+                    work_unit_id=i,
                     web_nav_dir=web_nav_dir,
                     train_logs_dirs=train_logs_dirs[0],
                     run_offline_metrics_only=run_offline_metrics_only,
                 )
             )
-
             print(hparam_config)
             experiment.add(
                 xm.Job(
                     executable=executable,
                     executor=xm_local.Local(),
                     args=hparam_config,
-                    env_vars=env_vars,
+                    env_vars=dict(
+                        **env_vars,
+                    ),
                 )
             )
 
