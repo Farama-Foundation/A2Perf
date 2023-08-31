@@ -5,6 +5,7 @@ import glob
 import gym
 import importlib
 import json
+import collections
 import logging
 import matplotlib.pyplot as plt
 import multiprocessing
@@ -109,58 +110,6 @@ def _start_inference_profilers(participant_event, profilers, pipes, profiler_sta
     return processes, profiler_objects
 
 
-def collect_system_metrics(emissions_file_path: str, benchmark_mode: BenchmarkMode,
-                           ):
-    df = pd.read_csv(emissions_file_path)
-
-    df['all_energy'] = df['cpu_energy'] + df['gpu_energy'] + df['ram_energy']
-    df['all_power'] = df['cpu_power'] + df['gpu_power'] + df['ram_power']
-
-    df['total_energy'] = df['all_energy'].sum()
-    df['total_power'] = df['all_power'].sum()
-    df['total_cpu_energy'] = df['cpu_energy'].sum()
-    df['total_gpu_energy'] = df['gpu_energy'].sum()
-    df['total_ram_energy'] = df['ram_energy'].sum()
-    df['total_cpu_power'] = df['cpu_power'].sum()
-    df['total_gpu_power'] = df['gpu_power'].sum()
-    df['total_ram_power'] = df['ram_power'].sum()
-    metric_values_dict = {
-        "cpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-        "gpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-        "ram_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-        "cpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
-        "gpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
-        "ram_power": {"values": [], "mean": None, "std": None, "units": "W"},
-        "ram_process": {"values": [], "mean": None, "std": None, "units": "GB"},
-        "duration": {"values": [], "mean": None, "std": None, "units": "min"},
-        "all_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
-        "all_power": {"values": [], "mean": None, "std": None, "units": "W"},
-    }
-
-    for key in metric_values_dict.keys():
-        if key in ('duration',):
-            start_time = pd.to_datetime(df['timestamp'].iloc[0])
-            end_time = pd.to_datetime(df['timestamp'].iloc[-1])
-            duration = (end_time - start_time).total_seconds()
-            duration = duration / 60
-
-            metric_values_dict[key]["values"].append(duration)
-            metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
-            metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
-        else:
-            metric_values_dict[key]["values"].extend(df[key].tolist())
-            metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
-            metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
-
-    if benchmark_mode == BenchmarkMode.TRAIN:
-        pass
-    elif benchmark_mode == BenchmarkMode.INFERENCE:
-        pass
-    else:
-        raise ValueError(f'Unknown benchmark mode: {benchmark_mode}')
-    return metric_values_dict
-
-
 @gin.configurable
 class Submission:
     def __init__(self,
@@ -260,6 +209,72 @@ class Submission:
         participant_module = importlib.util.module_from_spec(spec)
         return participant_module, spec
 
+    def collect_system_metrics(self, emissions_file_path: str, benchmark_mode: BenchmarkMode,
+                               metric_results: typing.Dict[str, typing.Any] = None):
+        logging.info(f'Collecting system metrics from {emissions_file_path}')
+        df = pd.read_csv(emissions_file_path)
+        df['all_energy'] = df['cpu_energy'] + df['gpu_energy'] + df['ram_energy']
+        df['all_power'] = df['cpu_power'] + df['gpu_power'] + df['ram_power']
+
+        df['total_energy'] = df['all_energy'].sum()
+        df['total_power'] = df['all_power'].sum()
+        df['total_cpu_energy'] = df['cpu_energy'].sum()
+        df['total_gpu_energy'] = df['gpu_energy'].sum()
+        df['total_ram_energy'] = df['ram_energy'].sum()
+        df['total_cpu_power'] = df['cpu_power'].sum()
+        df['total_gpu_power'] = df['gpu_power'].sum()
+        df['total_ram_power'] = df['ram_power'].sum()
+        metric_values_dict = {
+            "cpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "gpu_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "ram_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "cpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "gpu_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "ram_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "ram_process": {"values": [], "mean": None, "std": None, "units": "GB"},
+            "duration": {"values": [], "mean": None, "std": None, "units": "s"},
+            "all_energy": {"values": [], "mean": None, "std": None, "units": "kWh"},
+            "all_power": {"values": [], "mean": None, "std": None, "units": "W"},
+            "inference_time": {"values": [], "mean": None, "std": None, "units": "s"},
+        }
+
+        for key in metric_values_dict.keys():
+            if key == 'duration':
+                start_time = pd.to_datetime(df['timestamp'].iloc[0])
+                end_time = pd.to_datetime(df['timestamp'].iloc[-1])
+                duration = (end_time - start_time).total_seconds()
+                logging.info(f"Duration: {duration}")
+                # Convert to minutes if the duration is more than 60 seconds, else keep it in seconds
+                if duration > 60:
+                    logging.info(f'Converting duration from seconds to minutes')
+                    duration = duration / 60
+                    metric_values_dict[key]["units"] = "min"
+                else:
+                    metric_values_dict[key]["units"] = "s"
+                metric_values_dict[key]["values"].append(duration)
+
+            elif key == 'inference_time':
+                inference_times = metric_results['inference_time']['values']
+                avg_inference_time = np.mean(inference_times)
+                if avg_inference_time < 1.0:
+                    logging.info(f'Converting inference time from seconds to milliseconds')
+                    # convert to milliseconds
+                    inference_times = [i * 1000 for i in inference_times]
+                    metric_values_dict[key]["units"] = "ms"
+                    metric_values_dict[key]["values"] = inference_times
+            else:
+                metric_values_dict[key]["values"] = df[key].values.tolist()
+            metric_values_dict[key]["mean"] = np.mean(metric_values_dict[key]["values"])
+            metric_values_dict[key]["std"] = np.std(metric_values_dict[key]["values"])
+
+        if benchmark_mode == BenchmarkMode.TRAIN:
+            pass
+        elif benchmark_mode == BenchmarkMode.INFERENCE:
+            pass
+        else:
+            raise ValueError(f'Unknown benchmark mode: {benchmark_mode}')
+        return metric_values_dict
+
     @gin.configurable("Submission.create_domain")
     def create_domain(self, **kwargs):
         if self.domain == BenchmarkDomain.WEB_NAVIGATION:
@@ -285,10 +300,15 @@ class Submission:
         for _ in range(self.num_inference_steps):
             observation = env.observation_space.sample()
             data.append(observation)
+        del env
         return data
 
-    def _train(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event]):
+    def _train(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event],
+               gin_config_str: str, metric_values_dir: str):
+
+        # Parse original gin config before parsing the participant's gin config
         gin.parse_config(self.gin_config_str)
+        gin.parse_config(gin_config_str)
         participant_event.set()
 
         # Wait for all profilers to start up before continuing
@@ -302,7 +322,7 @@ class Submission:
             participant_module_spec.loader.exec_module(participant_module)
 
             if self.measure_emissions:
-                @codecarbon.track_emissions(output_dir=self.metric_values_dir, output_file='train_emissions.csv', )
+                @codecarbon.track_emissions(output_dir=metric_values_dir, output_file='train_emissions.csv', )
                 def train():
                     return participant_module.train()
 
@@ -322,7 +342,7 @@ class Submission:
                    metric_values_dir: str,
                    domain_config: str):
 
-        metric_results = {}
+        metric_results = collections.defaultdict(dict)
         gin.parse_config(domain_config)
         participant_event.set()
 
@@ -368,10 +388,13 @@ class Submission:
                 def perform_rollouts_and_track_emissions():
                     return perform_rollouts()
 
+                logging.info('Performing rollouts and tracking emissions')
                 all_rewards = perform_rollouts_and_track_emissions()
             else:
+                logging.info('Performing rollouts')
                 all_rewards = perform_rollouts()
 
+            logging.info(f'Rollout rewards: {all_rewards}')
             metric_results['rollout_returns'] = dict(values=all_rewards,
                                                      mean=np.mean(all_rewards),
                                                      std=np.std(all_rewards))
@@ -403,7 +426,7 @@ class Submission:
 
         return reliability_metrics
 
-    def _run_train_reliability_metrics(self):
+    def _run_train_reliability_metrics(self, save_dir):
         metrics = []
         for metric in self.reliability_metrics:
             if metric == ReliabilityMetrics.IqrWithinRuns:
@@ -420,7 +443,7 @@ class Submission:
                 raise ValueError(f'Invalid metric: {metric}')
 
         logging.info(f'Running reliability metrics: {metrics}')
-        logging.info(f'Logging to {self.metric_values_dir}')
+        logging.info(f'Logging to {save_dir}')
 
         if self.train_logs_dirs:
             run_paths = self.train_logs_dirs
@@ -441,13 +464,26 @@ class Submission:
         return reliability_metrics
 
     def _run_training_benchmark(self):
-        if not self.run_offline_metrics_only:
+        for domain_config_path in self.domain_config_paths:
+            logging.info(f'Running inference benchmark for domain config: {domain_config_path}')
+            metric_results = {}
+
+            domain_config_name = os.path.splitext(os.path.basename(domain_config_path))[0]
+            metric_values_dir = os.path.join(self.metric_values_dir, domain_config_name)
+            if not os.path.exists(metric_values_dir):
+                os.makedirs(metric_values_dir)
+
+            # Parsing gin config so that "create_domain" can receive different arguments
+            gin.parse_config_file(domain_config_path)
+            gin_config_str = gin.config_str()  # save gin configs for multiprocessing
+
             # Need a participant event to signal to profilers
             participant_started_event = multiprocessing.Event()
             profilers_started_events = [multiprocessing.Event() for _ in self.profilers]
 
             participant_process = self.mp_context.Process(target=self._train,
-                                                          args=(participant_started_event, profilers_started_events))
+                                                          args=(participant_started_event, profilers_started_events,
+                                                                gin_config_str, metric_values_dir,))
             participant_process.start()
             profilers = _start_profilers(profilers=self.profilers, participant_event=participant_started_event,
                                          profiler_events=profilers_started_events,
@@ -473,42 +509,40 @@ class Submission:
                 else:
                     logging.info(f'Profiler process {profiler.pid} finished')
 
-        # try to collect system metrics from train_emissions.csv
-        emissions_path = os.path.join(self.metric_values_dir, 'train_emissions.csv')
-        if os.path.exists(emissions_path):
-            system_metrics = collect_system_metrics(emissions_file_path=emissions_path,
-                                                    benchmark_mode=BenchmarkMode.TRAIN,
-                                                    )
+            # try to collect system metrics from train_emissions.csv
+            emissions_path = os.path.join(metric_values_dir, 'train_emissions.csv')
+            if os.path.exists(emissions_path):
+                system_metrics = self.collect_system_metrics(emissions_file_path=emissions_path,
+                                                             benchmark_mode=BenchmarkMode.TRAIN,
+                                                             metric_results=metric_results,
+                                                             )
 
-            self.metrics_results.update(system_metrics)
-        else:
-            logging.warning(f'No train_emissions.csv found in {self.metric_values_dir}')
+                metric_results.update(system_metrics)
+            else:
+                logging.warning(f'No train_emissions.csv found in {metric_values_dir}')
 
-        if self.reliability_metrics:
-            reliability_metrics = self._run_train_reliability_metrics()
-            self.metrics_results.update(reliability_metrics)
-        else:
-            logging.warning('No reliability metrics specified')
+            if self.reliability_metrics:
+                reliability_metrics = self._run_train_reliability_metrics(metric_values_dir)
+                metric_results.update(reliability_metrics)
+            else:
+                logging.warning('No reliability metrics specified')
 
-        ##################################################
-        # Save raw metrics to disk, and plot results
-        ##################################################
+            ##################################################
+            # Save raw metrics to disk, and plot results
+            ##################################################
 
-        with open(os.path.join(self.metric_values_dir, 'train_metric_results.json'), 'w') as f:
-            json.dump(self.metrics_results, f)
+            with open(os.path.join(metric_values_dir, 'train_metric_results.json'), 'w') as f:
+                json.dump(self.metrics_results, f)
 
-        # Plot metrics and save to file
-        if self.plot_metrics:
-            for profiler_object in self.profilers:
-                title, fig = profiler_object.plot_results()
-                plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
-            self._plot_metrics()
+            # Plot metrics and save to file
+            if self.plot_metrics:
+                for profiler_object in self.profilers:
+                    title, fig = profiler_object.plot_results()
+                    plt.savefig(os.path.join(metric_values_dir, f'{title}.png'))
+                self._plot_metrics(save_dir=metric_values_dir, metric_results=metric_results)
 
     def _run_inference_benchmark(self):
-
         if not self.run_offline_metrics_only:
-            # iterate over all domain configs for generalization
-
             for domain_config_path in self.domain_config_paths:
                 logging.info(f'Running inference benchmark for domain config: {domain_config_path}')
 
@@ -564,15 +598,19 @@ class Submission:
                     else:
                         logging.info(f'Profiler process {profiler.pid} finished')
 
+                logging.info(f'Waiting for inference metrics to be collected...')
                 inference_metrics = metrics_data_queue.get()
+                logging.info(f'Collected inference metrics: {inference_metrics}')
+
                 metric_results.update(inference_metrics)
                 emissions_path = os.path.join(metric_values_dir, 'inference_emissions.csv')
-                if os.path.exists(emissions_path):
-                    system_metrics = collect_system_metrics(emissions_file_path=emissions_path,
-                                                            benchmark_mode=BenchmarkMode.INFERENCE,
-                                                            )
-
-                    metric_results.update(system_metrics)
+                assert os.path.exists(emissions_path), f'No inference_emissions.csv found in {metric_values_dir}'
+                system_metrics = self.collect_system_metrics(emissions_file_path=emissions_path,
+                                                             benchmark_mode=BenchmarkMode.INFERENCE,
+                                                             metric_results=metric_results,
+                                                             )
+                logging.info(f'Collected system metrics: {system_metrics}')
+                metric_results.update(system_metrics)
                 if self.reliability_metrics:
                     reliability_metrics = self._run_inference_reliability_metrics(
                         values=metric_results['rollout_returns']['values'],
@@ -580,18 +618,18 @@ class Submission:
                     metric_results.update(reliability_metrics)
                 self.metrics_results[domain_config_name] = metric_results
 
-        with open(os.path.join(self.metric_values_dir, 'inference_metric_results.json'), 'w') as f:
-            json.dump(self.metrics_results, f)
+                with open(os.path.join(metric_values_dir, 'inference_metric_results.json'), 'w') as f:
+                    json.dump(self.metrics_results, f)
 
-    def _plot_metrics(self):
+    def _plot_metrics(self, save_dir, metric_results):
         if not self.metrics_results:
             logging.warning('No metrics to plot')
 
-        for metric_name, metric_values in self.metrics_results.items():
+        for metric_name, metric_values in metric_results.items():
             plt.figure()
             plt.title(metric_name)
             plt.plot(metric_values['values'])
-            plt.savefig(os.path.join(self.metric_values_dir, f'{metric_name}.png'))
+            plt.savefig(os.path.join(save_dir, f'{metric_name}.png'))
 
     def run_benchmark(self):
         self.gin_config_str = gin.config_str()  # save gin configs for multiprocessing
