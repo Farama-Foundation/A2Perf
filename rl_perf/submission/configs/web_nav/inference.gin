@@ -13,7 +13,7 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offlin
 # Set up submission object
 Submission.mode = %BenchmarkMode.INFERENCE
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-Submission.run_offline_metrics_only = True
+Submission.run_offline_metrics_only = False
 Submission.measure_emissions = True
 
 ####################################
