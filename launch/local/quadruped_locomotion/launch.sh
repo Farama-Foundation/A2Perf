@@ -20,6 +20,7 @@ MODE='train'
 VISUALIZE=false
 #INT_SAVE_FREQ=10000000
 INT_SAVE_FREQ=100000
+EXTRA_GIN_BINDINGS=""
 
 #INT_SAVE_FREQ=10
 SETUP_PATH='setup_model_env.py'
@@ -228,5 +229,6 @@ python3.7 -u main_submission.py \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
-  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
+  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
+  $EXTRA_GIN_BINDINGS
 EOF

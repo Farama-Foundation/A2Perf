@@ -15,7 +15,6 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 
-# from rl_perf.domains.web_nav.CoDE import vocabulary_node
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
@@ -24,8 +23,6 @@ from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcros
 , StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts, LowerCVaRAcrossRollouts, )
 from rl_perf.metrics.system import codecarbon
 from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
-
-from rl_perf.domains import quadruped_locomotion
 
 
 @contextmanager
@@ -199,6 +196,8 @@ class Submission:
     @gin.configurable("Submission.create_domain")
     def create_domain(self, **kwargs):
         if self.domain == BenchmarkDomain.WEB_NAVIGATION:
+            from rl_perf.domains.web_nav.CoDE import vocabulary_node
+
             if kwargs.get('reload_vocab', False):
                 global_vocab_dict = np.load(os.path.join(self.root_dir, 'train', 'global_vocab.npy'),
                                             allow_pickle=True).item()
