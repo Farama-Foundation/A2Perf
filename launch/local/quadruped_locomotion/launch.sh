@@ -5,21 +5,24 @@ cd ../../.. || exit
 SEED=0
 ENV_BATCH_SIZE=1
 TOTAL_ENV_STEPS=200000000
-ROOT_DIR="../logs/quadruped_locomotion"
+ROOT_DIR="/tmp/locomotion"
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
-QUAD_LOCO_DIR=""
+QUAD_LOCO_DIR="$(pwd)/rl_perf/domains/quadruped_locomotion"
 DOCKER_IMAGE_NAME="rlperf/quadruped_locomotion:latest"
 DOCKER_CONTAINER_NAME="quadruped_locomotion_container"
-DOCKERFILE_PATH="/home/jasonlinux22/Jason/A2Perf/rl-perf/rl_perf/domains/quadruped_locomotion/docker/Dockerfile"
+DOCKERFILE_PATH="$(pwd)/rl_perf/domains/quadruped_locomotion/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 PARALLEL_MODE=true
-PARALLEL_CORES=1
+PARALLEL_CORES=32
 MODE='train'
-VISUALIZE=true
-INT_SAVE_FREQ=10000000
+VISUALIZE=false
+#INT_SAVE_FREQ=10000000
+INT_SAVE_FREQ=100000
+
+#INT_SAVE_FREQ=10
 SETUP_PATH='setup_model_env.py'
 
 # parse command-line arguments
@@ -86,29 +89,29 @@ for arg in "$@"; do
     shift
     ;;
   --parallel_mode=*)
-      PARALLEL_MODE="${arg#*=}"
-      shift
-      ;;
+    PARALLEL_MODE="${arg#*=}"
+    shift
+    ;;
   --parallel_cores=*)
-      PARALLEL_CORES="${arg#*=}"
-      shift
-      ;;
+    PARALLEL_CORES="${arg#*=}"
+    shift
+    ;;
   --mode=*)
-      MODE="${arg#*=}"
-      shift
-      ;;
+    MODE="${arg#*=}"
+    shift
+    ;;
   --visualize=*)
-      VISUALIZE="${arg#*=}"
-      shift
-      ;;
+    VISUALIZE="${arg#*=}"
+    shift
+    ;;
   --int_save_freq=*)
-      INT_SAVE_FREQ="${arg#*=}"
-      shift
-      ;;
+    INT_SAVE_FREQ="${arg#*=}"
+    shift
+    ;;
   --setup_path=*)
-      SETUP_PATH="${arg#*=}"
-      shift
-      ;;
+    SETUP_PATH="${arg#*=}"
+    shift
+    ;;
   *)
     echo "Invalid option: $arg"
     exit 1
@@ -149,27 +152,54 @@ sudo apt-get install x11-xserver-utils
 # Build the Docker image
 docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
   -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/quadruped_locomotion
+  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/quadruped_locomotion/docker
+
+docker build \
+  --rm \
+  --pull \
+  -f "${DOCKERFILE_PATH}" \
+  --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
+  --build-arg QUAD_LOCO_DIR="$QUAD_LOCO_DIR" \
+  -t "$DOCKER_IMAGE_NAME" \
+  rl_perf/domains/quadruped_locomotion
+
+echo "Successfully built docker image."
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
-  # if it is running, do nothing
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
-  xhost + local: # Allow docker to access the display
-  docker run -itd \
-    --rm \
-    --name "$DOCKER_CONTAINER_NAME" \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -e DISPLAY="$DISPLAY" \
-    -v "${HOME}/.Xauthority:/user/.Xauthority:rw" \
-    -v /dev/shm:/dev/shm \
-    --privileged \
-    -v "$(pwd)":/rl-perf \
-    -p 2022:22 \
-    "$DOCKER_IMAGE_NAME"
-fi
-# --gpus=all \
+  echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
+  # initial command
+  docker_run_command="docker run -itd --rm -p 202$WORK_UNIT_ID:22 --privileged"
+  #  docker_run_command="docker run -itd --rm  --privileged"
 
+  # check to see if /sys/class/powercap exists. if so, mount it
+  if [ -d "/sys/class/powercap" ]; then
+    docker_run_command+=" -v /sys/class/powercap:/sys/class/powercap"
+  else
+    echo "No powercap directory found. Will not mount it."
+  fi
+
+  # check for GPU and add the necessary flag if found
+  if command -v nvidia-smi &>/dev/null; then
+    docker_run_command+=" --gpus all"
+    # give two GPUs depending on the docker_container_name last digit
+    #    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
+  fi
+
+  # append the rest of the flags
+  docker_run_command+=" -v $(pwd):/rl-perf"
+  docker_run_command+=" -v /dev/shm:/dev/shm"
+  docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
+  docker_run_command+=" --workdir /rl-perf"
+  docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
+  docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+
+  echo "Running command: $docker_run_command"
+  eval "$docker_run_command"
+fi
+
+#exit 0
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
@@ -177,7 +207,7 @@ pip install -r requirements.txt
 pip install -e .
 EOF
 
-# pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
+# pip install -r rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -196,7 +226,7 @@ export SETUP_PATH="$SETUP_PATH"
 
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
-python main_submission.py \
+python3.7 -u main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \

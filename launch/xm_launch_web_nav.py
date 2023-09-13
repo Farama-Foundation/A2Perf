@@ -6,7 +6,7 @@ import itertools
 from absl import app
 from absl import flags
 
-flags.DEFINE_string('experiment_name', 'web_nav', 'Name of experiment')
+flags.DEFINE_string('experiment_name', 'quadruped_locomotion', 'Name of experiment')
 flags.DEFINE_string('root_dir', '/tmp/xm_local', 'Base directory for logs and results')
 flags.DEFINE_string('train_logs_dir', 'train',
                     'Directory for train logs from all of the experiments that reliability metrics will be calculated on')
@@ -22,7 +22,7 @@ def main(_):
     # set directory of this script as working directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
+    web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/quadruped_locomotion')
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
         binary_path = './local/web_nav/launch.sh'

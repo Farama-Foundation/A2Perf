@@ -25,7 +25,7 @@ from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcros
 from rl_perf.metrics.system import codecarbon
 from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
 
-from rl_perf.domains import web_nav, circuit_training
+from rl_perf.domains import quadruped_locomotion
 
 
 @contextmanager

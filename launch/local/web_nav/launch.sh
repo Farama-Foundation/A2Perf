@@ -5,7 +5,7 @@ cd ../../.. || exit
 SEED=0
 ENV_BATCH_SIZE=1
 TOTAL_ENV_STEPS=1000000
-ROOT_DIR=../logs/web_nav
+ROOT_DIR=../logs/quadruped_locomotion
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
@@ -86,6 +86,7 @@ for arg in "$@"; do
   esac
 done
 
+
 SSH_KEY_PATH=$WEB_NAV_DIR/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
@@ -109,7 +110,7 @@ yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_nav
+  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/quadruped_locomotion
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   # if it is running, do nothing

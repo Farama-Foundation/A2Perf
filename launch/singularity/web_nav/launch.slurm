@@ -4,13 +4,13 @@
 #SBATCH -p seas_gpu            # Partition to submit to
 #SBATCH --mem=64000            # Memory per core in MB
 #SBATCH --gres=gpu:1           # Number of GPUs to use
-#SBATCH -o ../logs/web_nav/%j.log  # File to which output and errors will be written, %j inserts jobid
+#SBATCH -o ../logs/quadruped_locomotion/%j.log  # File to which output and errors will be written, %j inserts jobid
 
 SEED=0
 ENV_BATCH_SIZE=1
 DIFFICULTY_LEVEL=-1
 TOTAL_ENV_STEPS=1000000
-ROOT_DIR=../logs/web_nav
+ROOT_DIR=../logs/quadruped_locomotion
 GIN_CONFIG=""
 
 PARTICIPANT_MODULE_PATH=""
@@ -115,7 +115,7 @@ cd ..
 singularity instance start \
   --nv --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
-  launch/singularity/web_nav/web_nav.sif web_nav_"$SLURM_JOB_ID"
+  launch/singularity/quadruped_locomotion/quadruped_locomotion.sif web_nav_"$SLURM_JOB_ID"
 
 singularity exec instance://web_nav_"$SLURM_JOB_ID" bash <<EOF
 source ~/.web_nav/bin/activate
@@ -146,7 +146,7 @@ exit 0
 singularity instance start \
   --nv --bind /dev/shm:/dev/shm \
   --bind /var/run/:/var/run/ \
-  launch/singularity/web_nav/web_nav.sif web_nav_"$SLURM_JOB_ID"
+  launch/singularity/quadruped_locomotion/quadruped_locomotion.sif web_nav_"$SLURM_JOB_ID"
 
 singularity exec instance://web_nav_"$SLURM_JOB_ID" bash <<EOF
 python3 -m venv  --system-site-packages  ~/.web_nav
@@ -160,4 +160,4 @@ EOF
 
 # Run a python shell if you need...
 singularity shell instance://web_nav_"$SLURM_JOB_ID"
-source ~/.web_nav/bin/activate
+source ~/.quadruped_locomotion/bin/activate

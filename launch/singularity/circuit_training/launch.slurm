@@ -4,7 +4,7 @@
 #SBATCH -p seas_gpu            # Partition to submit to
 #SBATCH --mem=64000            # Memory per core in MB
 #SBATCH --gres=gpu:1           # Number of GPUs to use
-#SBATCH -o ../logs/web_nav/%j.log  # File to which output and errors will be written, %j inserts jobid
+#SBATCH -o ../logs/quadruped_locomotion/%j.log  # File to which output and errors will be written, %j inserts jobid
 
 # These arguments most likely do not need to chagne
 CT_VERSION=0.0.3
