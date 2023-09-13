@@ -15,12 +15,18 @@ flags.DEFINE_bool('debug', False, 'Debug mode')
 flags.DEFINE_bool('run_offline_metrics_only', False, 'Whether to run offline metrics only.')
 flags.DEFINE_string('participant_module_path', None, 'Path to participant module')
 flags.DEFINE_string('gin_config', None, 'Path to gin config file that determines which experiment to run')
+flags.DEFINE_integer('seed', 0, 'Random seed')
+flags.DEFINE_string('experiment_number', None, 'Experiment number')
 FLAGS = flags.FLAGS
 
 
 def main(_):
     # set directory of this script as working directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+    # If experiment number is defined, replace the last part of root_dir with experiment number
+    if FLAGS.experiment_number is not None:
+        FLAGS.root_dir = os.path.join(os.path.dirname(FLAGS.root_dir), FLAGS.experiment_number)
 
     quadruped_locomotion_dir = os.path.join(os.getcwd(), '../rl_perf/domains/quadruped_locomotion')
     if FLAGS.local:
@@ -44,30 +50,47 @@ def main(_):
         )
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
-        quadruped_locomotion_seeds = [
-            37,
-            # 82,
-            # 14,
-            # 65,
-            # 23,
-            # 98,
-            # 51,
-            # 19,
-            # 77,
-            # 43
-        ]
+
         if FLAGS.debug:
-            pass 
-            # num_collect_job_params = [1, ]
+            quadruped_locomotion_seeds = [
+                # 37,
+                FLAGS.seed,
+                # 14,
+                # 65,
+                # 23,
+                # 98,
+                # 51,
+                # 19,
+                # 77,
+                # 43
+            ]
+            num_parallel_cores = [44]
+            total_env_steps = [500000, ]
         else:
-            pass
-            # num_collect_job_params = [10, ]
+            quadruped_locomotion_seeds = [
+                FLAGS.seed,
+                # 82,
+                # 14,
+                # 65,
+                # 23,
+                # 98,
+                # 51,
+                # 19,
+                # 77,
+                # 43
+            ]
+            total_env_steps = [200000000, ]
+            num_parallel_cores = [44]
 
         quadruped_locomotion_hparam_sweeps = list(
             dict([
-                ('seed', seed[0]),
+                ('seed', seed),
+                ('total_env_steps', env_steps),
+                ('parallel_cores', parallel_cores),
+
             ])
-            for seed in itertools.product(quadruped_locomotion_seeds)
+            for seed, env_steps, parallel_cores in itertools.product(quadruped_locomotion_seeds,
+                                                                     total_env_steps, num_parallel_cores)
         )
 
         # Define Executable

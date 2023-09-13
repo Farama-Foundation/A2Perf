@@ -15,7 +15,7 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 
-from rl_perf.domains.web_nav.CoDE import vocabulary_node
+# from rl_perf.domains.web_nav.CoDE import vocabulary_node
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
                                                                         LowerCVaROnAcross,
