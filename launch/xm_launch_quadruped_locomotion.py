@@ -64,7 +64,7 @@ def main(_):
                 # 77,
                 # 43
             ]
-            num_parallel_cores = [44]
+            num_parallel_cores = [50]
             total_env_steps = [500000, ]
         else:
             quadruped_locomotion_seeds = [
@@ -80,7 +80,7 @@ def main(_):
                 # 43
             ]
             total_env_steps = [200000000, ]
-            num_parallel_cores = [44]
+            num_parallel_cores = [50]
 
         quadruped_locomotion_hparam_sweeps = list(
             dict([

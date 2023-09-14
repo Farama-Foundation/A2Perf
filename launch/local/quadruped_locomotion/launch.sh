@@ -20,7 +20,7 @@ MODE='train'
 VISUALIZE=false
 #INT_SAVE_FREQ=10000000
 INT_SAVE_FREQ=100000
-EXTRA_GIN_BINDINGS=""
+EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
 
 #INT_SAVE_FREQ=10
 SETUP_PATH='setup_model_env.py'
@@ -225,7 +225,7 @@ export SETUP_PATH="$SETUP_PATH"
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3.7 -u main_submission.py \
-  --gin_file=$GIN_CONFIG \
+  --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
