@@ -7,7 +7,6 @@ ENV_BATCH_SIZE=1
 TOTAL_ENV_STEPS=200000000
 ROOT_DIR="/tmp/locomotion"
 GIN_CONFIG=""
-DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
 QUAD_LOCO_DIR="$(pwd)/rl_perf/domains/quadruped_locomotion"
 DOCKER_IMAGE_NAME="rlperf/quadruped_locomotion:latest"
@@ -16,11 +15,12 @@ DOCKERFILE_PATH="$(pwd)/rl_perf/domains/quadruped_locomotion/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 PARALLEL_MODE=true
-PARALLEL_CORES=32
+PARALLEL_CORES=0
 MODE='train'
 VISUALIZE=false
 #INT_SAVE_FREQ=10000000
 INT_SAVE_FREQ=100000
+EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
 
 #INT_SAVE_FREQ=10
 SETUP_PATH='setup_model_env.py'
@@ -119,7 +119,7 @@ for arg in "$@"; do
   esac
 done
 
-SSH_KEY_PATH=$QUAD_LOCO_DIR/.ssh/id_rsa
+SSH_KEY_PATH=$QUAD_LOCO_DIR/docker/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
 echo "Difficulty Level: $DIFFICULTY_LEVEL"
@@ -127,7 +127,7 @@ echo "Seed value: $SEED"
 echo "Root directory: $ROOT_DIR"
 echo "Gin config: $GIN_CONFIG"
 echo "Participant module path: $PARTICIPANT_MODULE_PATH"
-echo "Web Nav directory: $WEB_NAV_DIR"
+echo "Quadruped locomotion directory: $QUAD_LOCO_DIR"
 echo "Docker image name: $DOCKER_IMAGE_NAME"
 echo "Docker container name: $DOCKER_CONTAINER_NAME"
 echo "Dockerfile path: $DOCKERFILE_PATH"
@@ -141,29 +141,24 @@ echo "Int Save Freq: $INT_SAVE_FREQ"
 echo "Setup Path: $SETUP_PATH"
 
 # create ssh-key in WEB_NAV_DIR without password
-mkdir -p "$QUAD_LOCO_DIR/.ssh"
-yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
-
-# --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
+mkdir -p "$QUAD_LOCO_DIR/docker/.ssh"
+yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N ""
 
 # install xhost
 sudo apt-get install x11-xserver-utils
-
-# Build the Docker image
-docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
-  -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/quadruped_locomotion/docker
 
 docker build \
   --rm \
   --pull \
   -f "${DOCKERFILE_PATH}" \
   --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
-  --build-arg QUAD_LOCO_DIR="$QUAD_LOCO_DIR" \
+  --build-arg USER_ID="$(id -u)" \
+  --build-arg USER_GROUP_ID="$(id -g)" \
   -t "$DOCKER_IMAGE_NAME" \
-  rl_perf/domains/quadruped_locomotion
+  rl_perf/domains/quadruped_locomotion/docker
 
 echo "Successfully built docker image."
+#exit 0
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
@@ -199,6 +194,11 @@ else
   eval "$docker_run_command"
 fi
 
+whoami
+
+echo "$(id -u)"
+echo "$(id -g)"
+
 #exit 0
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -212,11 +212,9 @@ EOF
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 export SEED=$SEED
-export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
-export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
-export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
+export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export PARALLEL_MODE="$PARALLEL_MODE"
 export PARALLEL_CORES="$PARALLEL_CORES"
 export MODE="$MODE"
@@ -227,9 +225,10 @@ export SETUP_PATH="$SETUP_PATH"
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3.7 -u main_submission.py \
-  --gin_file=$GIN_CONFIG \
+  --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
-  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
+  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
+  $EXTRA_GIN_BINDINGS
 EOF
