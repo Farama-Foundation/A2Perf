@@ -397,6 +397,9 @@ class Submission:
             else:
                 logging.info(f'Participant process {participant_process.pid} finished')
 
+            participant_process.kill()
+            logging.info('Killed participant process')
+
             for profiler in profilers:
                 profiler.join()
                 if profiler.is_alive():
@@ -406,6 +409,7 @@ class Submission:
                 else:
                     logging.info(f'Profiler process {profiler.pid} finished')
 
+                profiler.kill()
         if self.reliability_metrics:
             self._run_train_reliability_metrics()
 

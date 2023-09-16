@@ -65,7 +65,7 @@ def main(_):
                 # 43
             ]
             num_parallel_cores = [50]
-            total_env_steps = [500000, ]
+            total_env_steps = [50000, ]
         else:
             quadruped_locomotion_seeds = [
                 FLAGS.seed,
