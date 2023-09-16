@@ -18,6 +18,7 @@ PARALLEL_MODE=true
 PARALLEL_CORES=0
 MODE='train'
 VISUALIZE=false
+MODEL_FILE_PATH=""
 #INT_SAVE_FREQ=10000000
 INT_SAVE_FREQ=100000
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
@@ -30,6 +31,10 @@ for arg in "$@"; do
   case "$arg" in
   --seed=*)
     SEED="${arg#*=}"
+    shift
+    ;;
+  --model_file_path=*)
+    MODEL_FILE_PATH="${arg#*=}"
     shift
     ;;
   --run_offline_metrics_only=*)
@@ -165,7 +170,7 @@ if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ];
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   # initial command
-  docker_run_command="docker run -itd --rm -p 202$WORK_UNIT_ID:22 --privileged"
+  docker_run_command="docker run -itd --rm -p 2020:22 --privileged"
   #  docker_run_command="docker run -itd --rm  --privileged"
 
   # check to see if /sys/class/powercap exists. if so, mount it
@@ -194,11 +199,6 @@ else
   eval "$docker_run_command"
 fi
 
-whoami
-
-echo "$(id -u)"
-echo "$(id -g)"
-
 #exit 0
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -218,6 +218,7 @@ export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export PARALLEL_MODE="$PARALLEL_MODE"
 export PARALLEL_CORES="$PARALLEL_CORES"
 export MODE="$MODE"
+export MODEL_FILE_PATH="$MODEL_FILE_PATH"
 export VISUALIZE="$VISUALIZE"
 export INT_SAVE_FREQ="$INT_SAVE_FREQ"
 export SETUP_PATH="$SETUP_PATH"
