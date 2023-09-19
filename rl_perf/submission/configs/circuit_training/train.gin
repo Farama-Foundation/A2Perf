@@ -30,6 +30,8 @@ eval_metrics.Evaluator.align_on_global_step = True
 FREQ_THRESH = 0.01
 WINDOW_SIZE = 100
 WINDOW_SIZE_TRIMMED = 100
+
+# TODO: Change these eval points when we have the interval
 EVAL_POINTS =[ 344,  648,  958, 1234, 1552, 1894, 2224, 2540, 2836, 3158, 3464]
 
 metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
@@ -59,7 +61,7 @@ track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
 track_emissions.baseline_measure_sec=10
-# track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
+track_emissions.default_cpu_tdp = 58 # if your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'

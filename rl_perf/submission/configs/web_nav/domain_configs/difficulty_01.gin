@@ -1,0 +1,9 @@
+import rl_perf.submission.submission_util
+
+
+Submission.create_domain.seed = 37
+Submission.create_domain.reload_vocab = True
+Submission.create_domain.difficulty = 1
+
+
+

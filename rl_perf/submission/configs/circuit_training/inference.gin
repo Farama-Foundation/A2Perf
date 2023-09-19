@@ -15,8 +15,8 @@ Submission.measure_emissions=True
 ####################################
 # Set up benchmark mode
 ####################################
-Submission.num_inference_steps = 10
-Submission.num_inference_episodes = 5
+Submission.num_inference_steps = 10000
+Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
 
 

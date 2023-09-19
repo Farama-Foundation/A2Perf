@@ -5,14 +5,10 @@ cd ../../.. || exit
 # These arguments most likely do not need to chagne
 CT_VERSION=0.0.3
 PYTHON_VERSION=python3.9
-DREAMPLACE_PATTERN=dreamplace_20230414_2835324_${PYTHON_VERSION}.tar.gz
-TF_AGENTS_PIP_VERSION="tf-agents[reverb]==0.16.0"
-#TENSORFLOW_PROBABILITY_PIP_VERSION="tensorflow_probability"
-#TF_AGENTS_PIP_VERSION="tf-agents-nightly[reverb]"
-#TENSORFLOW_PROBABILITY_PIP_VERSION="tfp-nightly"
+TF_AGENTS_PIP_VERSION="tf-agents[reverb]"
 DM_REVERB_PIP_VERSION=""
 CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
-DOCKER_IMAGE_NAME="circuit_training:core"
+DOCKER_IMAGE_NAME="rlperf/circuit_training"
 DOCKER_CONTAINER_NAME="circuit_training_container"
 DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
@@ -22,8 +18,8 @@ SEED=0
 ROOT_DIR=../logs/web_nav
 GIN_CONFIG=""
 PARTICIPANT_MODULE_PATH=""
-REVERB_PORT=8008
-REVERB_SERVER="<IP Address of the Reverb Server>:${REVERB_PORT}"
+REVERB_PORT=8000
+REVERB_SERVER_IP=""
 NETLIST_FILE=./circuit_training/environment/test_data/ariane/netlist.pb.txt
 INIT_PLACEMENT=./circuit_training/environment/test_data/ariane/initial.plc
 RUN_OFFLINE_METRICS_ONLY=""
@@ -44,8 +40,8 @@ for arg in "$@"; do
     ROOT_DIR="${arg#*=}"
     shift
     ;;
-  --train_logs_dir=*)
-    TRAIN_LOGS_DIR="${arg#*=}"
+  --train_logs_dirs=*)
+    TRAIN_LOGS_DIRS="${arg#*=}"
     shift
     ;;
   --gin_config=*)
@@ -84,8 +80,8 @@ for arg in "$@"; do
     REVERB_PORT="${arg#*=}"
     shift
     ;;
-  --reverb_server=*)
-    REVERB_SERVER="${arg#*=}"
+  --reverb_server_ip=*)
+    REVERB_SERVER_IP="${arg#*=}"
     shift
     ;;
   --netlist_file=*)
@@ -107,10 +103,9 @@ for arg in "$@"; do
   esac
 done
 
-SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/.ssh/id_rsa
+SSH_KEY_PATH=$CIRCUIT_TRAINING_DIR/tools/docker/.ssh/id_rsa
 echo "CT_VERSION: $CT_VERSION"
 echo "PYTHON_VERSION: $PYTHON_VERSION"
-echo "DREAMPLACE_PATTERN: $DREAMPLACE_PATTERN"
 echo "TF_AGENTS_PIP_VERSION: $TF_AGENTS_PIP_VERSION"
 #echo "TENSORFLOW_PROBABILITY_PIP_VERSION: $TENSORFLOW_PROBABILITY_PIP_VERSION"
 #echo "TF_AGENTS_PIP_VERSION: $TF_AGENTS_PIP_VERSION"
@@ -126,31 +121,34 @@ echo "ROOT_DIR: $ROOT_DIR"
 echo "GIN_CONFIG: $GIN_CONFIG"
 echo "PARTICIPANT_MODULE_PATH: $PARTICIPANT_MODULE_PATH"
 echo "REVERB_PORT: $REVERB_PORT"
-echo "REVERB_SERVER: $REVERB_SERVER"
+echo "REVERB_SERVER_IP: $REVERB_SERVER_IP"
 echo "NETLIST_FILE: $NETLIST_FILE"
 echo "INIT_PLACEMENT: $INIT_PLACEMENT"
 echo "RUN_OFFLINE_METRICS_ONLY: $RUN_OFFLINE_METRICS_ONLY"
 echo "NUM_COLLECT_JOBS: $NUM_COLLECT_JOBS"
-#echo "TRAIN_LOGS_DIR: $TRAIN_LOGS_DIR"
+#echo "TRAIN_LOGS_DIRS: $TRAIN_LOGS_DIRS"
 #echo "SSH_KEY_PATH: $SSH_KEY_PATH"
 
 # create ssh-key in CIRCUIT_TRAINING_DIR without password
-mkdir -p "$CIRCUIT_TRAINING_DIR/.ssh"
+mkdir -p "$CIRCUIT_TRAINING_DIR/tools/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "circuit_training" -f "$SSH_KEY_PATH" -N ""
 
 echo "Successfully parsed command-line arguments."
 
-docker build --rm \
+# check for gpu with nvidia-smi. if gpu doesn't exist use cpu base image
+if nvidia-smi; then
+  echo "GPU exists. Will use gpu base image."
+  BASE_IMAGE="nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
+else
+  echo "GPU does not exist. Will use cpu base image."
+  BASE_IMAGE="ubuntu:20.04"
+fi
+
+docker build \
+  --rm \
   --pull \
-  --build-arg base_image=nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04 \
-  --build-arg tf_agents_version="${TF_AGENTS_PIP_VERSION}" \
-  --build-arg tensorflow_probability_version="${TENSORFLOW_PROBABILITY_PIP_VERSION}" \
-  --build-arg dm_reverb_version="${DM_REVERB_PIP_VERSION}" \
-  --build-arg dreamplace_version="${DREAMPLACE_PATTERN}" \
-  --build-arg placement_cost_binary="plc_wrapper_main_${CT_VERSION}" \
-  --build-arg python_version="${PYTHON_VERSION}" \
-  -f "${DOCKERFILE_PATH}" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/circuit_training
+  --build-arg base_image=$BASE_IMAGE -f "${DOCKERFILE_PATH}" \
+  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/circuit_training/tools/docker
 
 echo "Successfully built docker image."
 
@@ -158,49 +156,62 @@ if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ];
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
-  docker run -itd \
-    --rm \
-    --gpus=all \
-    --privileged \
-    -p 2022:22 \
-    -v "$(pwd)":/rl-perf \
-    --workdir /workspace \
-    --name "$DOCKER_CONTAINER_NAME" \
-    "$DOCKER_IMAGE_NAME"
+  # initial command
+  docker_run_command="docker run -itd --rm -p 2022:22"
+
+  # check to see if /sys/class/powercap exists. if so, mount it
+  if [ -d "/sys/class/powercap" ]; then
+    docker_run_command+=" -v /sys/class/powercap:/sys/class/powercap"
+  else
+    echo "No powercap directory found. Will not mount it."
+  fi
+
+  # check for GPU and add the necessary flag if found
+  if command -v nvidia-smi &>/dev/null; then
+    docker_run_command+=" --gpus all"
+  fi
+
+  # append the rest of the flags
+  docker_run_command+=" -v \"$(pwd)\":/rl-perf"
+  docker_run_command+=" --workdir /rl-perf"
+  docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
+  docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+
+  echo "Running command: $docker_run_command"
+  eval "$docker_run_command"
 fi
 
-# Install required packages inside the container
-cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
-cd /rl-perf
+#exit 0
 
+# Install required packages inside the container
+docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF
 # Install requirements for the rl-perf repo
-pip install -r $REQUIREMENTS_PATH
+pip install  --no-cache-dir -r "$REQUIREMENTS_PATH"
 
 # Install RLPerf as a package
-pip install -e .
-
-# Install packages specific to the user's training code
+pip install --no-cache-dir -e .
 EOF
 
-# Run the benchmarking code
-cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
+exit 0
+
+docker exec --interactive "$DOCKER_CONTAINER_NAME" bash <<EOF
+export PYTHONPATH=/rl-perf:\$PYTHONPATH
 export TF_FORCE_GPU_ALLOW_GROWTH=true
-export TF_GPU_ALLOCATOR=cuda_malloc_async
+#export TF_GPU_ALLOCATOR=cuda_malloc_async
 export ROOT_DIR=$ROOT_DIR
 export GLOBAL_SEED=$SEED
 export REVERB_PORT=$REVERB_PORT
-export REVERB_SERVER=$REVERB_SERVER
+export REVERB_SERVER_IP=$REVERB_SERVER_IP
 export NETLIST_FILE=$NETLIST_FILE
 export INIT_PLACEMENT=$INIT_PLACEMENT
 export NUM_COLLECT_JOBS=$NUM_COLLECT_JOBS
 export WRAPT_DISABLE_EXTENSIONS=true
-cd /rl-perf
 
 $PYTHON_VERSION rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
-  --train_logs_dir=$TRAIN_LOGS_DIR \
+  --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
 EOF
 
@@ -244,10 +255,21 @@ cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 
 # Install requirements for the rl-perf repo
-pip install -r $REQUIREMENTS_PATH
+pip install --no-deps --ignore-installed -r $REQUIREMENTS_PATH
 
 # Install RLPerf as a package
-pip install -e .
+pip install --no-deps --ignore-installed -e .
 
 # Install packages specific to the user's training code
 EOF
+
+export PYTHONPATH=/rl-perf:$PYTHONPATH
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export WRAPT_DISABLE_EXTENSIONS=true
+export ROOT_DIR=--root_dir=/rl-perf/logs/circuit_training/debug
+export GLOBAL_SEED=0
+export REVERB_PORT=8000
+export REVERB_SERVER_IP=127.0.0.1
+export NETLIST_FILE=/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc
+export INIT_PLACEMENT=/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt
+export NUM_COLLECT_JOBS=4

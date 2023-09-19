@@ -1,2 +1,5 @@
 xmanager
 absl-py
+matplotlib
+seaborn
+pandas

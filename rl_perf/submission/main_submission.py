@@ -24,28 +24,28 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-  # Set the working directory to the submission directory.
-  os.chdir(os.path.dirname(os.path.abspath(__file__)))
-  multiprocessing.set_start_method('spawn', force=True)
+    # Set the working directory to the submission directory.
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    multiprocessing.set_start_method('spawn', force=True)
 
-  print('FLAGS.gin_config', FLAGS.gin_config)
-  print('FLAGS.participant_module_path', FLAGS.participant_module_path)
+    print('FLAGS.gin_config', FLAGS.gin_config)
+    print('FLAGS.participant_module_path', FLAGS.participant_module_path)
 
-  gin.parse_config_file(FLAGS.gin_config)
-  for binding in FLAGS.extra_gin_bindings:
-    gin.parse_config(binding)
+    gin.parse_config_file(FLAGS.gin_config)
+    for binding in FLAGS.extra_gin_bindings:
+        gin.parse_config(binding)
 
-  logging.set_verbosity(logging.INFO)
+    logging.set_verbosity(logging.INFO)
 
-  submission = Submission(
-      root_dir=FLAGS.root_dir,
-      metric_values_dir=FLAGS.metric_values_dir,
-      participant_module_path=FLAGS.participant_module_path,
-      train_logs_dirs=FLAGS.train_logs_dirs,
-      run_offline_metrics_only=FLAGS.run_offline_metrics_only
-  )
-  submission.run_benchmark()
+    submission = Submission(
+        root_dir=FLAGS.root_dir,
+        metric_values_dir=FLAGS.metric_values_dir,
+        participant_module_path=FLAGS.participant_module_path,
+        train_logs_dirs=FLAGS.train_logs_dirs,
+        run_offline_metrics_only=FLAGS.run_offline_metrics_only
+    )
+    submission.run_benchmark()
 
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
