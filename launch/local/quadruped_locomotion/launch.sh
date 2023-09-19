@@ -18,7 +18,7 @@ PARALLEL_MODE=true
 PARALLEL_CORES=0
 MODE='train'
 VISUALIZE=false
-MODEL_FILE_PATH=""
+MOTION_FILE_PATH=""
 #INT_SAVE_FREQ=10000000
 INT_SAVE_FREQ=100000
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
@@ -33,8 +33,8 @@ for arg in "$@"; do
     SEED="${arg#*=}"
     shift
     ;;
-  --model_file_path=*)
-    MODEL_FILE_PATH="${arg#*=}"
+  --motion_file_path=*)
+    MOTION_FILE_PATH="${arg#*=}"
     shift
     ;;
   --run_offline_metrics_only=*)
@@ -218,7 +218,7 @@ export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export PARALLEL_MODE="$PARALLEL_MODE"
 export PARALLEL_CORES="$PARALLEL_CORES"
 export MODE="$MODE"
-export MODEL_FILE_PATH="$MODEL_FILE_PATH"
+export MOTION_FILE_PATH="$MOTION_FILE_PATH"
 export VISUALIZE="$VISUALIZE"
 export INT_SAVE_FREQ="$INT_SAVE_FREQ"
 export SETUP_PATH="$SETUP_PATH"

@@ -17,7 +17,7 @@ flags.DEFINE_string('participant_module_path', None, 'Path to participant module
 flags.DEFINE_string('gin_config', None, 'Path to gin config file that determines which experiment to run')
 flags.DEFINE_integer('seed', 0, 'Random seed')
 flags.DEFINE_string('experiment_number', None, 'Experiment number')
-flags.DEFINE_string('motion_file',
+flags.DEFINE_string('motion_file_path',
                     '/rl-perf/rl_perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt',
                     'Motion file')
 FLAGS = flags.FLAGS
@@ -124,7 +124,7 @@ def main(_):
                 participant_module_path=participant_module_path,
                 quad_loco_dir=quadruped_locomotion_dir,
                 train_logs_dirs=train_logs_dirs,
-                model_file_path=FLAGS.motion_file,
+                motion_file_path=FLAGS.motion_file_path,
                 run_offline_metrics_only=run_offline_metrics_only,
             ))
 
