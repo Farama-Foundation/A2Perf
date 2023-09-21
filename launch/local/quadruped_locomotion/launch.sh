@@ -3,7 +3,6 @@ cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
 SEED=0
-ENV_BATCH_SIZE=1
 TOTAL_ENV_STEPS=200000000
 ROOT_DIR="/tmp/locomotion"
 GIN_CONFIG=""
@@ -18,12 +17,10 @@ PARALLEL_MODE=true
 PARALLEL_CORES=0
 MODE='train'
 VISUALIZE=false
-MODEL_FILE_PATH=""
-#INT_SAVE_FREQ=10000000
-INT_SAVE_FREQ=100000
+MOTION_FILE_PATH=""
+INT_SAVE_FREQ=1000
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
 
-#INT_SAVE_FREQ=10
 SETUP_PATH='setup_model_env.py'
 
 # parse command-line arguments
@@ -33,8 +30,8 @@ for arg in "$@"; do
     SEED="${arg#*=}"
     shift
     ;;
-  --model_file_path=*)
-    MODEL_FILE_PATH="${arg#*=}"
+  --motion_file_path=*)
+    MOTION_FILE_PATH="${arg#*=}"
     shift
     ;;
   --run_offline_metrics_only=*)
@@ -43,10 +40,6 @@ for arg in "$@"; do
     ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
-    shift
-    ;;
-  --env_batch_size=*)
-    ENV_BATCH_SIZE="${arg#*=}"
     shift
     ;;
   --total_env_steps=*)
@@ -203,8 +196,8 @@ fi
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
-pip install -r requirements.txt
-pip install -e .
+python3.7 -m pip install -r requirements.txt
+python3.7 -m pip install -e .
 EOF
 
 # pip install -r rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
@@ -218,7 +211,7 @@ export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export PARALLEL_MODE="$PARALLEL_MODE"
 export PARALLEL_CORES="$PARALLEL_CORES"
 export MODE="$MODE"
-export MODEL_FILE_PATH="$MODEL_FILE_PATH"
+export MOTION_FILE_PATH="$MOTION_FILE_PATH"
 export VISUALIZE="$VISUALIZE"
 export INT_SAVE_FREQ="$INT_SAVE_FREQ"
 export SETUP_PATH="$SETUP_PATH"

@@ -67,8 +67,8 @@ def main(_):
                 # 77,
                 # 43
             ]
-            num_parallel_cores = [2]
-            total_env_steps = [500000, ]
+            num_parallel_cores = [4]
+            total_env_steps = [1000, ]
         else:
             quadruped_locomotion_seeds = [
                 FLAGS.seed,
@@ -124,7 +124,7 @@ def main(_):
                 participant_module_path=participant_module_path,
                 quad_loco_dir=quadruped_locomotion_dir,
                 train_logs_dirs=train_logs_dirs,
-                model_file_path=FLAGS.motion_file,
+                motion_file_path=FLAGS.motion_file,
                 run_offline_metrics_only=run_offline_metrics_only,
             ))
 
