@@ -3,3 +3,4 @@ absl-py
 matplotlib
 seaborn
 pandas
+numpy

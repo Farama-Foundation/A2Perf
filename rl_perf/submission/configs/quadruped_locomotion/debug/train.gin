@@ -23,8 +23,8 @@ Submission.reliability_metrics  = %METRICS
 
 ## Configure evaluation
 eval_metrics.Evaluator.metrics = %METRICS
-eval_metrics.Evaluator.timepoint_variable='Metrics/EnvironmentSteps'
-eval_metrics.Evaluator.dependent_variable='Metrics/AverageReturn'
+eval_metrics.Evaluator.timepoint_variable='global_step'
+eval_metrics.Evaluator.dependent_variable='episode_reward'
 eval_metrics.Evaluator.align_on_global_step = True
 
 FREQ_THRESH = 0.01

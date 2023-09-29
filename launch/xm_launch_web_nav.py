@@ -21,12 +21,6 @@ _TRAIN_LOGS_DIRS = flags.DEFINE_multi_string(
 )
 _LOCAL = flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
-_TRAIN_EXP_ID = flags.DEFINE_string(
-    'train_exp_id',
-    None,
-    'Experiment where the training logs are stored. This must be present for'
-    ' inference or running offline metrics',
-)
 _INFERENCE = flags.DEFINE_bool(
     'inference', False, 'Whether to run train or inferenceexperiment.'
 )

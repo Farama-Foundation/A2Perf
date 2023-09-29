@@ -207,7 +207,17 @@ pip install -r requirements.txt
 pip install -e .
 EOF
 
-# pip install -r rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
+# Remove stray single quotes first
+TRAIN_LOGS_DIRS=$(echo "$TRAIN_LOGS_DIRS" | tr -d "'")
+
+# Now split into array
+IFS=',' read -ra TRAIN_LOGS_ARRAY <<<"$TRAIN_LOGS_DIRS"
+
+# Construct the train_logs_dirs arguments
+TRAIN_LOGS_ARGS=""
+for dir in "${TRAIN_LOGS_ARRAY[@]}"; do
+  TRAIN_LOGS_ARGS+="--train_logs_dirs=$dir "
+done
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -229,7 +239,7 @@ python3.7 -u main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
-  --train_logs_dirs=$TRAIN_LOGS_DIRS \
+  $TRAIN_LOGS_ARGS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
   $EXTRA_GIN_BINDINGS
 EOF

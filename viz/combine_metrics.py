@@ -1,5 +1,5 @@
 # Example:  python3 combine_metrics.py --base_dir=/home/ikechukwuu/workspace/gcs/a2perf/web_nav/difficulty_1/0048/difficulty_level=1_env_batch_size=16_seed=37_total_env_steps=1000000/ --pattern='**/*.json'
-
+# Locomotion: python3.7 combine_metrics.py
 from absl import app
 from absl import flags
 import glob
@@ -15,12 +15,13 @@ _BASE_DIR = flags.DEFINE_string(
     ' metrics will be calculated on',
 )
 
-_PATTERN = flags.DEFINE_string(
-    'pattern',
-    '**',
-    'Pattern to match in the root directory',
-)
+# _PATTERN = flags.DEFINE_string(
+#     'pattern',
+#     '**',
+#     'Pattern to match in the root directory',
+# )
 
+_PAT
 
 def main(_):
     # glob for metrics_results.json in each directory

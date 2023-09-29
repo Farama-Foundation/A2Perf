@@ -1,7 +1,7 @@
 #!/bin/bash
 
 declare -a servers=("locomotion-0" "locomotion-1" "locomotion-2")
-declare -a zones=("us-central1-a" "us-central1-a" "us-east4-a")
+declare -a zones=("us-central1-a" "europe-west4-a" "us-east4-a")
 
 local_port=10999
 
