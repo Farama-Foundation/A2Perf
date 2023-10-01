@@ -3,8 +3,7 @@ cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
 SEED=0
-ENV_BATCH_SIZE=1
-TOTAL_ENV_STEPS=200000000
+TOTAL_ENV_STEPS=0
 ROOT_DIR="/tmp/locomotion"
 GIN_CONFIG=""
 PARTICIPANT_MODULE_PATH=""
@@ -16,15 +15,12 @@ REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 PARALLEL_MODE=true
 PARALLEL_CORES=0
-MODE='train'
+MODE=""
 VISUALIZE=false
 MOTION_FILE_PATH=""
-#INT_SAVE_FREQ=10000000
-INT_SAVE_FREQ=100000
+INT_SAVE_FREQ=0
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
-
-#INT_SAVE_FREQ=10
-SETUP_PATH='setup_model_env.py'
+SETUP_PATH='ppo_actor.py'
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -39,10 +35,6 @@ for arg in "$@"; do
     ;;
   --run_offline_metrics_only=*)
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
-    shift
-    ;;
-  --difficulty_level=*)
-    DIFFICULTY_LEVEL="${arg#*=}"
     shift
     ;;
   --env_batch_size=*)
@@ -127,7 +119,6 @@ done
 SSH_KEY_PATH=$QUAD_LOCO_DIR/docker/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
-echo "Difficulty Level: $DIFFICULTY_LEVEL"
 echo "Seed value: $SEED"
 echo "Root directory: $ROOT_DIR"
 echo "Gin config: $GIN_CONFIG"
@@ -145,14 +136,13 @@ echo "Visualize: $VISUALIZE"
 echo "Int Save Freq: $INT_SAVE_FREQ"
 echo "Setup Path: $SETUP_PATH"
 
-# create ssh-key in WEB_NAV_DIR without password
 mkdir -p "$QUAD_LOCO_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N ""
 
 # install xhost
 sudo apt-get install x11-xserver-utils
 
-docker build \
+docker build --network=host \
   --rm \
   --pull \
   -f "${DOCKERFILE_PATH}" \
@@ -170,8 +160,7 @@ if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ];
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   # initial command
-  docker_run_command="docker run -itd --rm -p 2020:22 --privileged"
-  #  docker_run_command="docker run -itd --rm  --privileged"
+  docker_run_command="docker run -itd --rm --privileged --network=host"
 
   # check to see if /sys/class/powercap exists. if so, mount it
   if [ -d "/sys/class/powercap" ]; then

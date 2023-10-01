@@ -8,7 +8,7 @@ from absl import app
 from absl import flags
 
 _EXPERIMENT_NAME = flags.DEFINE_string(
-    'experiment_name', 'web_nav', 'Name of experiment'
+    'experiment_name', 'quadruped_locomotion', 'Name of experiment'
 )
 _ROOT_DIR = flags.DEFINE_string(
     'root_dir', '/tmp/xm_local', 'Base directory for logs and results'
@@ -54,8 +54,9 @@ def main(_):
 
     # If experiment number is defined, replace the last part of root_dir with experiment number
     if _EXPERIMENT_NUMBER.value is not None:
-        _ROOT_DIR.value = os.path.join(os.path.dirname(_ROOT_DIR.value), _EXPERIMENT_NUMBER.value)
-
+        root_dir_flag = os.path.join(os.path.dirname(_ROOT_DIR.value), _EXPERIMENT_NUMBER.value)
+    else:
+        root_dir_flag = _ROOT_DIR.value
     quadruped_locomotion_dir = os.path.join(os.getcwd(), '../rl_perf/domains/quadruped_locomotion')
     if _LOCAL.value:
         executable_path = '/usr/bin/bash'
@@ -78,48 +79,33 @@ def main(_):
         )
 
     with xm_local.create_experiment(experiment_title=_EXPERIMENT_NAME.value) as experiment:
-
         if _DEBUG.value:
             quadruped_locomotion_seeds = [
-                # 37,
                 _SEED.value,
-                # 14,
-                # 65,
-                # 23,
-                # 98,
-                # 51,
-                # 19,
-                # 77,
-                # 43
             ]
-            num_parallel_cores = [2]
-            total_env_steps = [500000, ]
+            num_parallel_cores = [64]
+            total_env_steps = [5000000, ]
+            int_save_freqs = [1000000]
         else:
             quadruped_locomotion_seeds = [
                 _SEED.value,
-                # 82,
-                # 14,
-                # 65,
-                # 23,
-                # 98,
-                # 51,
-                # 19,
-                # 77,
-                # 43
             ]
             total_env_steps = [200000000, ]
-            num_parallel_cores = [40]
+            num_parallel_cores = [170]
+            int_save_freqs = [1000000]
 
         quadruped_locomotion_hparam_sweeps = list(
             dict([
                 ('seed', seed),
                 ('total_env_steps', env_steps),
                 ('parallel_cores', parallel_cores),
+                ('int_save_freq', int_save_freq),
 
             ])
-            for seed, env_steps, parallel_cores, in itertools.product(quadruped_locomotion_seeds,
-                                                                      total_env_steps, num_parallel_cores,
-                                                                      )
+            for seed, env_steps, parallel_cores, int_save_freq in itertools.product(quadruped_locomotion_seeds,
+                                                                                    total_env_steps, num_parallel_cores,
+                                                                                    int_save_freqs
+                                                                                    )
         )
 
         # Define Executable
@@ -136,7 +122,7 @@ def main(_):
             experiment_name = _EXPERIMENT_NAME.value + '_' + '_'.join(
                 f"{key}_{hparam_config[key]}" for key in sorted(hparam_config.keys()))
 
-            root_dir = os.path.abspath(_ROOT_DIR.value)
+            root_dir = os.path.abspath(root_dir_flag)
             root_dir = os.path.join(root_dir, experiment_name)
             participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
             run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
@@ -150,6 +136,7 @@ def main(_):
                 train_logs_dirs=','.join(_TRAIN_LOGS_DIRS.value),
                 motion_file_path=_MOTION_FILE_PATH.value,
                 run_offline_metrics_only=run_offline_metrics_only,
+                mode='train',
             ))
 
             print(hparam_config)

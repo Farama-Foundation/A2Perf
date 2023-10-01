@@ -476,20 +476,12 @@ class Submission:
 
     def _run_training_benchmark(self):
         print(self.domain_config_paths)
-        for domain_config_path in self.domain_config_paths:
-            print(domain_config_path)
-
         metric_results = {}
         metric_values_dir = os.path.join(self.metric_values_dir)
         if not os.path.exists(metric_values_dir):
             os.makedirs(metric_values_dir)
 
         if not self.run_offline_metrics_only:
-            # logging.info(f'Running training benchmark for domain config: {domain_config_path}')
-            # domain_config_name = os.path.splitext(os.path.basename(domain_config_path))[0]
-
-            # Parsing gin config so that "create_domain" can receive different arguments
-            gin.parse_config_file(domain_config_path)
             gin_config_str = gin.config_str()  # save gin configs for multiprocessing
 
             # Need a participant event to signal to profilers
