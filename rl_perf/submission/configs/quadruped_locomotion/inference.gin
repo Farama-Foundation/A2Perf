@@ -13,8 +13,7 @@ Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
 # Set up domain
 ####################################
 Submission.create_domain.seed = 0
-Submission.create_domain.designs=[{'number_of_pages': 1, 'action': [],'action_page': [],}]
-Submission.create_domain.reload_vocab = True
+
 
 ####################################
 # Set up benchmark mode

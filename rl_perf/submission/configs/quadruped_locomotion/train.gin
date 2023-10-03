@@ -23,8 +23,8 @@ Submission.reliability_metrics  = %METRICS
 
 ## Configure evaluation
 eval_metrics.Evaluator.metrics = %METRICS
-eval_metrics.Evaluator.timepoint_variable='Metrics/EnvironmentSteps'
-eval_metrics.Evaluator.dependent_variable='Metrics/AverageReturn'
+eval_metrics.Evaluator.timepoint_variable='global_step'
+eval_metrics.Evaluator.dependent_variable='episode_reward'
 eval_metrics.Evaluator.align_on_global_step = True
 
 FREQ_THRESH = 0.01
@@ -49,8 +49,8 @@ metrics_online.MedianPerfDuringTraining.eval_points = %EVAL_POINTS
 
 
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'rlperf_circuit_training_train_debug'
-track_emissions.measure_power_secs = 1
+track_emissions.project_name = 'rlperf_quadruped_locomotion_train'
+track_emissions.measure_power_secs = 10
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
 track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
@@ -59,7 +59,6 @@ track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
 track_emissions.baseline_measure_sec=10
-# track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'

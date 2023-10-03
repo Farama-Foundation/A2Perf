@@ -21,7 +21,7 @@ MOTION_FILE_PATH=""
 INT_SAVE_FREQ=1000
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
 
-SETUP_PATH='setup_model_env.py'
+SETUP_PATH='ddpg_actor.py'
 
 # parse command-line arguments
 for arg in "$@"; do

@@ -4,7 +4,7 @@
 #declare -a zones=("us-central1-a" "us-central1-a" "us-east4-a" "us-east4-a" "us-west1-a" "us-west1-a")
 
 declare -a servers=("locomotion-3" "locomotion-4" "locomotion-5")
-declare -a zones=("us-east4-a" "us-west1-a" "us-west1-a")
+declare -a zones=("us-east4-a" "us-east7-a" "us-east1-b")
 #local_port=10999
 local_port=11002
 

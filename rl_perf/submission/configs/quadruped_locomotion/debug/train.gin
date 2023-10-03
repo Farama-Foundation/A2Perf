@@ -49,7 +49,7 @@ metrics_online.MedianPerfDuringTraining.eval_points = %EVAL_POINTS
 
 
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'rlperf_circuit_training_train_debug'
+track_emissions.project_name = 'rlperf_quadruped_locomotion_train_debug'
 track_emissions.measure_power_secs = 1
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
