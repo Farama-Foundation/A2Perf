@@ -32,12 +32,11 @@ Submission.reliability_metrics  = %METRICS
 # RELIABILITY PARAMETERS
 # ----------------------
 FREQ_THRESH = 0.01
-WINDOW_SIZE = 10000000
-WINDOW_SIZE_TRIMMED = 10000000
-RISK_ACROSS_RUNS_WINDOW_SIZE = 25000000
-#EVAL_POINTS =[990, 1185, 1380, 1575, 1770, 1965, 2160, 2355, 2550, 2745, 2940, 3135, 3330, 3525, 3720, 3915, 4110, 4305, 4500, 4695, 4890, 5085, 5280, 5475, 5670, 5865, 6060, 6255, 6450, 6645, 6840, 7035, 7230, 7425, 7620, 7815, 8010, 8205, 8400, 8595, 8790, 8985, 9180, 9375, 9570, 9765]
-EVAL_POINTS = None
-RISK_ACROSS_RUNS_EVAL_POINTS = [200000000]
+WINDOW_SIZE =0
+WINDOW_SIZE_TRIMMED =0
+RISK_ACROSS_RUNS_WINDOW_SIZE =0
+EVAL_POINTS =[990, 1185, 1380, 1575, 1770, 1965, 2160, 2355, 2550, 2745, 2940, 3135, 3330, 3525, 3720, 3915, 4110, 4305, 4500, 4695, 4890, 5085, 5280, 5475, 5670, 5865, 6060, 6255, 6450, 6645, 6840, 7035, 7230, 7425, 7620, 7815, 8010, 8205, 8400, 8595, 8790, 8985, 9180, 9375, 9570, 9765]
+RISK_ACROSS_RUNS_EVAL_POINTS = []
 # ----------------------
 # RELIABILITY METRICS CONFIGURATION
 # ----------------------
@@ -74,8 +73,8 @@ eval_metrics.Evaluator.subset_size = %SUBSET_SIZE
 
 collect_system_metrics.subset_size = %SUBSET_SIZE
 
-track_emissions.project_name = 'rlperf_web_nav_train_debug'
-track_emissions.measure_power_secs = 10
+track_emissions.project_name = 'rlperf_quadruped_locomomtion_train'
+track_emissions.measure_power_secs = 5
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
 track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
@@ -83,7 +82,7 @@ track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
 track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
-track_emissions.baseline_measure_sec=10
+track_emissions.baseline_measure_sec=30
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'

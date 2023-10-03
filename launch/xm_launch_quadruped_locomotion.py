@@ -83,9 +83,9 @@ def main(_):
             quadruped_locomotion_seeds = [
                 _SEED.value,
             ]
-            num_parallel_cores = [64]
-            total_env_steps = [5000000, ]
-            int_save_freqs = [1000000]
+            num_parallel_cores = [170]
+            total_env_steps = [500000, ]
+            int_save_freqs = [100000]
         else:
             quadruped_locomotion_seeds = [
                 _SEED.value,
