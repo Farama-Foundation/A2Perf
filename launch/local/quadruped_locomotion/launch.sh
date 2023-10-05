@@ -3,7 +3,7 @@ cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
 SEED=0
-TOTAL_ENV_STEPS=200000000
+TOTAL_ENV_STEPS=0
 ROOT_DIR="/tmp/locomotion"
 GIN_CONFIG=""
 PARTICIPANT_MODULE_PATH=""
@@ -15,12 +15,12 @@ REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 PARALLEL_MODE=true
 PARALLEL_CORES=0
-MODE='train'
+MODE=""
 VISUALIZE=false
 MOTION_FILE_PATH=""
-INT_SAVE_FREQ=1000
+INT_SAVE_FREQ=0
+INT_EVAL_FREQ=0
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
-
 SETUP_PATH='ddpg_actor.py'
 
 # parse command-line arguments
@@ -38,8 +38,8 @@ for arg in "$@"; do
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
     shift
     ;;
-  --difficulty_level=*)
-    DIFFICULTY_LEVEL="${arg#*=}"
+  --env_batch_size=*)
+    ENV_BATCH_SIZE="${arg#*=}"
     shift
     ;;
   --total_env_steps=*)
@@ -106,6 +106,10 @@ for arg in "$@"; do
     INT_SAVE_FREQ="${arg#*=}"
     shift
     ;;
+  --int_eval_freq=*)
+    INT_EVAL_FREQ="${arg#*=}"
+    shift
+    ;;
   --setup_path=*)
     SETUP_PATH="${arg#*=}"
     shift
@@ -120,7 +124,6 @@ done
 SSH_KEY_PATH=$QUAD_LOCO_DIR/docker/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
-echo "Difficulty Level: $DIFFICULTY_LEVEL"
 echo "Seed value: $SEED"
 echo "Root directory: $ROOT_DIR"
 echo "Gin config: $GIN_CONFIG"
@@ -138,14 +141,13 @@ echo "Visualize: $VISUALIZE"
 echo "Int Save Freq: $INT_SAVE_FREQ"
 echo "Setup Path: $SETUP_PATH"
 
-# create ssh-key in WEB_NAV_DIR without password
 mkdir -p "$QUAD_LOCO_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N ""
 
 # install xhost
 sudo apt-get install x11-xserver-utils
 
-docker build \
+docker build --network=host \
   --rm \
   --pull \
   -f "${DOCKERFILE_PATH}" \
@@ -163,8 +165,7 @@ if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ];
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
   # initial command
-  docker_run_command="docker run -itd --rm -p 2020:22 --privileged"
-  #  docker_run_command="docker run -itd --rm  --privileged"
+  docker_run_command="docker run -itd --rm --privileged --network=host"
 
   # check to see if /sys/class/powercap exists. if so, mount it
   if [ -d "/sys/class/powercap" ]; then
@@ -196,11 +197,21 @@ fi
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
-python3.7 -m pip install -r requirements.txt
-python3.7 -m pip install -e .
+pip install -r requirements.txt
+pip install -e .
 EOF
 
-# pip install -r rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
+# Remove stray single quotes first
+TRAIN_LOGS_DIRS=$(echo "$TRAIN_LOGS_DIRS" | tr -d "'")
+
+# Now split into array
+IFS=',' read -ra TRAIN_LOGS_ARRAY <<<"$TRAIN_LOGS_DIRS"
+
+# Construct the train_logs_dirs arguments
+TRAIN_LOGS_ARGS=""
+for dir in "${TRAIN_LOGS_ARRAY[@]}"; do
+  TRAIN_LOGS_ARGS+="--train_logs_dirs=$dir "
+done
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -214,6 +225,7 @@ export MODE="$MODE"
 export MOTION_FILE_PATH="$MOTION_FILE_PATH"
 export VISUALIZE="$VISUALIZE"
 export INT_SAVE_FREQ="$INT_SAVE_FREQ"
+export INT_EVAL_FREQ="$INT_EVAL_FREQ"
 export SETUP_PATH="$SETUP_PATH"
 
 cd /rl-perf/rl_perf/submission
@@ -222,7 +234,7 @@ python3.7 -u main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
-  --train_logs_dirs=$TRAIN_LOGS_DIRS \
+  $TRAIN_LOGS_ARGS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
   $EXTRA_GIN_BINDINGS
 EOF
