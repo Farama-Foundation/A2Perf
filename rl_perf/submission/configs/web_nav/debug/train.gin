@@ -15,6 +15,7 @@ Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
 Submission.run_offline_metrics_only=True
 Submission.measure_emissions=True
+Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/domain_configs/difficulty_01.gin'
 
 # ----------------------
 # RELIABILITY METRICS
