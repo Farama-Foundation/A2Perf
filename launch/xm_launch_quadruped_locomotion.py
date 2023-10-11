@@ -83,10 +83,10 @@ def main(_):
             quadruped_locomotion_seeds = [
                 _SEED.value,
             ]
-            num_parallel_cores = [64]
-            total_env_steps = [20000, ]
-            int_save_freqs = [10000]
-            int_eval_freqs = [1000]
+            num_parallel_cores = [170]
+            total_env_steps = [500000, ]
+            int_save_freqs = [100000]
+            int_eval_freqs = [10000]
         else:
             quadruped_locomotion_seeds = [
                 _SEED.value,
@@ -94,7 +94,7 @@ def main(_):
             total_env_steps = [200000000, ]
             num_parallel_cores = [170]
             int_save_freqs = [1000000]
-            int_eval_freqs = [100000]
+            int_eval_freqs = [1000000]
 
         quadruped_locomotion_hparam_sweeps = list(
             dict([
@@ -103,7 +103,6 @@ def main(_):
                 ('parallel_cores', parallel_cores),
                 ('int_save_freq', int_save_freq),
                 ('int_eval_freq', int_eval_freq),
-
             ])
             for seed, env_steps, parallel_cores, int_save_freq, int_eval_freq in
             itertools.product(quadruped_locomotion_seeds,

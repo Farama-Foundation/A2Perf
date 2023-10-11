@@ -58,13 +58,11 @@ metrics_online.LowerCVaROnAcross.window_size = %RISK_ACROSS_RUNS_WINDOW_SIZE
 metrics_online.LowerCVaROnAcross.baseline = None
 
 # Not possible to process all values when training runs are long
-SUBSET_SIZE = 100
 
 eval_metrics.Evaluator.metrics = %METRICS
 eval_metrics.Evaluator.timepoint_variable=None
 eval_metrics.Evaluator.dependent_variable='episode_reward'
 eval_metrics.Evaluator.align_on_global_step = True
-eval_metrics.Evaluator.subset_size = %SUBSET_SIZE
 
 # ----------------------
 # SYSTEM METRICS SETUP
@@ -82,7 +80,7 @@ track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
 track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
-track_emissions.baseline_measure_sec=30
+track_emissions.baseline_measure_sec=20
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'
