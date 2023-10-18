@@ -15,7 +15,7 @@ DOCKER_CONTAINER_NAME="web_nav_container"
 DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
-
+WORK_UNIT_ID=0
 # parse command-line arguments
 for arg in "$@"; do
   case "$arg" in
@@ -29,6 +29,10 @@ for arg in "$@"; do
     ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
+    shift
+    ;;
+  --work_unit_id=*)
+    WORK_UNIT_ID="${arg#*=}"
     shift
     ;;
   --env_batch_size=*)
@@ -86,7 +90,6 @@ for arg in "$@"; do
   esac
 done
 
-
 SSH_KEY_PATH=$WEB_NAV_DIR/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
@@ -107,30 +110,60 @@ mkdir -p "$WEB_NAV_DIR/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
 # Build the Docker image
-docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
+docker build --rm --network=host \
+  --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
+  --build-arg USER_ID="$(id -u)" \
+  --build-arg USER_GROUP_ID="$(id -g)" \
+  -t "$DOCKER_IMAGE_NAME" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/quadruped_locomotion
+  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_nav/docker
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
-  # if it is running, do nothing
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
-  xhost + local: # Allow docker to access the display
-  docker run -itd \
-    --rm \
-    --gpus=all \
-    --name "$DOCKER_CONTAINER_NAME" \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -e DISPLAY="$DISPLAY" \
-    -v "${HOME}/.Xauthority:/user/.Xauthority:rw" \
-    -v /dev/shm:/dev/shm \
-    --privileged \
-    --gpus=all \
-    -v "$(pwd)":/rl-perf \
-    -p 2022:22 \
-    "$DOCKER_IMAGE_NAME"
+  echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
+  docker_run_command="docker run -itd --rm --privileged --network=host"
+
+  # check to see if /sys/class/powercap exists. if so, mount it
+  if [ -d "/sys/class/powercap" ]; then
+    docker_run_command+=" -v /sys/class/powercap:/sys/class/powercap"
+  else
+    echo "No powercap directory found. Will not mount it."
+  fi
+
+  # check for GPU and add the necessary flag if found
+  if command -v nvidia-smi &>/dev/null; then
+    docker_run_command+=" --gpus all"
+    # give two GPUs depending on the docker_container_name last digit
+    #    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
+  fi
+
+  # append the rest of the flags
+  docker_run_command+=" -v $(pwd):/rl-perf"
+  docker_run_command+=" -v /dev/shm:/dev/shm"
+  docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
+  docker_run_command+=" --workdir /rl-perf"
+  docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
+  docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+
+  echo "Running command: $docker_run_command"
+  eval "$docker_run_command"
 fi
+
+#if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
+#  echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
+#else
+#  xhost + local: # Allow docker to access the display
+#  docker run -itd \
+#    --rm \
+#    --gpus=all \
+#    --name "$DOCKER_CONTAINER_NAME" \
+#    -v /tmp/.X11-unix:/tmp/.X11-unix \
+#    -e DISPLAY="$DISPLAY" \
+#    -v "${HOME}/.Xauthority:/user/.Xauthority:rw" \
+#    "$DOCKER_IMAGE_NAME"
+#fi
 
 #exit 0
 # Install packages inside the container
@@ -158,7 +191,7 @@ export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
-  --gin_file=$GIN_CONFIG \
+  --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \

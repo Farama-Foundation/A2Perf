@@ -70,7 +70,7 @@ eval_metrics.Evaluator.align_on_global_step = True
 # ----------------------
 # Set up codecarbon for system metrics
 track_emissions.project_name = 'rlperf_web_nav_train_debug'
-track_emissions.measure_power_secs = 1
+track_emissions.measure_power_secs = 5
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
 track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired

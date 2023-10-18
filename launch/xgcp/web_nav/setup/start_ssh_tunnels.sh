@@ -1,6 +1,6 @@
 #!/bin/bash
 
-declare -a servers=("web-nav" "web-nav-0")
+declare -a servers=("web-nav-0")
 
 # Start port number
 local_port=10021
