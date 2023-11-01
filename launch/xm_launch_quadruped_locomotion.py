@@ -43,7 +43,7 @@ _GIN_CONFIG = flags.DEFINE_string(
 _SEED = flags.DEFINE_integer('seed', 0, 'Random seed')
 _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None, 'Experiment number')
 _MOTION_FILE_PATH = flags.DEFINE_string('motion_file_path',
-                                        '/rl-perf/rl_perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt',
+                                        None,
                                         'Motion file')
 FLAGS = flags.FLAGS
 
