@@ -15,6 +15,8 @@ flags.DEFINE_bool('debug', False, 'Debug mode')
 flags.DEFINE_bool('run_offline_metrics_only', False, 'Whether to run offline metrics only.')
 flags.DEFINE_string('participant_module_path', None, 'Path to participant module')
 flags.DEFINE_string('gin_config', None, 'Path to gin config file that determines which experiment to run')
+_DIFFICULTY_LEVEL = flags.DEFINE_integer('difficulty_level', 1, 'Difficulty level')
+_SEED = flags.DEFINE_integer('seed', 0, 'Random seed')
 FLAGS = flags.FLAGS
 
 
@@ -22,7 +24,7 @@ def main(_):
     # set directory of this script as working directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/quadruped_locomotion')
+    web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
         binary_path = './local/web_nav/launch.sh'
@@ -30,7 +32,7 @@ def main(_):
         env_vars = dict(
             WEB_NAV_DIR=web_nav_dir,
             TF_FORCE_GPU_ALLOW_GROWTH='true',
-
+            TF_GPU_ALLOCATOR='cuda_malloc_async'
         )
 
     else:
@@ -46,43 +48,49 @@ def main(_):
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
 
         if FLAGS.debug:
-            web_nav_seeds = [
-                37,
-            ]
-            env_batch_sizes = [8, ]
-            total_env_steps = [10000, ]
-            difficulty_levels = [1, ]
-        else:
-            web_nav_seeds = [
-                37,
-                82,
-                14,
-                65,
-                23,
-                98,
-                51,
-                19,
-                77,
-                43
-            ]
-            env_batch_sizes = [8, ]
-            total_env_steps = [1000000, ]
-            difficulty_levels = [1, ]
-        web_nav_hparam_sweeps = list(
-            dict([
-                ('seed', seed),
-                ('env_batch_size', env_batch_size),
-                ('total_env_steps', env_steps),
-                ('difficulty_level', difficulty_level),
+            web_nav_seeds = [_SEED.value]
+            env_batch_sizes = [8]
+            total_env_steps = [50000]
+            difficulty_levels = [_DIFFICULTY_LEVEL.value]
+            learning_rates = [1e-4]  # Example values; adjust as needed.
+            eval_intervals = [5000]
+            train_checkpoint_intervals = [10000]
+            policy_checkpoint_intervals = [10000]
 
-            ])
-            for (seed, env_batch_size, env_steps, difficulty_level) in itertools.product(
+        else:
+            web_nav_seeds = [_SEED.value]
+            env_batch_sizes = [16]
+            total_env_steps = [1000000]
+            difficulty_levels = [_DIFFICULTY_LEVEL.value]
+
+            learning_rates = [1e-4]  # Example values; adjust as needed.
+            eval_intervals = [50000]
+            train_checkpoint_intervals = [100000]
+            policy_checkpoint_intervals = [100000]
+
+        # Combine all hyperparameters for the sweep
+        web_nav_hparam_sweeps = [
+            {
+                'seed': seed,
+                'env_batch_size': env_batch_size,
+                'total_env_steps': env_steps,
+                'difficulty_level': difficulty_level,
+                'learning_rate': lr,
+                'eval_interval': ei,
+                'train_checkpoint_interval': tci,
+                'policy_checkpoint_interval': pci,
+            }
+            for (seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci) in itertools.product(
                 web_nav_seeds,
                 env_batch_sizes,
                 total_env_steps,
                 difficulty_levels,
+                learning_rates,
+                eval_intervals,
+                train_checkpoint_intervals,
+                policy_checkpoint_intervals,
             )
-        )
+        ]
 
         # Define Executable
         [executable] = experiment.package([

@@ -9,13 +9,18 @@ ROOT_DIR=../logs/quadruped_locomotion
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
 PARTICIPANT_MODULE_PATH=""
-WEB_NAV_DIR=""
+WEB_NAV_DIR="$(pwd)/rl_perf/domains/web_nav"
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
-DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/rl_perf/domains/web_nav/docker/Dockerfile"
+DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 WORK_UNIT_ID=0
+LEARNING_RATE=0.001               # Default value, adjust if needed
+EVAL_INTERVAL=100000              # Default value, adjust if needed
+TRAIN_CHECKPOINT_INTERVAL=100000  # Default value, adjust if needed
+POLICY_CHECKPOINT_INTERVAL=100000 # Default value, adjust if needed
+
 # parse command-line arguments
 for arg in "$@"; do
   case "$arg" in
@@ -83,6 +88,22 @@ for arg in "$@"; do
     DOCKERFILE_PATH="${arg#*=}"
     shift
     ;;
+  --learning_rate=*)
+    LEARNING_RATE="${arg#*=}"
+    shift
+    ;;
+  --eval_interval=*)
+    EVAL_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --train_checkpoint_interval=*)
+    TRAIN_CHECKPOINT_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --policy_checkpoint_interval=*)
+    POLICY_CHECKPOINT_INTERVAL="${arg#*=}"
+    shift
+    ;;
   *)
     echo "Invalid option: $arg"
     exit 1
@@ -90,7 +111,7 @@ for arg in "$@"; do
   esac
 done
 
-SSH_KEY_PATH=$WEB_NAV_DIR/.ssh/id_rsa
+SSH_KEY_PATH=$WEB_NAV_DIR/docker/.ssh/id_rsa
 
 echo "Env Batch Size: $ENV_BATCH_SIZE"
 echo "Difficulty Level: $DIFFICULTY_LEVEL"
@@ -106,7 +127,7 @@ echo "SSH key path: $SSH_KEY_PATH"
 echo "Requirements path: $REQUIREMENTS_PATH"
 
 # create ssh-key in WEB_NAV_DIR without password
-mkdir -p "$WEB_NAV_DIR/.ssh"
+mkdir -p "$WEB_NAV_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
 # Build the Docker image
@@ -141,7 +162,7 @@ else
 
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
-  docker_run_command+=" -v /dev/shm:/dev/shm"
+  #  docker_run_command+=" -v /dev/shm:/dev/shm"
   docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
@@ -151,21 +172,6 @@ else
   eval "$docker_run_command"
 fi
 
-#if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
-#  echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
-#else
-#  xhost + local: # Allow docker to access the display
-#  docker run -itd \
-#    --rm \
-#    --gpus=all \
-#    --name "$DOCKER_CONTAINER_NAME" \
-#    -v /tmp/.X11-unix:/tmp/.X11-unix \
-#    -e DISPLAY="$DISPLAY" \
-#    -v "${HOME}/.Xauthority:/user/.Xauthority:rw" \
-#    "$DOCKER_IMAGE_NAME"
-#fi
-
-#exit 0
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
@@ -173,11 +179,8 @@ cd /rl-perf
 # Install requirements for the rl-perf repo
 pip install -r requirements.txt
 
-# Install RLPerf as a packages
-pip install -e .
-
 # Install packages specific to the user's training code
-pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
+pip install -r rl_perf/rlperf_benchmark_submission/web_nav/debug/requirements.txt
 EOF
 
 # Run the benchmarking code
@@ -188,6 +191,10 @@ export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
+export LEARNING_RATE=$LEARNING_RATE
+export EVAL_INTERVAL=$EVAL_INTERVAL
+export TRAIN_CHECKPOINT_INTERVAL=$TRAIN_CHECKPOINT_INTERVAL
+export POLICY_CHECKPOINT_INTERVAL=$POLICY_CHECKPOINT_INTERVAL
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
