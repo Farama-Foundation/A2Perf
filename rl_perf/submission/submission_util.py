@@ -311,7 +311,7 @@ class Submission:
         for _ in range(self.num_inference_steps):
             observation = env.observation_space.sample()
             data.append(observation)
-        del env
+        env.close()
         return data
 
     def _train(self, participant_event: multiprocessing.Event, profiler_events: typing.List[multiprocessing.Event],
@@ -397,12 +397,13 @@ class Submission:
 
             if self.measure_emissions:
                 @codecarbon.track_emissions(output_dir=metric_values_dir, output_file='inference_emissions.csv', )
-                def perform_rollouts_and_track_emissions():
-                    return self.perform_rollouts(participant_module=participant_module,
-                                                 participant_model=participant_model, env=env)
+                def perform_rollouts_and_track_emissions(p_module, p_model, e):
+                    rewards = self.perform_rollouts(participant_module=p_module, participant_model=p_model, env=e)
+                    return rewards
 
                 logging.info('Performing rollouts and tracking emissions')
-                all_rewards = perform_rollouts_and_track_emissions()
+                all_rewards = perform_rollouts_and_track_emissions(p_module=participant_module,
+                                                                   p_model=participant_model, e=env)
             else:
                 logging.info('Performing rollouts')
                 all_rewards = self.perform_rollouts(participant_module=participant_module,
@@ -629,7 +630,7 @@ class Submission:
 
                 participant_process.kill()
                 logging.info('Killed participant process')
-                
+
                 for profiler in profilers:
                     profiler.join()
                     if profiler.is_alive():
