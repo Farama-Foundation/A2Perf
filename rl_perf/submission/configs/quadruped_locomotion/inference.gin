@@ -4,56 +4,64 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metric
 import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 
 ####################################
-# Set up submission object
-####################################
-Submission.mode = %BenchmarkMode.INFERENCE
-Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-
-####################################
-# Set up domain
-####################################
-Submission.create_domain.seed = 0
-Submission.create_domain.designs=[{'number_of_pages': 1, 'action': [],'action_page': [],}]
-Submission.create_domain.reload_vocab = True
-
-####################################
 # Set up benchmark mode
 ####################################
-Submission.num_inference_steps = 10
-Submission.num_inference_episodes = 10
+Submission.num_inference_steps = 1000
+Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
-
-####################################
-# Set up carbon and energy metrics
-####################################
-Submission.measure_emissions=True
-Submission.measure_emissions_interval=1
-Submission.baseline_measure_sec=10
-Submission.code_carbon_offline_mode=True
-Submission.country_iso_code='USA'
-Submission.region='Massachusetts'
-Submission.tracking_mode='process'
-
-####################################
-# Profiler setup
-####################################
-#memory_profiler.InferenceMemoryProfiler.interval = 0.5
-#memory_profiler.InferenceMemoryProfiler.log_file = 'inference_memory_profiler.csv'
-#Submission.profilers = (@memory_profiler.InferenceMemoryProfiler,)
+Submission.domain_config_paths='/rl-perf/rl_perf/submission/configs/quadruped_locomotion/domain_configs/dog_pace.gin'
 
 ####################################
 # Reliability
 ####################################
 
 METRICS = [
-    %ReliabilityMetrics.IqrAcrossRollouts,
-    %ReliabilityMetrics.StddevAcrossRollouts,
-    %ReliabilityMetrics.UpperCVaRAcrossRollouts,
-    %ReliabilityMetrics.LowerCVaRAcrossRollouts,
-    %ReliabilityMetrics.MadAcrossRollouts,
+    #%ReliabilityMetrics.IqrAcrossRollouts,
+    #%ReliabilityMetrics.StddevAcrossRollouts,
+    #%ReliabilityMetrics.UpperCVaRAcrossRollouts,
+    #%ReliabilityMetrics.LowerCVaRAcrossRollouts,
+    #%ReliabilityMetrics.MadAcrossRollouts,
 ]
 
 Submission.reliability_metrics = %METRICS
 eval_metrics.Evaluator.timepoint_variable='episode_num'
 eval_metrics.Evaluator.dependent_variable='reward'
 eval_metrics.Evaluator.align_on_global_step = True
+
+
+# ----------------------
+# SUBMISSION SETUP
+# ----------------------
+# Set up submission object
+Submission.domain = %BenchmarkDomain.QUADRUPED_LOCOMOTION
+Submission.run_offline_metrics_only=False
+Submission.measure_emissions=True
+Submission.mode = %BenchmarkMode.INFERENCE
+
+
+eval_metrics.Evaluator.metrics = %METRICS
+eval_metrics.Evaluator.timepoint_variable=None
+eval_metrics.Evaluator.dependent_variable='episode_reward'
+eval_metrics.Evaluator.align_on_global_step = True
+eval_metrics.Evaluator.subset_size = %SUBSET_SIZE
+
+# ----------------------
+# SYSTEM METRICS SETUP
+# ----------------------
+# Set up codecarbon for system metrics
+
+collect_system_metrics.subset_size = %SUBSET_SIZE
+
+track_emissions.project_name = 'rlperf_quadruped_locomomtion_inference'
+track_emissions.measure_power_secs = 1
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+track_emissions.baseline_measure_sec=5
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'

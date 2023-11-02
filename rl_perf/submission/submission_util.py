@@ -16,6 +16,7 @@ import sys
 import timeit
 import typing
 from contextlib import contextmanager
+from decimal import Decimal
 
 from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
 from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcrossRuns, IqrWithinRuns,
@@ -27,7 +28,6 @@ from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (IqrAcros
 , StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts, LowerCVaRAcrossRollouts, )
 from rl_perf.metrics.system import codecarbon
 from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
-from decimal import Decimal
 
 SCI_NOTATION_THRESHOLD = 1e-2
 
@@ -299,7 +299,7 @@ class Submission:
         elif self.domain == BenchmarkDomain.CIRCUIT_TRAINING:
             pass
         elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
-            pass
+            from rl_perf.domains import quadruped_locomotion
         else:
             raise NotImplementedError(f'Domain {self.domain} not implemented')
         env = gym.make(self.domain.value, **kwargs)
@@ -345,6 +345,21 @@ class Submission:
         for profiler_event in profiler_events:
             profiler_event.clear()
 
+    def perform_rollouts(self, participant_module, participant_model, env):
+        rollout_rewards = []
+        for _ in range(self.num_inference_episodes):
+            observation = env.reset()
+            done = False
+            rewards = 0
+            while not done:
+                preprocessed_obs = participant_module.preprocess_observation(observation)
+                action = participant_module.infer_once(model=participant_model, observation=preprocessed_obs)
+                observation, reward, done, _ = env.step(action)
+                rewards += reward
+            rollout_rewards.append(rewards)
+            print(f'Episode reward: {rewards}')
+        return rollout_rewards
+
     def _inference(self,
                    participant_event: multiprocessing.Event,
                    profiler_events: typing.List[multiprocessing.Event],
@@ -362,7 +377,9 @@ class Submission:
             print(self.participant_module_path)
             print(participant_module_spec)
             participant_module_spec.loader.exec_module(participant_module)
-            participant_model = participant_module.load_model()
+
+            env = self.create_domain()
+            participant_model = participant_module.load_model(env=env)
 
             preprocessed_data = [participant_module.preprocess_observation(x) for x in inference_data]
 
@@ -378,32 +395,18 @@ class Submission:
                                                         mean=np.mean(inference_times),
                                                         std=np.std(inference_times))
 
-            def perform_rollouts():
-                rollout_rewards = []
-                env = self.create_domain()
-                for _ in range(self.num_inference_episodes):
-                    observation = env.reset()
-                    done = False
-                    rewards = 0
-                    while not done:
-                        preprocessed_obs = participant_module.preprocess_observation(observation)
-                        action = participant_module.infer_once(model=participant_model, observation=preprocessed_obs)
-                        observation, reward, done, _ = env.step(action)
-                        rewards += reward
-                    rollout_rewards.append(rewards)
-                    print(f'Episode reward: {rewards}')
-                return rollout_rewards
-
             if self.measure_emissions:
                 @codecarbon.track_emissions(output_dir=metric_values_dir, output_file='inference_emissions.csv', )
                 def perform_rollouts_and_track_emissions():
-                    return perform_rollouts()
+                    return self.perform_rollouts(participant_module=participant_module,
+                                                 participant_model=participant_model, env=env)
 
                 logging.info('Performing rollouts and tracking emissions')
                 all_rewards = perform_rollouts_and_track_emissions()
             else:
                 logging.info('Performing rollouts')
-                all_rewards = perform_rollouts()
+                all_rewards = self.perform_rollouts(participant_module=participant_module,
+                                                    participant_model=participant_model, env=env)
 
             logging.info(f'Rollout rewards: {all_rewards}')
             metric_results['rollout_returns'] = dict(values=all_rewards,
@@ -576,6 +579,7 @@ class Submission:
             self._plot_metrics(metric_results=self.metrics_results, save_dir=self.metric_values_dir)
 
     def _run_inference_benchmark(self):
+        logging.info(f'Running inference benchmark for domain: {self.domain}')
         if not self.run_offline_metrics_only:
             for domain_config_path in self.domain_config_paths:
                 logging.info(f'Running inference benchmark for domain config: {domain_config_path}')
@@ -623,6 +627,9 @@ class Submission:
                 else:
                     logging.info(f'Participant process {participant_process.pid} finished')
 
+                participant_process.kill()
+                logging.info('Killed participant process')
+                
                 for profiler in profilers:
                     profiler.join()
                     if profiler.is_alive():
@@ -639,12 +646,12 @@ class Submission:
                 metric_results.update(inference_metrics)
                 emissions_path = os.path.join(metric_values_dir, 'inference_emissions.csv')
                 assert os.path.exists(emissions_path), f'No inference_emissions.csv found in {metric_values_dir}'
-                system_metrics = self.collect_system_metrics(emissions_file_path=emissions_path,
-                                                             benchmark_mode=BenchmarkMode.INFERENCE,
-                                                             metric_results=metric_results,
-                                                             )
-                logging.info(f'Collected system metrics: {system_metrics}')
-                metric_results.update(system_metrics)
+                # system_metrics = self.collect_system_metrics(emissions_file_path=emissions_path,
+                #                                              benchmark_mode=BenchmarkMode.INFERENCE,
+                #                                              metric_results=metric_results,
+                #                                              )
+                # logging.info(f'Collected system metrics: {system_metrics}')
+                # metric_results.update(system_metrics)
                 if self.reliability_metrics:
                     reliability_metrics = self._run_inference_reliability_metrics(
                         values=metric_results['rollout_returns']['values'],
