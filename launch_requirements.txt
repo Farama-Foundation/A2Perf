@@ -4,3 +4,5 @@ matplotlib
 seaborn
 pandas
 numpy
+minari
+gymnasium
