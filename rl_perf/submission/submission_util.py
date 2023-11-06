@@ -3,7 +3,7 @@ import csv
 import enum
 import gin
 import glob
-import gym
+import gymnasium as gym
 import importlib
 import json
 import logging

@@ -194,6 +194,7 @@ cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip install -r requirements.txt
 pip install -e .
+pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
 EOF
 
 # Remove stray single quotes first
@@ -224,7 +225,7 @@ export SETUP_PATH="$SETUP_PATH"
 
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
-python3.7 -u main_submission.py \
+python3.9 -u main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
