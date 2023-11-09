@@ -57,7 +57,8 @@ def main(argv):
             observation = env.reset()  # Reset the environment to get the initial observation.
             observation = preprocess_observation(observation)
             action = infer_once(model, observation)
-            next_observation, reward, done, info = env.step(action)  # Step the environment with the action.
+            next_observation, reward, terminated, truncated, info = env.step(action)  # Step the environment with the action.
+            done = truncated or terminated
             transition = (observation, action, reward, next_observation, done)
             transitions.append(transition)
 
