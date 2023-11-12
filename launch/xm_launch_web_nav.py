@@ -41,34 +41,41 @@ def main(_):
         binary_path = './singularity/web_nav/launch.slurm'
         additional_args = []
         env_vars = dict(
-            TF_FORCE_GPU_ALLOW_GROWTH='true',
-            # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
         )
 
     with xm_local.create_experiment(experiment_title=FLAGS.experiment_name) as experiment:
 
         if FLAGS.debug:
+            # Debug mode hyperparameters
+            summary_intervals = [5000]
+            log_intervals = [5000]
+            rb_capacity_values = [10000, 100000]
+            batch_size_values = [32, 64, 128]
+            timesteps_per_actorbatch_values = [8]
             web_nav_seeds = [_SEED.value]
             env_batch_sizes = [8]
             total_env_steps = [50000]
             difficulty_levels = [_DIFFICULTY_LEVEL.value]
-            learning_rates = [1e-4]  # Example values; adjust as needed.
+            learning_rates = [1e-4]
             eval_intervals = [5000]
             train_checkpoint_intervals = [10000]
             policy_checkpoint_intervals = [10000]
-
         else:
+            # Non-debug mode hyperparameters
+            summary_intervals = [50000]  # Adjusted to match the non-debug scale
+            log_intervals = [50000]  # Adjusted to match the non-debug scale
+            rb_capacity_values = [100000, 200000]  # Hypothetical values for non-debug mode
+            batch_size_values = [64, 128, 256]  # Hypothetical larger batch sizes for non-debug mode
+            timesteps_per_actorbatch_values = [20]  # Hypothetical value for non-debug mode
             web_nav_seeds = [_SEED.value]
             env_batch_sizes = [16]
             total_env_steps = [1000000]
             difficulty_levels = [_DIFFICULTY_LEVEL.value]
-
-            learning_rates = [1e-4]  # Example values; adjust as needed.
+            learning_rates = [1e-4]
             eval_intervals = [50000]
             train_checkpoint_intervals = [100000]
             policy_checkpoint_intervals = [100000]
 
-        # Combine all hyperparameters for the sweep
         web_nav_hparam_sweeps = [
             {
                 'seed': seed,
@@ -79,8 +86,14 @@ def main(_):
                 'eval_interval': ei,
                 'train_checkpoint_interval': tci,
                 'policy_checkpoint_interval': pci,
+                'summary_interval': si,
+                'log_interval': li,
+                'rb_capacity': rb,
+                'batch_size': bs,
+                'timesteps_per_actorbatch': tpab,
             }
-            for (seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci) in itertools.product(
+            for (seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci, si, li, rb, bs, tpab) in
+            itertools.product(
                 web_nav_seeds,
                 env_batch_sizes,
                 total_env_steps,
@@ -89,6 +102,11 @@ def main(_):
                 eval_intervals,
                 train_checkpoint_intervals,
                 policy_checkpoint_intervals,
+                summary_intervals,
+                log_intervals,
+                rb_capacity_values,
+                batch_size_values,
+                timesteps_per_actorbatch_values,
             )
         ]
 

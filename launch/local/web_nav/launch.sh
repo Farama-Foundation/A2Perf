@@ -3,7 +3,7 @@ cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
 SEED=0
-ENV_BATCH_SIZE=1
+ENV_BATCH_SIZE=16 # Adjusted default value
 TOTAL_ENV_STEPS=1000000
 ROOT_DIR=../logs/quadruped_locomotion
 GIN_CONFIG=""
@@ -17,92 +17,79 @@ REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 WORK_UNIT_ID=0
 LEARNING_RATE=0.001               # Default value, adjust if needed
-EVAL_INTERVAL=100000              # Default value, adjust if needed
+EVAL_INTERVAL=50000               # Adjusted default value
 TRAIN_CHECKPOINT_INTERVAL=100000  # Default value, adjust if needed
 POLICY_CHECKPOINT_INTERVAL=100000 # Default value, adjust if needed
-
+RB_CAPACITY=100000                # Default replay buffer capacity
+SUMMARY_INTERVAL=10000            # Default value, adjust if needed
 # parse command-line arguments
 for arg in "$@"; do
   case "$arg" in
   --seed=*)
     SEED="${arg#*=}"
-    shift
     ;;
   --run_offline_metrics_only=*)
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
-    shift
+    ;;
+  --summary_interval=*)
+    SUMMARY_INTERVAL="${arg#*=}"
     ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
-    shift
     ;;
   --work_unit_id=*)
     WORK_UNIT_ID="${arg#*=}"
-    shift
     ;;
   --env_batch_size=*)
     ENV_BATCH_SIZE="${arg#*=}"
-    shift
     ;;
   --total_env_steps=*)
     TOTAL_ENV_STEPS="${arg#*=}"
-    shift
     ;;
   --root_dir=*)
     ROOT_DIR="${arg#*=}"
-    shift
     ;;
   --train_logs_dirs=*)
     TRAIN_LOGS_DIRS="${arg#*=}"
-    shift
     ;;
   --gin_config=*)
     GIN_CONFIG="${arg#*=}"
-    shift
     ;;
   --participant_module_path=*)
     PARTICIPANT_MODULE_PATH="${arg#*=}"
-    shift
     ;;
   --web_nav_dir=*)
     WEB_NAV_DIR="${arg#*=}"
-    shift
     ;;
   --docker_image_name=*)
     DOCKER_IMAGE_NAME="${arg#*=}"
-    shift
     ;;
   --docker_container_name=*)
     DOCKER_CONTAINER_NAME="${arg#*=}"
-    shift
     ;;
   --ssh_key_path=*)
     SSH_KEY_PATH="${arg#*=}"
-    shift
     ;;
   --requirements_path=*)
     REQUIREMENTS_PATH="${arg#*=}"
-    shift
     ;;
   --dockerfile_path=*)
     DOCKERFILE_PATH="${arg#*=}"
-    shift
     ;;
   --learning_rate=*)
     LEARNING_RATE="${arg#*=}"
-    shift
     ;;
   --eval_interval=*)
     EVAL_INTERVAL="${arg#*=}"
-    shift
     ;;
   --train_checkpoint_interval=*)
     TRAIN_CHECKPOINT_INTERVAL="${arg#*=}"
-    shift
     ;;
   --policy_checkpoint_interval=*)
     POLICY_CHECKPOINT_INTERVAL="${arg#*=}"
-    shift
+    ;;
+  --rb_capacity=*)
+    RB_CAPACITY="${arg#*=}"
     ;;
   *)
     echo "Invalid option: $arg"
@@ -195,6 +182,8 @@ export LEARNING_RATE=$LEARNING_RATE
 export EVAL_INTERVAL=$EVAL_INTERVAL
 export TRAIN_CHECKPOINT_INTERVAL=$TRAIN_CHECKPOINT_INTERVAL
 export POLICY_CHECKPOINT_INTERVAL=$POLICY_CHECKPOINT_INTERVAL
+export RB_CAPACITY=$RB_CAPACITY
+export SUMMARY_INTERVAL=$SUMMARY_INTERVAL
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
