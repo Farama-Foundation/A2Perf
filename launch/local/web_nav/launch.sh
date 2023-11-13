@@ -4,10 +4,12 @@ cd ../../.. || exit
 
 SEED=0
 ENV_BATCH_SIZE=16 # Adjusted default value
+BATCH_SIZE=0
 TOTAL_ENV_STEPS=1000000
 ROOT_DIR=../logs/quadruped_locomotion
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
+TIMESTEPS_PER_ACTORBATCH=0
 PARTICIPANT_MODULE_PATH=""
 WEB_NAV_DIR="$(pwd)/rl_perf/domains/web_nav"
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
@@ -15,6 +17,7 @@ DOCKER_CONTAINER_NAME="web_nav_container"
 DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
+LOG_INTERVAL=0
 WORK_UNIT_ID=0
 LEARNING_RATE=0.001               # Default value, adjust if needed
 EVAL_INTERVAL=50000               # Adjusted default value
@@ -27,69 +30,105 @@ for arg in "$@"; do
   case "$arg" in
   --seed=*)
     SEED="${arg#*=}"
+    shift
     ;;
   --run_offline_metrics_only=*)
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
     ;;
   --summary_interval=*)
     SUMMARY_INTERVAL="${arg#*=}"
+    shift
     ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
+    shift
+    ;;
+  --timesteps_per_actorbatch=*)
+    TIMESTEPS_PER_ACTORBATCH="${arg#*=}"
+    shift
     ;;
   --work_unit_id=*)
     WORK_UNIT_ID="${arg#*=}"
+    shift
     ;;
   --env_batch_size=*)
     ENV_BATCH_SIZE="${arg#*=}"
+    shift
     ;;
   --total_env_steps=*)
     TOTAL_ENV_STEPS="${arg#*=}"
+    shift
     ;;
   --root_dir=*)
     ROOT_DIR="${arg#*=}"
+    shift
+    ;;
+  --batch_size=*)
+    BATCH_SIZE="${arg#*=}"
+    shift
     ;;
   --train_logs_dirs=*)
     TRAIN_LOGS_DIRS="${arg#*=}"
+    shift
     ;;
   --gin_config=*)
     GIN_CONFIG="${arg#*=}"
+    shift
     ;;
   --participant_module_path=*)
     PARTICIPANT_MODULE_PATH="${arg#*=}"
+    shift
     ;;
   --web_nav_dir=*)
     WEB_NAV_DIR="${arg#*=}"
+    shift
     ;;
   --docker_image_name=*)
     DOCKER_IMAGE_NAME="${arg#*=}"
+    shift
     ;;
   --docker_container_name=*)
     DOCKER_CONTAINER_NAME="${arg#*=}"
+    shift
     ;;
   --ssh_key_path=*)
     SSH_KEY_PATH="${arg#*=}"
+    shift
     ;;
   --requirements_path=*)
     REQUIREMENTS_PATH="${arg#*=}"
+    shift
     ;;
   --dockerfile_path=*)
     DOCKERFILE_PATH="${arg#*=}"
+    shift
     ;;
   --learning_rate=*)
     LEARNING_RATE="${arg#*=}"
+    shift
     ;;
   --eval_interval=*)
     EVAL_INTERVAL="${arg#*=}"
+    shift
     ;;
   --train_checkpoint_interval=*)
     TRAIN_CHECKPOINT_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --log_interval=*)
+    LOG_INTERVAL="${arg#*=}"
+    shift
     ;;
   --policy_checkpoint_interval=*)
     POLICY_CHECKPOINT_INTERVAL="${arg#*=}"
+    shift
     ;;
   --rb_capacity=*)
     RB_CAPACITY="${arg#*=}"
+    shift
+    ;;
+  --rb_checkpoint_interval=*)
+    RB_CHECKPOINT_INTERVAL="${arg#*=}"
     ;;
   *)
     echo "Invalid option: $arg"
@@ -167,11 +206,14 @@ cd /rl-perf
 pip install -r requirements.txt
 
 # Install packages specific to the user's training code
-pip install -r rl_perf/rlperf_benchmark_submission/web_nav/debug/requirements.txt
+pip install --user -r rl_perf/rlperf_benchmark_submission/web_nav/debug/requirements.txt
 EOF
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
+
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+
 export SEED=$SEED
 export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
@@ -184,6 +226,10 @@ export TRAIN_CHECKPOINT_INTERVAL=$TRAIN_CHECKPOINT_INTERVAL
 export POLICY_CHECKPOINT_INTERVAL=$POLICY_CHECKPOINT_INTERVAL
 export RB_CAPACITY=$RB_CAPACITY
 export SUMMARY_INTERVAL=$SUMMARY_INTERVAL
+export BATCH_SIZE=$BATCH_SIZE
+export LOG_INTERVAL=$LOG_INTERVAL
+export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
+export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
@@ -191,5 +237,6 @@ python3 main_submission.py \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
-  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY
+  --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
+  --verbosity=1
 EOF

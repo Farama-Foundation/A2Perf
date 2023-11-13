@@ -49,11 +49,12 @@ def main(_):
             # Debug mode hyperparameters
             summary_intervals = [5000]
             log_intervals = [5000]
-            rb_capacity_values = [10000, 100000]
-            batch_size_values = [32, 64, 128]
+            rb_capacity_values = [10000, ]
+            rb_checkpoint_intervals = [5000]  # Assuming a default value for debug mode
+            batch_size_values = [32, ]
             timesteps_per_actorbatch_values = [8]
             web_nav_seeds = [_SEED.value]
-            env_batch_sizes = [8]
+            env_batch_sizes = [2]
             total_env_steps = [50000]
             difficulty_levels = [_DIFFICULTY_LEVEL.value]
             learning_rates = [1e-4]
@@ -65,6 +66,7 @@ def main(_):
             summary_intervals = [50000]  # Adjusted to match the non-debug scale
             log_intervals = [50000]  # Adjusted to match the non-debug scale
             rb_capacity_values = [100000, 200000]  # Hypothetical values for non-debug mode
+            rb_checkpoint_intervals = [5000]  # Assuming a default value for debug mode
             batch_size_values = [64, 128, 256]  # Hypothetical larger batch sizes for non-debug mode
             timesteps_per_actorbatch_values = [20]  # Hypothetical value for non-debug mode
             web_nav_seeds = [_SEED.value]
@@ -75,7 +77,6 @@ def main(_):
             eval_intervals = [50000]
             train_checkpoint_intervals = [100000]
             policy_checkpoint_intervals = [100000]
-
         web_nav_hparam_sweeps = [
             {
                 'seed': seed,
@@ -89,10 +90,11 @@ def main(_):
                 'summary_interval': si,
                 'log_interval': li,
                 'rb_capacity': rb,
+                'rb_checkpoint_interval': rci,  # Added rb_checkpoint_interval
                 'batch_size': bs,
                 'timesteps_per_actorbatch': tpab,
             }
-            for (seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci, si, li, rb, bs, tpab) in
+            for seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci, si, li, rb, rci, bs, tpab in
             itertools.product(
                 web_nav_seeds,
                 env_batch_sizes,
@@ -105,11 +107,11 @@ def main(_):
                 summary_intervals,
                 log_intervals,
                 rb_capacity_values,
+                rb_checkpoint_intervals,  # Added rb_checkpoint_intervals here
                 batch_size_values,
                 timesteps_per_actorbatch_values,
             )
         ]
-
         # Define Executable
         [executable] = experiment.package([
             xm.binary(
@@ -120,13 +122,10 @@ def main(_):
             )
         ])
 
-        for hparam_config in web_nav_hparam_sweeps:
-            experiment_name = FLAGS.experiment_name + '_' + '_'.join(
-                f"{key}_{hparam_config[key]}" for key in sorted(hparam_config.keys()))
-
+        for i, hparam_config in enumerate(web_nav_hparam_sweeps):
             # Add additional arguments that are constant across all runs
             root_dir = os.path.abspath(FLAGS.root_dir)
-            root_dir = os.path.join(root_dir, experiment_name)
+            root_dir = os.path.join(root_dir, f'web_nav_{i}')
             train_logs_dirs = root_dir
             participant_module_path = os.path.join(FLAGS.participant_module_path)
             run_offline_metrics_only = str(FLAGS.run_offline_metrics_only)
