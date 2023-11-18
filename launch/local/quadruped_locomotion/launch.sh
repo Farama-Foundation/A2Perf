@@ -19,8 +19,10 @@ MODE=""
 VISUALIZE=false
 MOTION_FILE_PATH=""
 INT_SAVE_FREQ=0
+INT_EVAL_FREQ=0
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
-SETUP_PATH='ppo_actor.py'
+ALGORITHM=""
+SETUP_PATH=""
 DEBUG=""
 
 # parse command-line arguments
@@ -36,6 +38,10 @@ for arg in "$@"; do
     ;;
   --run_offline_metrics_only=*)
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
+    shift
+    ;;
+  --algo=*)
+    ALGORITHM="${arg#*=}"
     shift
     ;;
   --env_batch_size=*)
@@ -106,6 +112,10 @@ for arg in "$@"; do
     INT_SAVE_FREQ="${arg#*=}"
     shift
     ;;
+  --int_eval_freq=*)
+    INT_EVAL_FREQ="${arg#*=}"
+    shift
+    ;;
   --setup_path=*)
     SETUP_PATH="${arg#*=}"
     shift
@@ -122,24 +132,15 @@ for arg in "$@"; do
 done
 
 SSH_KEY_PATH=$QUAD_LOCO_DIR/docker/.ssh/id_rsa
-
-echo "Env Batch Size: $ENV_BATCH_SIZE"
-echo "Seed value: $SEED"
-echo "Root directory: $ROOT_DIR"
-echo "Gin config: $GIN_CONFIG"
-echo "Participant module path: $PARTICIPANT_MODULE_PATH"
-echo "Quadruped locomotion directory: $QUAD_LOCO_DIR"
-echo "Docker image name: $DOCKER_IMAGE_NAME"
-echo "Docker container name: $DOCKER_CONTAINER_NAME"
-echo "Dockerfile path: $DOCKERFILE_PATH"
-echo "SSH key path: $SSH_KEY_PATH"
-echo "Requirements path: $REQUIREMENTS_PATH"
-echo "Parallel Mode: $PARALLEL_MODE"
-echo "Parallel Cores: $PARALLEL_CORES"
-echo "Mode: $MODE"
-echo "Visualize: $VISUALIZE"
-echo "Int Save Freq: $INT_SAVE_FREQ"
-echo "Setup Path: $SETUP_PATH"
+# change the setup path depending on the algorithm
+if [ "$ALGORITHM" = "ppo" ]; then
+  SETUP_PATH="ppo_actor.py"
+elif [ "$ALGORITHM" = "ddpg" ]; then
+  SETUP_PATH="ddpg_actor.py"
+else
+  echo "Invalid algorithm: $ALGORITHM"
+  exit 1
+fi
 
 mkdir -p "$QUAD_LOCO_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N ""
@@ -177,8 +178,6 @@ else
   # check for GPU and add the necessary flag if found
   if command -v nvidia-smi &>/dev/null; then
     docker_run_command+=" --gpus all"
-    # give two GPUs depending on the docker_container_name last digit
-    #    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
   fi
 
   # append the rest of the flags
@@ -199,9 +198,9 @@ pip install -r requirements.txt
 pip install -e .
 
 if [ "$DEBUG" = "true" ]; then
-  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/debug/requirements.txt
+  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/debug/requirements.txt
 else
-  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
+  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
 fi
 EOF
 
@@ -229,6 +228,7 @@ export MODE="$MODE"
 export MOTION_FILE_PATH="$MOTION_FILE_PATH"
 export VISUALIZE="$VISUALIZE"
 export INT_SAVE_FREQ="$INT_SAVE_FREQ"
+export INT_EVAL_FREQ="$INT_EVAL_FREQ"
 export SETUP_PATH="$SETUP_PATH"
 
 cd /rl-perf/rl_perf/submission

@@ -51,10 +51,11 @@ def main(_):
           "/home/ikechukwuu/workspace/rl-perf/env/bin/xmanager", "launch",
           "launch/xm_launch_quadruped_locomotion.py", "--",
           f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
-          f"--participant_module_path=/rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/{debug_path}",
+          f"--participant_module_path={os.path.join('/rl-perf/rl_perf/rlperf_benchmark_submission', FLAGS.algo, debug_path)}",
           f"--motion_file_path={motion_file_path}",
           f"--gin_config={os.path.join(base_gin_config, 'train.gin')}",
           "--local",
+          f"--algo={FLAGS.algo}",
           '--debug' if FLAGS.debug else '',
           f"--seed={seed}", f"--experiment_number={next_exp_num}"
       ]
