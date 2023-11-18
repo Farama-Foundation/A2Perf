@@ -21,6 +21,7 @@ MOTION_FILE_PATH=""
 INT_SAVE_FREQ=0
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
 SETUP_PATH='ppo_actor.py'
+DEBUG=""
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -109,6 +110,10 @@ for arg in "$@"; do
     SETUP_PATH="${arg#*=}"
     shift
     ;;
+  --debug=*)
+    DEBUG="${arg#*=}"
+    shift
+    ;;
   *)
     echo "Invalid option: $arg"
     exit 1
@@ -194,7 +199,7 @@ cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip install -r requirements.txt
 pip install -e .
-pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
+pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/debug/requirements.txt
 EOF
 
 # Remove stray single quotes first
