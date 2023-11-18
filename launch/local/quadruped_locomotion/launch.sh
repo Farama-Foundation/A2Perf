@@ -193,13 +193,16 @@ else
   eval "$docker_run_command"
 fi
 
-#exit 0
-# Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip install -r requirements.txt
 pip install -e .
-pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/debug/requirements.txt
+
+if [ "$DEBUG" = "true" ]; then
+  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/debug/requirements.txt
+else
+  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/requirements.txt
+fi
 EOF
 
 # Remove stray single quotes first
