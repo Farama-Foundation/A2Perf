@@ -25,11 +25,22 @@ TRAIN_CHECKPOINT_INTERVAL=100000  # Default value, adjust if needed
 POLICY_CHECKPOINT_INTERVAL=100000 # Default value, adjust if needed
 RB_CAPACITY=100000                # Default replay buffer capacity
 SUMMARY_INTERVAL=10000            # Default value, adjust if needed
+ALGORITHM=""
+DEBUG=""
+
 # parse command-line arguments
 for arg in "$@"; do
   case "$arg" in
   --seed=*)
     SEED="${arg#*=}"
+    shift
+    ;;
+  --algo=*)
+    ALGORITHM="${arg#*=}"
+    shift
+    ;;
+  --debug=*)
+    DEBUG="${arg#*=}"
     shift
     ;;
   --run_offline_metrics_only=*)
@@ -182,13 +193,10 @@ else
   # check for GPU and add the necessary flag if found
   if command -v nvidia-smi &>/dev/null; then
     docker_run_command+=" --gpus all"
-    # give two GPUs depending on the docker_container_name last digit
-    #    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
   fi
 
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
-  #  docker_run_command+=" -v /dev/shm:/dev/shm"
   docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
@@ -198,15 +206,16 @@ else
   eval "$docker_run_command"
 fi
 
-# Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
-
-# Install requirements for the rl-perf repo
 pip install -r requirements.txt
+pip install -e .
 
-# Install packages specific to the user's training code
-pip install --user -r rl_perf/rlperf_benchmark_submission/web_nav/debug/requirements.txt
+if [ "$DEBUG" = "true" ]; then
+  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/web_nav/${ALGORITHM}/debug/requirements.txt
+else
+  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/web_nav/${ALGORITHM}/requirements.txt
+fi
 EOF
 
 # Run the benchmarking code
