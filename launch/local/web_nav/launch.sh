@@ -2,23 +2,29 @@
 cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
-echo $(pwd)
 SEED=0
-ENV_BATCH_SIZE=1
+ENV_BATCH_SIZE=16 # Adjusted default value
+BATCH_SIZE=0
 TOTAL_ENV_STEPS=1000000
-ROOT_DIR=../logs/web_nav
+ROOT_DIR=../logs/quadruped_locomotion
 GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
+TIMESTEPS_PER_ACTORBATCH=0
 PARTICIPANT_MODULE_PATH=""
-WORK_UNIT_ID=0
 WEB_NAV_DIR="$(pwd)/rl_perf/domains/web_nav"
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
 DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
-RUN_OFFLINE_METRICS_ONLY="False"
-BASE_IMAGE="nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04"
-
+RUN_OFFLINE_METRICS_ONLY=""
+LOG_INTERVAL=0
+WORK_UNIT_ID=0
+LEARNING_RATE=0.001               # Default value, adjust if needed
+EVAL_INTERVAL=50000               # Adjusted default value
+TRAIN_CHECKPOINT_INTERVAL=100000  # Default value, adjust if needed
+POLICY_CHECKPOINT_INTERVAL=100000 # Default value, adjust if needed
+RB_CAPACITY=100000                # Default replay buffer capacity
+SUMMARY_INTERVAL=10000            # Default value, adjust if needed
 # parse command-line arguments
 for arg in "$@"; do
   case "$arg" in
@@ -28,10 +34,17 @@ for arg in "$@"; do
     ;;
   --run_offline_metrics_only=*)
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
+    ;;
+  --summary_interval=*)
+    SUMMARY_INTERVAL="${arg#*=}"
     shift
     ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
+    shift
+    ;;
+  --timesteps_per_actorbatch=*)
+    TIMESTEPS_PER_ACTORBATCH="${arg#*=}"
     shift
     ;;
   --work_unit_id=*)
@@ -48,6 +61,10 @@ for arg in "$@"; do
     ;;
   --root_dir=*)
     ROOT_DIR="${arg#*=}"
+    shift
+    ;;
+  --batch_size=*)
+    BATCH_SIZE="${arg#*=}"
     shift
     ;;
   --train_logs_dirs=*)
@@ -86,6 +103,33 @@ for arg in "$@"; do
     DOCKERFILE_PATH="${arg#*=}"
     shift
     ;;
+  --learning_rate=*)
+    LEARNING_RATE="${arg#*=}"
+    shift
+    ;;
+  --eval_interval=*)
+    EVAL_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --train_checkpoint_interval=*)
+    TRAIN_CHECKPOINT_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --log_interval=*)
+    LOG_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --policy_checkpoint_interval=*)
+    POLICY_CHECKPOINT_INTERVAL="${arg#*=}"
+    shift
+    ;;
+  --rb_capacity=*)
+    RB_CAPACITY="${arg#*=}"
+    shift
+    ;;
+  --rb_checkpoint_interval=*)
+    RB_CHECKPOINT_INTERVAL="${arg#*=}"
+    ;;
   *)
     echo "Invalid option: $arg"
     exit 1
@@ -107,30 +151,26 @@ echo "Docker container name: $DOCKER_CONTAINER_NAME"
 echo "Dockerfile path: $DOCKERFILE_PATH"
 echo "SSH key path: $SSH_KEY_PATH"
 echo "Requirements path: $REQUIREMENTS_PATH"
-echo "Work unit id: $WORK_UNIT_ID"
 
 # create ssh-key in WEB_NAV_DIR without password
 mkdir -p "$WEB_NAV_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
-docker build \
-  --rm \
-  --pull \
-  --build-arg base_image=$BASE_IMAGE \
-  -f "${DOCKERFILE_PATH}" \
-  --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
+# Build the Docker image
+docker build --rm --network=host \
+  --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
+  --build-arg USER_ID="$(id -u)" \
+  --build-arg USER_GROUP_ID="$(id -g)" \
   -t "$DOCKER_IMAGE_NAME" \
-  "$WEB_NAV_DIR"/docker
-
-echo "Successfully built docker image."
+  --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
+  -f "$DOCKERFILE_PATH" \
+  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_nav/docker
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
 else
   echo "$DOCKER_CONTAINER_NAME is not running. Will start a new container."
-  # initial command
-  #  docker_run_command="docker run -itd --rm -p 2022:22 --privileged"
-  docker_run_command="docker run -itd --rm  --privileged"
+  docker_run_command="docker run -itd --rm --privileged --network=host"
 
   # check to see if /sys/class/powercap exists. if so, mount it
   if [ -d "/sys/class/powercap" ]; then
@@ -141,21 +181,15 @@ else
 
   # check for GPU and add the necessary flag if found
   if command -v nvidia-smi &>/dev/null; then
-    #    docker_run_command+=" --gpus all"
+    docker_run_command+=" --gpus all"
     # give two GPUs depending on the docker_container_name last digit
-    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
+    #    docker_run_command+=" --gpus \"device=$WORK_UNIT_ID\""
   fi
 
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
-  docker_run_command+=" -v /dev/shm:/dev/shm"
+  #  docker_run_command+=" -v /dev/shm:/dev/shm"
   docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
-  #  docker_run_command+=" -v /var/run/:/var/run/"
-  #  docker_run_command+=" -v /tmp/:/tmp/"
-  #  docker_run_command+=" -v /var/tmp/:/var/tmp/"
-  docker_run_command+=" -v /sys/fs/cgroup:/sys/fs/cgroup:rw"
-  #  docker_run_command+=" -e DISPLAY=$DISPLAY"
-  docker_run_command+=" -v $HOME/.Xauthority:/user/.Xauthority:rw"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
@@ -164,50 +198,45 @@ else
   eval "$docker_run_command"
 fi
 
-#exit 0
-
-EXTRA_GIN_BINDINGS=$(
-  cat <<EOF
-  --extra_gin_bindings='track_emissions.default_cpu_tdp=125' \
-  --extra_gin_bindings='track_emissions.gpu_ids=[$WORK_UNIT_ID]' 
-EOF
-)
-
-#exit 0
 # Install packages inside the container
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 
 # Install requirements for the rl-perf repo
-python3 -m pip install -r requirements.txt
-
-# Install RLPerf as a packages
-pip install -e .
-
+pip install -r requirements.txt
 
 # Install packages specific to the user's training code
-pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
+pip install --user -r rl_perf/rlperf_benchmark_submission/web_nav/debug/requirements.txt
 EOF
 
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
+
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+
 export SEED=$SEED
-export CUDA_VISIBLE_DEVICES=$WORK_UNIT_ID
 export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
-export TF_FORCE_GPU_ALLOW_GROWTH=true
-export TF_CUDA_MALLOC_ASYNC=1
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
-export PYTHONPATH=\$(pwd):\$PYTHONPATH
+export LEARNING_RATE=$LEARNING_RATE
+export EVAL_INTERVAL=$EVAL_INTERVAL
+export TRAIN_CHECKPOINT_INTERVAL=$TRAIN_CHECKPOINT_INTERVAL
+export POLICY_CHECKPOINT_INTERVAL=$POLICY_CHECKPOINT_INTERVAL
+export RB_CAPACITY=$RB_CAPACITY
+export SUMMARY_INTERVAL=$SUMMARY_INTERVAL
+export BATCH_SIZE=$BATCH_SIZE
+export LOG_INTERVAL=$LOG_INTERVAL
+export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
+export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
 cd /rl-perf/rl_perf/submission
 export DISPLAY=:0
-python3 -u main_submission.py \
+python3 main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
-  $EXTRA_GIN_BINDINGS
-EO
+  --verbosity=1
+EOF

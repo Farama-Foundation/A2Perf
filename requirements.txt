@@ -13,3 +13,9 @@ gym
 
 # codecarbon
 -r ./rl_perf/metrics/system/codecarbon/requirements-dev.txt
+
+# web_nav
+-r ./rl_perf/domains/web_nav/requirements.txt
+
+# rl_perf
+-e ./

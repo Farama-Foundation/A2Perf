@@ -46,6 +46,11 @@ def main(_):
     )
     submission.run_benchmark()
 
+    # multiprocessing make sure all processes are terminated
+    for p in multiprocessing.active_children():
+        p.terminate()
+        p.join()
+      
 
 if __name__ == '__main__':
     app.run(main)

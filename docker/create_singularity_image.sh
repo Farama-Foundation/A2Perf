@@ -4,4 +4,4 @@ docker build -f $WEB_NAV_DIR/Dockerfile_singularity -t rlperf/web_nav:singularit
 
 # Convert the docker image to a singularity image
 docker save rlperf/web_nav:singularity_w_user -o $WEB_NAV_DIR/web_nav.tar
-#singularity build web_nav.sif docker-archive://$WEB_NAV_DIR/web_nav.tar
+#singularity build quadruped_locomotion.sif docker-archive://$WEB_NAV_DIR/quadruped_locomotion.tar
