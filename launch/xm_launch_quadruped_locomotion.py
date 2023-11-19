@@ -104,7 +104,7 @@ def main(_):
       total_env_steps = [200000000, ]
       num_parallel_cores = [170]
       int_save_freqs = [1000000]
-      int_eval_freqs = [10000]
+      int_eval_freqs = [100000]
       algos = [_ALGO.value]
 
     quadruped_locomotion_hparam_sweeps = list(

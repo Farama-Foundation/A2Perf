@@ -1,7 +1,8 @@
-from absl import app
-from absl import flags
 import os
 import subprocess
+
+from absl import app
+from absl import flags
 
 FLAGS = flags.FLAGS
 
@@ -57,7 +58,8 @@ def main(_):
           "--local",
           f"--algo={FLAGS.algo}",
           '--debug' if FLAGS.debug else '',
-          f"--seed={seed}", f"--experiment_number={next_exp_num}"
+          f"--seed={seed}",
+          f"--experiment_number={next_exp_num}"
       ]
 
       subprocess.run(xmanager_cmd, check=True)
