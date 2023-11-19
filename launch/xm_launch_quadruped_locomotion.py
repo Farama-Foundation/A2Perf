@@ -1,11 +1,11 @@
-import os
-import numpy as np
-from xmanager import xm
-from xmanager import xm_local
-
+import copy
 import itertools
+import os
+
 from absl import app
 from absl import flags
+from xmanager import xm
+from xmanager import xm_local
 
 _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'quadruped_locomotion', 'Name of experiment'
@@ -136,8 +136,14 @@ def main(_):
     ])
 
     for hparam_config in quadruped_locomotion_hparam_sweeps:
+      hparam_reduced = dict()
+      for key in hparam_config.keys():
+        new_key = ''.join(
+            [x[0] for x in key.split('_')])
+        hparam_reduced[new_key] = hparam_config[key]
       experiment_name = _EXPERIMENT_NAME.value + '_' + '_'.join(
-          f"{key}_{hparam_config[key]}" for key in sorted(hparam_config.keys()))
+          f"{key}_{hparam_reduced[key]}" for key in
+          sorted(hparam_reduced.keys()))
 
       root_dir = os.path.abspath(root_dir_flag)
       root_dir = os.path.join(root_dir, experiment_name)

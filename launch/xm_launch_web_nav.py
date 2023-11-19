@@ -1,10 +1,11 @@
-import os
-from xmanager import xm
-from xmanager import xm_local
-
+import copy
 import itertools
+import os
+
 from absl import app
 from absl import flags
+from xmanager import xm
+from xmanager import xm_local
 
 _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'web_nav', 'Name of experiment'
@@ -164,17 +165,25 @@ def main(_):
     ])
 
     for i, hparam_config in enumerate(web_nav_hparam_sweeps):
-      # Add additional arguments that are constant across all runs
+      hparam_reduced = dict()
+      for key in hparam_config.keys():
+        new_key = ''.join(
+            [x[0] for x in key.split('_')])
+        hparam_reduced[new_key] = hparam_config[key]
+      experiment_name = _EXPERIMENT_NAME.value + '_' + '_'.join(
+          f"{key}_{hparam_reduced[key]}" for key in
+          sorted(hparam_reduced.keys()))
+
       root_dir = os.path.abspath(root_dir_flag)
-      root_dir = os.path.join(root_dir, f'web_nav_{i}')
-      train_logs_dirs = root_dir
+      root_dir = os.path.join(root_dir, experiment_name)
       participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
       run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
+
       hparam_config.update(dict(root_dir=root_dir,
                                 gin_config=_GIN_CONFIG.value,
                                 participant_module_path=participant_module_path,
                                 web_nav_dir=web_nav_dir,
-                                train_logs_dirs=train_logs_dirs,
+                                train_logs_dirs=_TRAIN_LOGS_DIRS.value,
                                 run_offline_metrics_only=run_offline_metrics_only, ))
 
       print(hparam_config)
