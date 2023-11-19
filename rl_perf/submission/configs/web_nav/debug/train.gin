@@ -21,11 +21,11 @@ Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/do
 # RELIABILITY METRICS
 # ----------------------
 METRICS = [
-    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
-    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
-    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
-    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
-    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
+#    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
+#    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
+#    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
+#    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
+#    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
 ]
 Submission.reliability_metrics  = %METRICS
 

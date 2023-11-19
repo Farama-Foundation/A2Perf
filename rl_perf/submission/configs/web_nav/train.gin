@@ -13,7 +13,7 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 # Set up submission object
 Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-Submission.run_offline_metrics_only=True
+Submission.run_offline_metrics_only=False
 Submission.measure_emissions=True
 Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/domain_configs/difficulty_01.gin'
 
@@ -21,11 +21,11 @@ Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/do
 # RELIABILITY METRICS
 # ----------------------
 METRICS = [
-    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
-    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
-    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
-    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
-    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
+#    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
+#    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
+#    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
+#    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
+#    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
 ]
 Submission.reliability_metrics  = %METRICS
 
