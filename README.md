@@ -39,7 +39,7 @@ and `CircuitTraining-v0`. For example, you can create an instance of the `WebNav
 
 ```python
 from rl_perf.domains.web_nav import web_nav
-import gym
+import gymnasium as gym
 
 env = gym.make('WebNavigation-v0', difficulty=1, seed=0)
 ```

@@ -3,3 +3,6 @@ absl-py
 matplotlib
 seaborn
 pandas
+numpy
+minari
+gymnasium

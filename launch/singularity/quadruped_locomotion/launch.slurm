@@ -128,7 +128,7 @@ export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
 
-python3.7 rl_perf/submission/main_submission.py \
+python3.9 rl_perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \

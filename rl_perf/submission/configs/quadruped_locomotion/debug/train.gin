@@ -13,18 +13,18 @@ import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 # Set up submission object
 Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.QUADRUPED_LOCOMOTION
-Submission.run_offline_metrics_only=True
+Submission.run_offline_metrics_only=False
 Submission.measure_emissions=True
 
 # ----------------------
 # RELIABILITY METRICS
 # ----------------------
 METRICS = [
-    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
-    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
-    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
-    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
-    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
+#    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
+#    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
+#    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
+#    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
+#    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
 ]
 Submission.reliability_metrics  = %METRICS
 
@@ -57,9 +57,6 @@ metrics_online.LowerCVaROnAcross.eval_points = %RISK_ACROSS_RUNS_EVAL_POINTS
 metrics_online.LowerCVaROnAcross.window_size = %RISK_ACROSS_RUNS_WINDOW_SIZE
 metrics_online.LowerCVaROnAcross.baseline = None
 
-# Not possible to process all values when training runs are long
-SUBSET_SIZE = 100
-
 eval_metrics.Evaluator.metrics = %METRICS
 eval_metrics.Evaluator.timepoint_variable=None
 eval_metrics.Evaluator.dependent_variable='episode_reward'
@@ -70,7 +67,6 @@ eval_metrics.Evaluator.align_on_global_step = True
 # ----------------------
 # Set up codecarbon for system metrics
 
-collect_system_metrics.subset_size = %SUBSET_SIZE
 
 track_emissions.project_name = 'rlperf_quadruped_locomomtion_train_debug'
 track_emissions.measure_power_secs = 5
@@ -81,7 +77,7 @@ track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
 track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
-track_emissions.baseline_measure_sec=10
+track_emissions.baseline_measure_sec=30
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'
