@@ -40,6 +40,11 @@ _GIN_CONFIG = flags.DEFINE_string(
     None,
     'Path to gin config file that determines which experiment to run',
 )
+_EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
+    'extra_gin_bindings',
+    [],
+    'Extra gin bindings to add to the default bindings',
+)
 _ALGO = flags.DEFINE_string(
     'algo',
     None,
@@ -51,6 +56,7 @@ _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
 _MOTION_FILE_PATH = flags.DEFINE_string('motion_file_path',
                                         None,
                                         'Motion file')
+_MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
 FLAGS = flags.FLAGS
 
 
@@ -141,6 +147,8 @@ def main(_):
         new_key = ''.join(
             [x[0] for x in key.split('_')])
         hparam_reduced[new_key] = hparam_config[key]
+
+      hparam_reduced = hparam_config  # replacing for debug
       experiment_name = _EXPERIMENT_NAME.value + '_' + '_'.join(
           f"{key}_{hparam_reduced[key]}" for key in
           sorted(hparam_reduced.keys()))
@@ -159,7 +167,9 @@ def main(_):
           train_logs_dirs=','.join(_TRAIN_LOGS_DIRS.value),
           motion_file_path=_MOTION_FILE_PATH.value,
           run_offline_metrics_only=run_offline_metrics_only,
-          mode='train',
+          mode=_MODE.value,
+          extra_gin_bindings=','.join(_EXTRA_GIN_BINDINGS.value),
+
       ))
 
       print(hparam_config)

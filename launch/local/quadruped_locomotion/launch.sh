@@ -48,6 +48,10 @@ for arg in "$@"; do
     ENV_BATCH_SIZE="${arg#*=}"
     shift
     ;;
+  --extra_gin_bindings=*)
+    EXTRA_GIN_BINDINGS="${arg#*=}"
+    shift
+    ;;
   --total_env_steps=*)
     TOTAL_ENV_STEPS="${arg#*=}"
     shift
@@ -131,6 +135,21 @@ for arg in "$@"; do
   esac
 done
 
+echo $EXTRA_GIN_BINDINGS
+
+# remove stray single quotes
+EXTRA_GIN_BINDINGS=$(echo "$EXTRA_GIN_BINDINGS" | tr -d "'")
+echo $EXTRA_GIN_BINDINGS
+
+# Now split into array
+IFS=',' read -ra EXTRA_GIN_BINDINGS_ARRAY <<<"$EXTRA_GIN_BINDINGS"
+
+EXTRA_GIN_BINDINGS_ARG=""
+for binding in "${EXTRA_GIN_BINDINGS_ARRAY[@]}"; do
+  EXTRA_GIN_BINDINGS_ARG+="--extra_gin_bindings='$binding' "
+done
+echo $EXTRA_GIN_BINDINGS_ARG
+#exit 0
 SSH_KEY_PATH=$QUAD_LOCO_DIR/docker/.ssh/id_rsa
 # change the setup path depending on the algorithm
 if [ "$ALGORITHM" = "ppo" ]; then
@@ -239,5 +258,5 @@ python3.9 -u main_submission.py \
   --root_dir=$ROOT_DIR \
   $TRAIN_LOGS_ARGS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
-  $EXTRA_GIN_BINDINGS
+  $EXTRA_GIN_BINDINGS_ARG
 EOF
