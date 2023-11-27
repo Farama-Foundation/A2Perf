@@ -5,15 +5,16 @@ from absl import app
 from absl import flags
 
 FLAGS = flags.FLAGS
-
-# Updated to define a list of motion files
-flags.DEFINE_list('motion_files', None,
-                  'List of motion file names without extensions')
-flags.DEFINE_list('algo', None, 'List of algorithms')
-flags.DEFINE_list('seed', None, 'List of seed numbers')
-flags.DEFINE_string('experiment_number', None, 'Experiment number')
-flags.DEFINE_boolean('debug', False, 'Enable debug mode')
-flags.DEFINE_string('mode', None, 'Mode to run in')
+# Define flags
+_MOTION_FILES = flags.DEFINE_list(
+    'motion_files', None, 'List of motion file names without extensions')
+_ALGO = flags.DEFINE_list('algo', None, 'List of algorithms')
+_SEED = flags.DEFINE_list('seed', None, 'List of seed numbers')
+_EXPERIMENT_NUMBER = flags.DEFINE_string(
+    'experiment_number', None, 'Experiment number')
+_DEBUG = flags.DEFINE_boolean('debug', False, 'Enable debug mode')
+_MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
+_SKILL_LEVEL = flags.DEFINE_string('skill_level', None, 'Skill level')
 
 
 def get_next_experiment_number(host_dir_base):
@@ -32,15 +33,14 @@ def get_next_experiment_number(host_dir_base):
 def main(_):
   os.chdir("/home/ikechukwuu/workspace/rl-perf")
 
-  debug_path = "debug" if FLAGS.debug else ""
-
-  seeds = [int(seed) for seed in FLAGS.seed]
+  debug_path = "debug" if _DEBUG.value else ""
+  seeds = [int(seed) for seed in _SEED.value]
   base_gin_config = f'/rl-perf/rl_perf/submission/configs/quadruped_locomotion/' + debug_path
-  gin_config_name = f'train.gin' if FLAGS.mode == 'train' else f'inference.gin'
-  env_mode = 'train' if FLAGS.mode == 'train' else 'test'
+  gin_config_name = f'train.gin' if _MODE.value == 'train' else f'inference.gin'
+  env_mode = 'train' if _MODE.value == 'train' else 'test'
 
-  for algo in FLAGS.algo:  # Loop through each algorithm
-    for motion_file in FLAGS.motion_files:  # Loop through each motion file
+  for algo in _ALGO.value:  # Loop through each algorithm
+    for motion_file in _MOTION_FILES.value:  # Loop through each motion file
       host_dir_base = f"/home/ikechukwuu/workspace/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
       root_dir_base = f"/mnt/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
 
@@ -73,8 +73,9 @@ def main(_):
         subprocess.run(xmanager_cmd, check=True)
 
         # Docker cleanup
-        subprocess.run(["docker", "rm", "-f", "quadruped_locomotion_container"],
-                       check=True)
+        # subprocess.run(
+        #     ["docker", "rm", "-f", "quadruped_locomotion_container"],
+        #     check=True)
 
 
 if __name__ == "__main__":

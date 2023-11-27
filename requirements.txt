@@ -5,6 +5,7 @@ absl-py
 gin-config
 black
 scipy
+minari
 regex
 gym
 
