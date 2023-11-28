@@ -1,0 +1,83 @@
+# ----------------------
+# IMPORTS
+# ----------------------
+import rl_perf.submission.submission_util
+import rl_perf.metrics.system.profiler.memory_profiler
+import rl_perf.metrics.system.codecarbon
+import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+
+# ----------------------
+# SUBMISSION SETUP
+# ----------------------
+# Set up submission object
+Submission.mode = %BenchmarkMode.TRAIN
+Submission.domain = %BenchmarkDomain.QUADRUPED_LOCOMOTION
+Submission.run_offline_metrics_only=False
+Submission.measure_emissions=True
+
+# ----------------------
+# RELIABILITY METRICS
+# ----------------------
+METRICS = [
+#    %ReliabilityMetrics.IqrWithinRuns, # Dispersion across Time
+#    %ReliabilityMetrics.IqrAcrossRuns, # Dispersion across Runs
+#    %ReliabilityMetrics.UpperCVaROnDrawdown, # Long-term risk across time
+#    %ReliabilityMetrics.LowerCVaROnDiffs, # Short-term risk across time
+#    %ReliabilityMetrics.LowerCVarOnAcross # Risk across runs
+]
+Submission.reliability_metrics  = %METRICS
+
+# ----------------------
+# RELIABILITY PARAMETERS
+# ----------------------
+FREQ_THRESH = 0.01
+WINDOW_SIZE =0
+WINDOW_SIZE_TRIMMED =0
+RISK_ACROSS_RUNS_WINDOW_SIZE =0
+EVAL_POINTS =[990, 1185, 1380, 1575, 1770, 1965, 2160, 2355, 2550, 2745, 2940, 3135, 3330, 3525, 3720, 3915, 4110, 4305, 4500, 4695, 4890, 5085, 5280, 5475, 5670, 5865, 6060, 6255, 6450, 6645, 6840, 7035, 7230, 7425, 7620, 7815, 8010, 8205, 8400, 8595, 8790, 8985, 9180, 9375, 9570, 9765]
+RISK_ACROSS_RUNS_EVAL_POINTS = []
+# ----------------------
+# RELIABILITY METRICS CONFIGURATION
+# ----------------------
+metrics_online.IqrWithinRuns.window_size = %WINDOW_SIZE_TRIMMED
+metrics_online.IqrWithinRuns.eval_points = %EVAL_POINTS
+metrics_online.IqrWithinRuns.baseline = None
+
+metrics_online.LowerCVaROnDiffs.baseline = None
+metrics_online.UpperCVaROnDrawdown.baseline = None
+
+metrics_online.IqrAcrossRuns.lowpass_thresh = %FREQ_THRESH
+metrics_online.IqrAcrossRuns.eval_points = %EVAL_POINTS
+metrics_online.IqrAcrossRuns.window_size = %WINDOW_SIZE
+metrics_online.IqrAcrossRuns.baseline = None
+
+metrics_online.LowerCVaROnAcross.lowpass_thresh = %FREQ_THRESH
+metrics_online.LowerCVaROnAcross.eval_points = %RISK_ACROSS_RUNS_EVAL_POINTS
+metrics_online.LowerCVaROnAcross.window_size = %RISK_ACROSS_RUNS_WINDOW_SIZE
+metrics_online.LowerCVaROnAcross.baseline = None
+
+eval_metrics.Evaluator.metrics = %METRICS
+eval_metrics.Evaluator.timepoint_variable=None
+eval_metrics.Evaluator.dependent_variable='episode_reward'
+eval_metrics.Evaluator.align_on_global_step = True
+
+# ----------------------
+# SYSTEM METRICS SETUP
+# ----------------------
+# Set up codecarbon for system metrics
+
+
+track_emissions.project_name = 'rlperf_quadruped_locomomtion_train_debug'
+track_emissions.measure_power_secs = 5
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+track_emissions.baseline_measure_sec=30
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'

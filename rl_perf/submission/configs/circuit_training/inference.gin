@@ -1,0 +1,59 @@
+import rl_perf.submission.submission_util
+import rl_perf.metrics.system.profiler.memory_profiler
+import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
+import rl_perf.metrics.system.codecarbon
+
+# Set up submission object
+Submission.mode = %BenchmarkMode.INFERENCE
+Submission.domain = %BenchmarkDomain.CIRCUIT_TRAINING
+Submission.run_offline_metrics_only=True
+Submission.measure_emissions=True
+
+
+####################################
+# Set up benchmark mode
+####################################
+Submission.num_inference_steps = 10000
+Submission.num_inference_episodes = 100
+Submission.time_participant_code = True
+
+
+####################################
+#Set up domain##
+####################################
+Submission.create_domain.init_placement = '/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'
+Submission.create_domain.netlist_file = '/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'
+Submission.create_domain.is_eval=True
+
+
+####################################
+# Reliability
+####################################
+
+METRICS = [
+    %ReliabilityMetrics.IqrAcrossRollouts,
+    %ReliabilityMetrics.LowerCVaRAcrossRollouts
+]
+Submission.reliability_metrics = %METRICS
+eval_metrics.Evaluator.metrics = %METRICS
+eval_metrics.Evaluator.timepoint_variable='episode_num'
+eval_metrics.Evaluator.dependent_variable='reward'
+eval_metrics.Evaluator.align_on_global_step = True
+
+# Set up codecarbon for system metrics
+track_emissions.project_name = 'rlperf_circuit_training_train_inference'
+track_emissions.measure_power_secs = 0.5 # Set measurement interval to 0.5 seconds
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+track_emissions.baseline_measure_sec=2
+# track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'
