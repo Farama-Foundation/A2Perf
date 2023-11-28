@@ -6,10 +6,10 @@
     url = https://github.com/harvard-edge/circuit_training.git
 [submodule "quadruped_locomotion"]
     path = quadruped_locomotion
-    url = https://github.com/harvard-edge/quadruped_locomotion.git
+    url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
 [submodule "src/quadruped_locomotion"]
     path = rl_perf/domains/quadruped_locomotion
-    url = https://github.com/harvard-edge/quadruped_locomotion.git
+    url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
 [submodule "src/circuit_training"]
     path = rl_perf/domains/circuit_training
     url = https://github.com/harvard-edge/circuit_training.git
