@@ -97,8 +97,10 @@ def main(_):
       eval_intervals = [5000]
       train_checkpoint_intervals = [10000]
       policy_checkpoint_intervals = [10000]
+      algorithms = [_ALGO.value]
     else:
       # Non-debug mode hyperparameters
+      algorithms = [_ALGO.value]
       summary_intervals = [50000]  # Adjusted to match the non-debug scale
       log_intervals = [50000]  # Adjusted to match the non-debug scale
       rb_capacity_values = [100000,
@@ -183,6 +185,7 @@ def main(_):
                                 gin_config=_GIN_CONFIG.value,
                                 participant_module_path=participant_module_path,
                                 web_nav_dir=web_nav_dir,
+                                algo=_ALGO.value,
                                 train_logs_dirs=_TRAIN_LOGS_DIRS.value,
                                 run_offline_metrics_only=run_offline_metrics_only, ))
 

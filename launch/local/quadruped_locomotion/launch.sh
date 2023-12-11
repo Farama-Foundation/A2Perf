@@ -167,7 +167,8 @@ yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N 
 # install xhost
 sudo apt-get install x11-xserver-utils
 
-docker build --network=host \
+#docker build \
+docker build --network=host --no-cache \
   --rm \
   --pull \
   -f "${DOCKERFILE_PATH}" \

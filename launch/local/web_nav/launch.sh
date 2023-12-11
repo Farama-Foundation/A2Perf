@@ -209,7 +209,7 @@ fi
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip install -r requirements.txt
-pip install -e .
+pip install .
 
 if [ "$DEBUG" = "true" ]; then
   pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/web_nav/${ALGORITHM}/debug/requirements.txt
@@ -218,6 +218,7 @@ else
 fi
 EOF
 
+exit 0
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 

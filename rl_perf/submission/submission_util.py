@@ -264,7 +264,7 @@ class Submission:
   def _inference(self, participant_event: multiprocessing.Event,
       profiler_events: typing.List[multiprocessing.Event],
       inference_data: typing.List[typing.Any],
-      rollout_data_queue: multiprocessing.Queue, ):
+  ):
     gin.parse_config(self.gin_config_str)
     participant_event.set()
 
@@ -281,11 +281,11 @@ class Submission:
       preprocessed_data = [participant_module.preprocess_observation(x) for x in
                            inference_data]
 
-      def inference_step():
-        return participant_module.infer_once(model=participant_model,
-                                             observation=preprocessed_data[i])
-
       if self.time_inference_steps:
+        def inference_step():
+          return participant_module.infer_once(model=participant_model,
+                                               observation=preprocessed_data[i])
+
         inference_times = []
         for i in range(self.num_inference_steps):
           inference_times.append(timeit.timeit(inference_step, number=1))
@@ -295,6 +295,11 @@ class Submission:
                                                     inference_times),
                                                 std=np.std(
                                                     inference_times))
+        print(f'Inference time: {np.mean(inference_times)}')
+        del inference_times
+
+      # for some reason if we do many inference steps, the rollouts hang
+      # how could we fix this?
 
       def perform_rollouts():
         all_rewards = []
@@ -327,7 +332,7 @@ class Submission:
       metric_results['rollout_returns'] = dict(values=all_rewards,
                                                mean=np.mean(all_rewards),
                                                std=np.std(all_rewards))
-      rollout_data_queue.put(metric_results)
+      # rollout_data_queue.put(metric_results)
     participant_event.clear()
     for profiler_event in profiler_events:
       profiler_event.clear()
@@ -470,13 +475,11 @@ class Submission:
       profilers_started_events = [multiprocessing.Event() for _ in
                                   self.profilers]
 
-      rollout_data_queue = self.mp_context.Queue()
       participant_process = self.mp_context.Process(target=self._inference,
                                                     args=(
                                                         participant_started_event,
                                                         profilers_started_events,
                                                         inference_data,
-                                                        rollout_data_queue,
                                                     ))
 
       participant_process.start()

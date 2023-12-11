@@ -33,6 +33,10 @@ def main(_):
 
   debug_path = "debug" if FLAGS.debug else ""
 
+  # Docker cleanup, but don't fail if it doesn't exist
+  subprocess.run(["docker", "rm", "-f", "web_nav_container"],
+                 check=False)
+
   seeds = [int(seed) for seed in FLAGS.seed]
   base_gin_config = f'/rl-perf/rl_perf/submission/configs/web_nav/' + debug_path
 
@@ -59,10 +63,6 @@ def main(_):
       ]
 
       subprocess.run(xmanager_cmd, check=True)
-
-      # Docker cleanup
-      subprocess.run(["docker", "rm", "-f", "web_nav_container"],
-                     check=True)
 
 
 if __name__ == "__main__":
