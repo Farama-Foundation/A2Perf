@@ -198,9 +198,11 @@ else
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
   docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
+  docker_run_command+=" -v /dev/shm:/dev/shm"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+  docker_run_command+=" --privileged"
 
   echo "Running command: $docker_run_command"
   eval "$docker_run_command"
@@ -208,7 +210,7 @@ fi
 
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
-pip install -r requirements.txt
+pip install -U -r requirements.txt
 pip install .
 
 if [ "$DEBUG" = "true" ]; then

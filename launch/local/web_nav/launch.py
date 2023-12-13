@@ -11,6 +11,9 @@ flags.DEFINE_string('algo', None, 'Algorithm to use')
 flags.DEFINE_list('seed', None, 'List of seed numbers')
 flags.DEFINE_string('experiment_number', None, 'Experiment number')
 flags.DEFINE_boolean('debug', False, 'Enable debug mode')
+flags.DEFINE_string('host_dir_base',
+
+                    None, 'Base directory for host')
 
 FLAGS = flags.FLAGS
 
@@ -29,9 +32,13 @@ def get_next_experiment_number(host_dir_base):
 
 
 def main(_):
-  os.chdir("/home/ikechukwuu/workspace/rl-perf")
+  # change directory to the root of the repo
+  os.chdir(
+      os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../')
+  )
 
   debug_path = "debug" if FLAGS.debug else ""
+  host_dir_base = os.path.abspath(FLAGS.host_dir_base)
 
   # Docker cleanup, but don't fail if it doesn't exist
   subprocess.run(["docker", "rm", "-f", "web_nav_container"],
@@ -41,7 +48,8 @@ def main(_):
   base_gin_config = f'/rl-perf/rl_perf/submission/configs/web_nav/' + debug_path
 
   for difficulty_level in FLAGS.difficulty_levels:  # Loop through each motion file
-    host_dir_base = f"/home/ikechukwuu/workspace/gcs/a2perf/web_nav/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}"
+    # host_dir_base = f"/home/ikechukwuu/workspace/gcs/a2perf/web_nav/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}"
+    host_dir_base = f'{host_dir_base}/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}'
     root_dir_base = f"/mnt/gcs/a2perf/web_nav/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}"
 
     for seed in seeds:
@@ -49,7 +57,8 @@ def main(_):
       next_exp_num = FLAGS.experiment_number if FLAGS.experiment_number is not None else next_exp_num
       # Launch the xmanager command
       xmanager_cmd = [
-          "/home/ikechukwuu/workspace/rl-perf/env/bin/xmanager", "launch",
+          f'env/bin/xmanager', 'launch',
+          # "/home/ikechukwuu/workspace/rl-perf/env/bin/xmanager", "launch",
           "launch/xm_launch_web_nav.py", "--",
           f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
           f"--participant_module_path={os.path.join('/rl-perf/rl_perf/rlperf_benchmark_submission/web_nav', FLAGS.algo, debug_path)}",
