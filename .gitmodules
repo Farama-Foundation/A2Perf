@@ -1,20 +1,20 @@
 [submodule "src/web_nav"]
-	path = rl_perf/domains/web_navigation
+	path = a2perf/domains/web_navigation
     url = https://github.com/harvard-edge/web_nav.git
 [submodule "src/quadruped_locomotion"]
-    path = rl_perf/domains/quadruped_locomotion
+	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/harvard-edge/quadruped_locomotion.git
 [submodule "src/circuit_training"]
-    path = rl_perf/domains/circuit_training
+	path = a2perf/domains/circuit_training
     url = https://github.com/harvard-edge/circuit_training.git
 [submodule "rl_perf/rlperf_benchmark_submission"]
-	path = rl_perf/a2perf_benchmark_submission
+	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/harvard-edge/rlperf_benchmark_submission.git
 [submodule "rl_perf/metrics/system/codecarbon"]
-    path = rl_perf/metrics/system/codecarbon
+	path = a2perf/metrics/system/codecarbon
     url = https://github.com/harvard-edge/codecarbon.git
 [submodule "reliability"]
 	url = https://github.com/harvard-edge/rl-reliability-metrics.git
 [submodule "rl_perf/metrics/reliability"]
-	path = rl_perf/metrics/reliability
+	path = a2perf/metrics/reliability
 	url = https://github.com/harvard-edge/rl-reliability-metrics.git
