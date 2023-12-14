@@ -1,13 +1,14 @@
-psutil
-setuptools
-matplotlib
 absl-py
-gin-config
 black
-scipy
-minari
-regex
+gin-config
 gym
+gymnasium
+matplotlib
+minari
+psutil
+regex
+scipy
+setuptools
 
 # reliabiility
 -r ./rl_perf/metrics/reliability/requirements.txt
@@ -19,4 +20,4 @@ gym
 -r ./rl_perf/domains/web_nav/requirements.txt
 
 # rl_perf
--e ./
+./

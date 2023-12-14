@@ -1,8 +1,9 @@
-xmanager
 absl-py
-matplotlib
-seaborn
-pandas
-numpy
-minari
+gin-config
 gymnasium
+matplotlib
+minari
+numpy
+pandas
+seaborn
+xmanager
