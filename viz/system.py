@@ -20,7 +20,7 @@ _PATTERN = flags.DEFINE_string('pattern', 'circuit_training_num_collect_jobs_16_
 
 
 # run with
-# python system.py --base_dir=/home/ikechukwuu/workspace/gcs/a2perf/web_nav/difficulty_1/0026/ --pattern=difficulty_1_seed=*
+# python system.py --base_dir=/home/ikechukwuu/workspace/gcs/a2perf/web_navigation/difficulty_1/0026/ --pattern=difficulty_1_seed=*
 # glob to find metrics dir:
 def main(argv):
     del argv  # Unused.

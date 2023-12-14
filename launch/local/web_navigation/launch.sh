@@ -175,7 +175,7 @@ docker build --rm --network=host \
   -t "$DOCKER_IMAGE_NAME" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_nav/docker
+  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_navigation/docker
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."

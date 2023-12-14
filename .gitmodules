@@ -1,5 +1,5 @@
 [submodule "src/web_nav"]
-    path = rl_perf/domains/web_nav
+	path = rl_perf/domains/web_navigation
     url = https://github.com/harvard-edge/web_nav.git
 [submodule "src/quadruped_locomotion"]
     path = rl_perf/domains/quadruped_locomotion

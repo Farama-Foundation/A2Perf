@@ -8,7 +8,7 @@ from xmanager import xm
 from xmanager import xm_local
 
 _EXPERIMENT_NAME = flags.DEFINE_string(
-    'experiment_name', 'web_nav', 'Name of experiment'
+    'experiment_name', 'web_navigation', 'Name of experiment'
 )
 _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
                                          'Experiment number')
@@ -58,10 +58,10 @@ def main(_):
   else:
     root_dir_flag = _ROOT_DIR.value
 
-  web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_nav')
+  web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_navigation')
   if _LOCAL.value:
     executable_path = '/usr/bin/bash'
-    binary_path = './local/web_nav/launch.sh'
+    binary_path = 'local/web_navigation/launch.sh'
     additional_args = []
     env_vars = dict(
         WEB_NAV_DIR=web_nav_dir,

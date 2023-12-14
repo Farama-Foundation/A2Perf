@@ -1,4 +1,4 @@
-# Example:  python3 combine_metrics.py --base_dir=/home/ikechukwuu/workspace/gcs/a2perf/web_nav/difficulty_1/0048/difficulty_level=1_env_batch_size=16_seed=37_total_env_steps=1000000/ --pattern='**/*.json'
+# Example:  python3 combine_metrics.py --base_dir=/home/ikechukwuu/workspace/gcs/a2perf/web_navigation/difficulty_1/0048/difficulty_level=1_env_batch_size=16_seed=37_total_env_steps=1000000/ --pattern='**/*.json'
 # Locomotion: python3.9 combine_metrics.py
 from absl import app
 from absl import flags

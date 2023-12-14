@@ -9,7 +9,7 @@ from absl import app
 from absl import flags
 
 _DESIGN_FILE_PATH = flags.DEFINE_string('design_file_path',
-                                        '../../rl_perf/domains/web_nav/web_nav/environment_generation/data/',
+                                        '../../rl_perf/domains/web_navigation/web_navigation/environment_generation/data/',
                                         'Path to directory containing design files')
 _DIFFICULTY_LEVELS_TO_PLOT = flags.DEFINE_list('difficulty_levels_to_plot',
                                                ['1', '5', '10'],

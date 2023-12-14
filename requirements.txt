@@ -16,7 +16,7 @@ setuptools
 # codecarbon
 -r ./rl_perf/metrics/system/codecarbon/requirements-dev.txt
 
-# web_nav
+# web_navigation
 -r ./rl_perf/domains/web_nav/requirements.txt
 
 # rl_perf
