@@ -8,7 +8,7 @@
     path = rl_perf/domains/circuit_training
     url = https://github.com/harvard-edge/circuit_training.git
 [submodule "rl_perf/rlperf_benchmark_submission"]
-    path = rl_perf/rlperf_benchmark_submission
+	path = rl_perf/a2perf_benchmark_submission
     url = https://github.com/harvard-edge/rlperf_benchmark_submission.git
 [submodule "rl_perf/metrics/system/codecarbon"]
     path = rl_perf/metrics/system/codecarbon
