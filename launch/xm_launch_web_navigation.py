@@ -58,7 +58,7 @@ def main(_):
   else:
     root_dir_flag = _ROOT_DIR.value
 
-  web_nav_dir = os.path.join(os.getcwd(), '../rl_perf/domains/web_navigation')
+  web_nav_dir = os.path.join(os.getcwd(), '../a2perf/domains/web_navigation')
   if _LOCAL.value:
     executable_path = '/usr/bin/bash'
     binary_path = 'local/web_navigation/launch.sh'
@@ -72,7 +72,7 @@ def main(_):
   else:
     # Create log dirs since singularity needs them to exist
     executable_path = '/usr/bin/sbatch'
-    binary_path = './singularity/web_nav/launch.slurm'
+    binary_path = './singularity/web_navigation/launch.slurm'
     additional_args = []
     env_vars = dict(
     )

@@ -11,13 +11,13 @@ scipy
 setuptools
 
 # reliabiility
--r ./rl_perf/metrics/reliability/requirements.txt
+-r ./a2perf/metrics/reliability/requirements.txt
 
 # codecarbon
--r ./rl_perf/metrics/system/codecarbon/requirements-dev.txt
+-r ./a2perf/metrics/system/codecarbon/requirements-dev.txt
 
 # web_navigation
--r ./rl_perf/domains/web_nav/requirements.txt
+-r ./a2perf/domains/web_navigation/requirements.txt
 
-# rl_perf
-./
+# a2perf
+-e ./

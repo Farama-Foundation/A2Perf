@@ -89,7 +89,7 @@ def main(_):
   train_logs_dirs_str = ','.join(FLAGS.train_logs_dirs)
 
   command = (
-      'python3.8 rl_perf/submission/main_submission.py '
+      'python3.8 a2perf/submission/main_submission.py '
       f'--gin_config={FLAGS.gin_config} '
       f'--participant_module_path={FLAGS.participant_module_path} '
       f'--root_dir={FLAGS.root_dir} '

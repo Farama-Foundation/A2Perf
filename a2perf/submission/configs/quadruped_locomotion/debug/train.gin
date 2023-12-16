@@ -1,11 +1,11 @@
 # ----------------------
 # IMPORTS
 # ----------------------
-import rl_perf.submission.submission_util
-import rl_perf.metrics.system.profiler.memory_profiler
-import rl_perf.metrics.system.codecarbon
-import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
-import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+import a2perf.submission.submission_util
+import a2perf.metrics.system.profiler.memory_profiler
+import a2perf.metrics.system.codecarbon
+import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 
 # ----------------------
 # SUBMISSION SETUP

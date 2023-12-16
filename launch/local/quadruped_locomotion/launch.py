@@ -35,7 +35,7 @@ def main(_):
 
   debug_path = "debug" if _DEBUG.value else ""
   seeds = [int(seed) for seed in _SEED.value]
-  base_gin_config = f'/rl-perf/rl_perf/submission/configs/quadruped_locomotion/' + debug_path
+  base_gin_config = f'/rl-perf/a2perf/submission/configs/quadruped_locomotion/' + debug_path
   gin_config_name = f'train.gin' if _MODE.value == 'train' else f'inference.gin'
   env_mode = 'train' if _MODE.value == 'train' else 'test'
 
@@ -48,7 +48,7 @@ def main(_):
         next_exp_num = get_next_experiment_number(host_dir_base)
 
         # Construct the motion file path
-        motion_file_path = f"/rl-perf/rl_perf/domains/quadruped_locomotion/motion_imitation/data/motions/{motion_file}.txt"
+        motion_file_path = f"/rl-perf/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/{motion_file}.txt"
 
         next_exp_num = FLAGS.experiment_number if FLAGS.experiment_number is not None else next_exp_num
         # Launch the xmanager command
@@ -56,7 +56,7 @@ def main(_):
             "/home/ikechukwuu/workspace/rl-perf/env/bin/xmanager", "launch",
             "launch/xm_launch_quadruped_locomotion.py", "--",
             f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
-            f"--participant_module_path={os.path.join('/rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion', algo, debug_path)}",
+            f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion', algo, debug_path)}",
             f"--motion_file_path={motion_file_path}",
             f"--gin_config={os.path.join(base_gin_config, gin_config_name)}",
             "--local",

@@ -17,7 +17,7 @@ PARTICIPANT_MODULE_PATH=""
 WEB_NAV_DIR=""
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
-DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/rl_perf/domains/web_nav/docker/Dockerfile"
+DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/a2perf/domains/web_navigation/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 
@@ -118,7 +118,7 @@ singularity instance start \
   launch/singularity/quadruped_locomotion/quadruped_locomotion.sif web_nav_"$SLURM_JOB_ID"
 
 singularity exec instance://web_nav_"$SLURM_JOB_ID" bash <<EOF
-source ~/.web_nav/bin/activate
+source ~/.web_navigation/bin/activate
 
 # Pass in the command-line arguments
 export SEED=$SEED
@@ -128,7 +128,7 @@ export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
 
-python3 rl_perf/submission/main_submission.py \
+python3 a2perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
@@ -150,12 +150,12 @@ singularity instance start \
 
 singularity exec instance://web_nav_"$SLURM_JOB_ID" bash <<EOF
 python3 -m venv  --system-site-packages  ~/.web_nav
-source ~/.web_nav/bin/activate
+source ~/.web_navigation/bin/activate
 pip install --upgrade pip
 pip install --upgrade setuptools
 pip install -r requirements.txt
 pip install -e .
-pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
+pip install -r a2perf/a2perf_benchmark_submission/web_navigation/requirements.txt
 EOF
 
 # Run a python shell if you need...

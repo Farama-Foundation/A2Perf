@@ -15,7 +15,7 @@ PARTICIPANT_MODULE_PATH=""
 QUAD_LOCO_DIR=""
 DOCKER_IMAGE_NAME="rlperf/quadruped_locomotion:latest"
 DOCKER_CONTAINER_NAME="quadruped_locomotion_container"
-DOCKERFILE_PATH="/home/jasonlinux22/Jason/A2Perf/rl-perf/rl_perf/domains/quadruped_locomotion/docker/Dockerfile"
+DOCKERFILE_PATH="/home/jasonlinux22/Jason/A2Perf/rl-perf/a2perf/domains/quadruped_locomotion/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 
@@ -128,7 +128,7 @@ export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
 
-python3.9 rl_perf/submission/main_submission.py \
+python3.9 a2perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \

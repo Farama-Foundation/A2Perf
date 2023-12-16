@@ -45,7 +45,7 @@ def main(_):
                  check=False)
 
   seeds = [int(seed) for seed in FLAGS.seed]
-  base_gin_config = f'/rl-perf/rl_perf/submission/configs/web_navigation/' + debug_path
+  base_gin_config = f'/rl-perf/a2perf/submission/configs/web_navigation/' + debug_path
 
   for difficulty_level in FLAGS.difficulty_levels:  # Loop through each motion file
     # host_dir_base = f"/home/ikechukwuu/workspace/gcs/a2perf/web_navigation/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}"
@@ -61,7 +61,7 @@ def main(_):
           # "/home/ikechukwuu/workspace/rl-perf/env/bin/xmanager", "launch",
           "launch/xm_launch_web_navigation.py", "--",
           f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
-          f"--participant_module_path={os.path.join('/rl-perf/rl_perf/rlperf_benchmark_submission/web_navigation', FLAGS.algo, debug_path)}",
+          f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/web_navigation', FLAGS.algo, debug_path)}",
           f"--difficulty_level={difficulty_level}",
           f"--gin_config={os.path.join(base_gin_config, 'train.gin')}",
           "--local",

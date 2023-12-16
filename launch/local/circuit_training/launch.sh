@@ -7,10 +7,10 @@ CT_VERSION=0.0.3
 PYTHON_VERSION=python3.9
 TF_AGENTS_PIP_VERSION="tf-agents[reverb]"
 DM_REVERB_PIP_VERSION=""
-CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
+CIRCUIT_TRAINING_DIR=../../a2perf/domains/circuit_training
 DOCKER_IMAGE_NAME="rlperf/circuit_training"
 DOCKER_CONTAINER_NAME="circuit_training_container"
-DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
+DOCKERFILE_PATH="./a2perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
 
 # New Environment Variables
@@ -148,7 +148,7 @@ docker build \
   --rm \
   --pull \
   --build-arg base_image=$BASE_IMAGE -f "${DOCKERFILE_PATH}" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/circuit_training/tools/docker
+  -t "$DOCKER_IMAGE_NAME" a2perf/domains/circuit_training/tools/docker
 
 echo "Successfully built docker image."
 
@@ -207,7 +207,7 @@ export INIT_PLACEMENT=$INIT_PLACEMENT
 export NUM_COLLECT_JOBS=$NUM_COLLECT_JOBS
 export WRAPT_DISABLE_EXTENSIONS=true
 
-$PYTHON_VERSION rl_perf/submission/main_submission.py \
+$PYTHON_VERSION a2perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
@@ -223,19 +223,19 @@ docker run \
   --rm \
   --gpus=all \
   -v /home/ike2030/workspace/rl-perf:/rl-perf \
-  --workdir /rl-perf/rl_perf/domains/circuit_training \
+  --workdir /rl-perf/a2perf/domains/circuit_training \
   circuit_training:core
 
 docker run \
   -it \
   --rm \
   -v "$(pwd)":/rl-perf \
-  --workdir /rl-perf/rl_perf/domains/circuit_training \
+  --workdir /rl-perf/a2perf/domains/circuit_training \
   circuit_training:core
 pip install -e ../../../
 mkdir -p ./logs
 cd ../../../
-rl_perf/domains/circuit_training/tools/e2e_smoke_test.sh --root_dir ./logs
+a2perf/domains/circuit_training/tools/e2e_smoke_test.sh --root_dir ./logs
 # tools/e2e_smoke_test.sh --root_dir ./logs
 
 exit 0
@@ -245,10 +245,10 @@ docker run \
   -it \
   --rm \
   -v /home/ike2030/workspace/rl-perf:/rl-perf \
-  --workdir /rl-perf/rl_perf/domains/circuit_training \
+  --workdir /rl-perf/a2perf/domains/circuit_training \
   circuit_training:core
 
-cd /rl-perf/rl_perf/domains/circuit_training/ || exit
+cd /rl-perf/a2perf/domains/circuit_training/ || exit
 tox -e py39-stable -- circuit_training/grouping/grouping_test.py
 
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
@@ -270,6 +270,6 @@ export ROOT_DIR=--root_dir=/rl-perf/logs/circuit_training/debug
 export GLOBAL_SEED=0
 export REVERB_PORT=8000
 export REVERB_SERVER_IP=127.0.0.1
-export NETLIST_FILE=/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc
-export INIT_PLACEMENT=/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt
+export NETLIST_FILE=/rl-perf/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc
+export INIT_PLACEMENT=/rl-perf/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt
 export NUM_COLLECT_JOBS=4

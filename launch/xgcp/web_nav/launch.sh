@@ -4,10 +4,10 @@ cd ../../.. || exit
 
 CT_VERSION=0.0.3
 PYTHON_VERSION=python3.9
-CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
+CIRCUIT_TRAINING_DIR=../../a2perf/domains/circuit_training
 DOCKER_IMAGE_NAME="rlperf/circuit_training"
 DOCKER_CONTAINER_NAME="circuit_training_container"
-DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
+DOCKERFILE_PATH="./a2perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
 DEBUG_MODE=false
 # New Environment Variables

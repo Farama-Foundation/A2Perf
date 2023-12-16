@@ -1,9 +1,9 @@
-import rl_perf.submission.submission_util
-import rl_perf.metrics.system.profiler.memory_profiler
-import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
-import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
-import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
-import rl_perf.metrics.system.codecarbon
+import a2perf.submission.submission_util
+import a2perf.metrics.system.profiler.memory_profiler
+import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
+import a2perf.metrics.system.codecarbon
 
 # Set up submission object
 Submission.mode = %BenchmarkMode.INFERENCE
@@ -23,8 +23,8 @@ Submission.time_participant_code = True
 ####################################
 #Set up domain##
 ####################################
-Submission.create_domain.init_placement = '/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'
-Submission.create_domain.netlist_file = '/rl-perf/rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'
+Submission.create_domain.init_placement = '/rl-perf/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'
+Submission.create_domain.netlist_file = '/rl-perf/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'
 Submission.create_domain.is_eval=True
 
 

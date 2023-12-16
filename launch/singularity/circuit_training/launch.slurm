@@ -9,10 +9,10 @@
 
 # These arguments most likely do not need to change
 PYTHON_VERSION=python3.9
-CIRCUIT_TRAINING_DIR=../../rl_perf/domains/circuit_training
+CIRCUIT_TRAINING_DIR=../../a2perf/domains/circuit_training
 DOCKER_IMAGE_NAME="circuit_training:core"
 DOCKER_CONTAINER_NAME="circuit_training_container"
-DOCKERFILE_PATH="./rl_perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
+DOCKERFILE_PATH="./a2perf/domains/circuit_training/tools/docker/ubuntu_circuit_training"
 REQUIREMENTS_PATH="./requirements.txt"
 
 # New Environment Variables
@@ -157,7 +157,7 @@ export PYTHONPATH=$(pwd):\$PYTHONPATH
 
 echo $PYTHONPATH
 
-$PYTHON_VERSION rl_perf/submission/main_submission.py \
+$PYTHON_VERSION a2perf/submission/main_submission.py \
   --gin_file=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
@@ -190,7 +190,7 @@ EOF
 #export WRAPT_DISABLE_EXTENSIONS=true
 #
 #
-#$PYTHON_VERSION rl_perf/submission/main_submission.py \
+#$PYTHON_VERSION a2perf/submission/main_submission.py \
 #  --gin_file=$GIN_CONFIG \
 #  --participant_module_path=$PARTICIPANT_MODULE_PATH \
 #  --root_dir=$ROOT_DIR \
@@ -249,7 +249,7 @@ pip install --upgrade pip
 pip install --upgrade setuptools
 pip install -r requirements.txt
 pip install -e .
-pip install -r rl_perf/rlperf_benchmark_submission/circuit_training/requirements.txt
+pip install -r a2perf/a2perf_benchmark_submission/circuit_training/requirements.txt
 EOF
 
 # Run a python shell if you need...

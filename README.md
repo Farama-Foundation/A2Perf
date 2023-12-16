@@ -38,7 +38,7 @@ Environments in RLPerf are registered under the names `WebNavigation-v0`, `Quadr
 and `CircuitTraining-v0`. For example, you can create an instance of the `WebNavigation-v0` environment as follows:
 
 ```python
-from rl_perf.domains.web_nav import web_nav
+from a2perf.domains.web_navigation import web_nav
 import gymnasium as gym
 
 env = gym.make('WebNavigation-v0', difficulty=1, seed=0)
@@ -48,7 +48,7 @@ env = gym.make('WebNavigation-v0', difficulty=1, seed=0)
 
 ## Participant Submission
 
-- Participants can pull the template repository at https://github.com/harvard-edge/rlperf_benchmark_submission
+- Participants can pull the template repository at https://github.com/harvard-edge/a2perf_benchmark_submission
     - The submission repository must include:
         - `train.py` - defines a train function that can train the participant's model from scratch
         - `train.gin` - defines configurations for how the participant wants their solution to be benchmarked. For

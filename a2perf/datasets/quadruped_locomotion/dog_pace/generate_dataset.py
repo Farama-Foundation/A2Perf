@@ -10,9 +10,9 @@ from absl import flags
 from absl import logging
 from minari import DataCollectorV0
 
-from rl_perf.domains.quadruped_locomotion.motion_imitation.learning import \
+from a2perf.domains.quadruped_locomotion.motion_imitation.learning import \
   ppo_imitation
-from rl_perf.rlperf_benchmark_submission.quadruped_locomotion.ddpg import \
+from a2perf.a2perf_benchmark_submission.quadruped_locomotion.ddpg import \
   ddpg_imitation
 
 FLAGS = flags.FLAGS
@@ -222,7 +222,7 @@ def collect_samples(policy_path, unique_id, samples_to_collect, seed):
   # Need to set random seed again since we are in a new process.
   set_seed(seed)
   env = gym.make('QuadrupedLocomotion-v0', mode='test', motion_files=[
-      '/rl-perf/rl_perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt'],
+      '/rl-perf/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt'],
                  enable_rendering=False)
   env = DataCollectorV0(env=env, observation_space=gym.spaces.Box(low=-np.inf,
                                                                   high=np.inf,

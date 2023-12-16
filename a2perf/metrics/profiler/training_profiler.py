@@ -1,4 +1,4 @@
-from rl_perf.metrics.profiler.base_profiler import BaseProfiler
+from a2perf.metrics.profiler.base_profiler import BaseProfiler
 
 
 class TrainingProfiler(BaseProfiler):

@@ -71,7 +71,7 @@ def main(_):
   else:
     root_dir_flag = _ROOT_DIR.value
   quadruped_locomotion_dir = os.path.join(os.getcwd(),
-                                          '../rl_perf/domains/quadruped_locomotion')
+                                          '../a2perf/domains/quadruped_locomotion')
   if _LOCAL.value:
     executable_path = '/usr/bin/bash'
     binary_path = './local/quadruped_locomotion/launch.sh'

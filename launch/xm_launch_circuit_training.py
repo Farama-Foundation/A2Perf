@@ -21,7 +21,7 @@ FLAGS = flags.FLAGS
 def main(_):
     # set directory of this script as working directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    circuit_training_dir = os.path.join(os.getcwd(), '../rl_perf/domains/circuit_training')
+    circuit_training_dir = os.path.join(os.getcwd(), '../a2perf/domains/circuit_training')
     if FLAGS.local:
         executable_path = '/usr/bin/bash'
         binary_path = './local/circuit_training/launch.sh'
@@ -52,9 +52,9 @@ def main(_):
             num_collect_job_params = [16,
                                       ]
             netlist_file = os.path.join(repo_root,
-                                        'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
+                                        'a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,
-                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
+                                          'a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'),
         else:
             circuit_training_seeds = [
                 37, 82, 14,
@@ -62,9 +62,9 @@ def main(_):
             ]
             num_collect_job_params = [48, ]
             netlist_file = os.path.join(repo_root,
-                                        'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
+                                        'a2perf/domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'),
             init_placement = os.path.join(repo_root,
-                                          'rl_perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'),
+                                          'a2perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'),
 
         circuit_training_hparam_sweeps = list(
             dict([

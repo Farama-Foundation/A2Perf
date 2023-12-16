@@ -15,17 +15,17 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 
-from rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import \
+from a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import \
   Evaluator
-from rl_perf.metrics.reliability.rl_reliability_metrics.metrics import (
+from a2perf.metrics.reliability.rl_reliability_metrics.metrics import (
   IqrAcrossRuns, IqrWithinRuns,
   LowerCVaROnAcross,
   LowerCVaROnDiffs,
   IqrAcrossRollouts, MedianPerfDuringTraining
 , StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts,
   LowerCVaRAcrossRollouts, )
-from rl_perf.metrics.system import codecarbon
-from rl_perf.metrics.system.profiler.base_profiler import BaseProfiler
+from a2perf.metrics.system import codecarbon
+from a2perf.metrics.system.profiler.base_profiler import BaseProfiler
 
 
 @contextmanager
@@ -206,7 +206,7 @@ class Submission:
   @gin.configurable("Submission.create_domain")
   def create_domain(self, **kwargs):
     if self.domain == BenchmarkDomain.WEB_NAVIGATION:
-      from rl_perf.domains.web_nav.gwob.CoDE import vocabulary_node
+      from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
 
       if kwargs.get('reload_vocab', False):
         global_vocab_dict = np.load(
@@ -219,7 +219,7 @@ class Submission:
     elif self.domain == BenchmarkDomain.CIRCUIT_TRAINING:
       pass
     elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
-      from rl_perf.domains import quadruped_locomotion
+      from a2perf.domains import quadruped_locomotion
     else:
       raise NotImplementedError(f'Domain {self.domain} not implemented')
     return gym.make(id=self.domain.value, **kwargs)

@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import psutil
 from absl import logging
 
-from rl_perf.metrics.profiler.inference_profiler import InferenceProfiler
-from rl_perf.metrics.profiler.training_profiler import TrainingProfiler
+from a2perf.metrics.profiler.inference_profiler import InferenceProfiler
+from a2perf.metrics.profiler.training_profiler import TrainingProfiler
 import pandas as pd
 
 

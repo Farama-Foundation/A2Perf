@@ -51,7 +51,7 @@ def main(_):
   print(FLAGS.train_logs_dirs)
   print(FLAGS.participant_module_path)
   command = (
-      f'{FLAGS.python_version} rl_perf/submission/main_submission.py '
+      f'{FLAGS.python_version} a2perf/submission/main_submission.py '
       f' --gin_file={FLAGS.gin_config} '
       f' --participant_module_path={FLAGS.participant_module_path} '
       f' --root_dir={FLAGS.root_dir} '

@@ -7,10 +7,10 @@ TOTAL_ENV_STEPS=0
 ROOT_DIR="/tmp/locomotion"
 GIN_CONFIG=""
 PARTICIPANT_MODULE_PATH=""
-QUAD_LOCO_DIR="$(pwd)/rl_perf/domains/quadruped_locomotion"
+QUAD_LOCO_DIR="$(pwd)/a2perf/domains/quadruped_locomotion"
 DOCKER_IMAGE_NAME="rlperf/quadruped_locomotion:latest"
 DOCKER_CONTAINER_NAME="quadruped_locomotion_container"
-DOCKERFILE_PATH="$(pwd)/rl_perf/domains/quadruped_locomotion/docker/Dockerfile"
+DOCKERFILE_PATH="$(pwd)/a2perf/domains/quadruped_locomotion/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 PARALLEL_MODE=true
@@ -176,7 +176,7 @@ docker build --network=host --no-cache \
   --build-arg USER_ID="$(id -u)" \
   --build-arg USER_GROUP_ID="$(id -g)" \
   -t "$DOCKER_IMAGE_NAME" \
-  rl_perf/domains/quadruped_locomotion/docker
+  a2perf/domains/quadruped_locomotion/docker
 
 echo "Successfully built docker image."
 #exit 0
@@ -218,9 +218,9 @@ pip install -r requirements.txt
 pip install -e .
 
 if [ "$DEBUG" = "true" ]; then
-  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/debug/requirements.txt
+  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/debug/requirements.txt
 else
-  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
+  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
 fi
 EOF
 
@@ -251,7 +251,7 @@ export INT_SAVE_FREQ="$INT_SAVE_FREQ"
 export INT_EVAL_FREQ="$INT_EVAL_FREQ"
 export SETUP_PATH="$SETUP_PATH"
 
-cd /rl-perf/rl_perf/submission
+cd /rl-perf/a2perf/submission
 export DISPLAY=:0
 python3.9 -u main_submission.py \
   --gin_config=$GIN_CONFIG \

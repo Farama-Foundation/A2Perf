@@ -1,11 +1,11 @@
 # ----------------------
 # IMPORTS
 # ----------------------
-import rl_perf.submission.submission_util
-import rl_perf.metrics.system.profiler.memory_profiler
-import rl_perf.metrics.system.codecarbon
-import rl_perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
-import rl_perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
+import a2perf.submission.submission_util
+import a2perf.metrics.system.profiler.memory_profiler
+import a2perf.metrics.system.codecarbon
+import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
 
 # ----------------------
 # SUBMISSION SETUP
@@ -20,8 +20,8 @@ Submission.measure_emissions = True
 # Set up domain
 ####################################
 
-#Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
-Submission.domain_config_paths = '/rl-perf/rl_perf/submission/configs/web_nav/debug/domain_configs/difficulty_01.gin'
+#Submission.domain_config_paths = '/rl-perf/a2perf/submission/configs/web_navigation/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
+Submission.domain_config_paths = '/rl-perf/a2perf/submission/configs/web_navigation/debug/domain_configs/difficulty_01.gin'
 
 ####################################
 # Set up benchmark mode

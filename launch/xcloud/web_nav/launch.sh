@@ -12,7 +12,7 @@ PARTICIPANT_MODULE_PATH=""
 WEB_NAV_DIR=""
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
-DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/rl_perf/domains/web_nav/docker/Dockerfile"
+DOCKERFILE_PATH="/home/ike2030/workspace/rl-perf/a2perf/domains/web_navigation/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 
@@ -109,7 +109,7 @@ yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 docker build --rm --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_navigation
+  -t "$DOCKER_IMAGE_NAME" a2perf/domains/web_navigation
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   # if it is running, do nothing
@@ -142,7 +142,7 @@ pip install -r requirements.txt
 pip install -e .
 
 # Install packages specific to the user's training code
-pip install -r rl_perf/rlperf_benchmark_submission/web_nav/requirements.txt
+pip install -r a2perf/a2perf_benchmark_submission/web_navigation/requirements.txt
 EOF
 
 # Run the benchmarking code
@@ -153,7 +153,7 @@ export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIR=$TRAIN_LOGS_DIR
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
-cd /rl-perf/rl_perf/submission
+cd /rl-perf/a2perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
   --gin_file=$GIN_CONFIG \

@@ -11,10 +11,10 @@ GIN_CONFIG=""
 DIFFICULTY_LEVEL=-1
 TIMESTEPS_PER_ACTORBATCH=0
 PARTICIPANT_MODULE_PATH=""
-WEB_NAV_DIR="$(pwd)/rl_perf/domains/web_nav"
+WEB_NAV_DIR="$(pwd)/a2perf/domains/web_nav"
 DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
 DOCKER_CONTAINER_NAME="web_nav_container"
-DOCKERFILE_PATH="$(pwd)/rl_perf/domains/web_nav/docker/Dockerfile"
+DOCKERFILE_PATH="$(pwd)/a2perf/domains/web_navigation/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 LOG_INTERVAL=0
@@ -175,7 +175,7 @@ docker build --rm --network=host \
   -t "$DOCKER_IMAGE_NAME" \
   --build-arg WEB_NAV_DIR="$WEB_NAV_DIR" \
   -f "$DOCKERFILE_PATH" \
-  -t "$DOCKER_IMAGE_NAME" rl_perf/domains/web_navigation/docker
+  -t "$DOCKER_IMAGE_NAME" a2perf/domains/web_navigation/docker
 
 if [ "$(docker ps -q -f name="$DOCKER_CONTAINER_NAME" --format "{{.Names}}")" ]; then
   echo "$DOCKER_CONTAINER_NAME is already running. Run 'docker stop $DOCKER_CONTAINER_NAME' to stop it. Will use the running container."
@@ -214,9 +214,9 @@ pip install -U -r requirements.txt
 pip install .
 
 if [ "$DEBUG" = "true" ]; then
-  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/web_nav/${ALGORITHM}/debug/requirements.txt
+  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/debug/requirements.txt
 else
-  pip install -r /rl-perf/rl_perf/rlperf_benchmark_submission/web_nav/${ALGORITHM}/requirements.txt
+  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
 fi
 EOF
 
@@ -242,7 +242,7 @@ export BATCH_SIZE=$BATCH_SIZE
 export LOG_INTERVAL=$LOG_INTERVAL
 export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
 export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
-cd /rl-perf/rl_perf/submission
+cd /rl-perf/a2perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
   --gin_config=$GIN_CONFIG \

@@ -5,7 +5,7 @@ import gin
 from absl import app
 from absl import flags
 from absl import logging
-from rl_perf.submission.submission_util import Submission
+from a2perf.submission.submission_util import Submission
 
 flags.DEFINE_string('gin_config', None, 'Path to the gin-config file.')
 flags.DEFINE_string('participant_module_path', None,
