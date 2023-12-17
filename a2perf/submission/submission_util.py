@@ -212,7 +212,7 @@ class Submission:
         global_vocab_dict = np.load(
             os.path.join(self.root_dir, 'train', 'global_vocab.npy'),
             allow_pickle=True).item()
-        global_vocab = vocabulary_node.LockedVocabulary()
+        global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
         global_vocab.restore(dict(global_vocab=global_vocab_dict))
         kwargs['global_vocabulary'] = global_vocab
         kwargs.pop('reload_vocab')

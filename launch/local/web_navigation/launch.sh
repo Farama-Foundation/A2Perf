@@ -211,7 +211,6 @@ fi
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip install -U -r requirements.txt
-pip install .
 
 if [ "$DEBUG" = "true" ]; then
   pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/debug/requirements.txt
