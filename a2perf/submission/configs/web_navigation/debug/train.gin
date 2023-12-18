@@ -1,0 +1,38 @@
+# ----------------------
+# IMPORTS
+# ----------------------
+import a2perf.submission.submission_util
+import a2perf.metrics.system.profiler.memory_profiler
+import a2perf.metrics.system.codecarbon
+import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+
+# ----------------------
+# SUBMISSION SETUP
+# ----------------------
+# Set up submission object
+Submission.mode = %BenchmarkMode.TRAIN
+Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
+Submission.run_offline_metrics_only=True
+Submission.measure_emissions=True
+#Submission.domain_config_paths = '/rl-perf/a2perf/submission/configs/web_navigation/domain_configs/difficulty_01.gin'
+
+
+# ----------------------
+# SYSTEM METRICS SETUP
+# ----------------------
+# Set up codecarbon for system metrics
+track_emissions.project_name = 'rlperf_web_nav_train_debug'
+track_emissions.measure_power_secs = 5
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+track_emissions.baseline_measure_sec=10
+track_emissions.default_cpu_tdp = 58 # if your CPU cannot be detected, set it manually
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'

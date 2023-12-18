@@ -12,6 +12,7 @@ flags.DEFINE_multi_string(
     ' metrics will be calculated on',
 )
 flags.DEFINE_integer('seed', 0, 'Global seed.')
+flags.DEFINE_integer('num_websites', 1, 'Number of websites.')
 flags.DEFINE_integer(
     'env_batch_size', 8, 'Batch size for the environment.'
 )  # added default
@@ -70,6 +71,7 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       FLAGS.policy_checkpoint_interval
   )
+  os.environ['NUM_WEBSITES'] = str(FLAGS.num_websites)
   os.environ['RB_CHECKPOINT_INTERVAL'] = str(FLAGS.rb_checkpoint_interval)
   os.environ['LOG_INTERVAL'] = str(FLAGS.log_interval)
   os.environ['SUMMARY_INTERVAL'] = str(FLAGS.summary_interval)
