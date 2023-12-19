@@ -27,12 +27,17 @@ RB_CAPACITY=100000                # Default replay buffer capacity
 SUMMARY_INTERVAL=10000            # Default value, adjust if needed
 ALGORITHM=""
 DEBUG=""
+NUM_WEBSITES=0
 
 # parse command-line arguments
 for arg in "$@"; do
   case "$arg" in
   --seed=*)
     SEED="${arg#*=}"
+    shift
+    ;;
+  --num_websites=*)
+    NUM_WEBSITES="${arg#*=}"
     shift
     ;;
   --algo=*)
@@ -149,7 +154,7 @@ for arg in "$@"; do
 done
 
 SSH_KEY_PATH=$WEB_NAV_DIR/docker/.ssh/id_rsa
-
+echo "Num Websites: $NUM_WEBSITES"
 echo "Env Batch Size: $ENV_BATCH_SIZE"
 echo "Difficulty Level: $DIFFICULTY_LEVEL"
 echo "Seed value: $SEED"
@@ -219,7 +224,6 @@ else
 fi
 EOF
 
-exit 0
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 
@@ -241,6 +245,7 @@ export BATCH_SIZE=$BATCH_SIZE
 export LOG_INTERVAL=$LOG_INTERVAL
 export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
 export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
+export NUM_WEBSITES=$NUM_WEBSITES
 cd /rl-perf/a2perf/submission
 export DISPLAY=:0
 python3 main_submission.py \
@@ -249,5 +254,5 @@ python3 main_submission.py \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
-  --verbosity=1
+  --verbosity=2
 EOF
