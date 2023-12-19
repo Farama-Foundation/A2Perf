@@ -48,8 +48,7 @@ def main(_):
   base_gin_config = f'/rl-perf/a2perf/submission/configs/web_navigation/' + debug_path
 
   for difficulty_level in FLAGS.difficulty_levels:  # Loop through each motion file
-    # host_dir_base = f"/home/ikechukwuu/workspace/gcs/a2perf/web_navigation/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}"
-    host_dir_base = f'{host_dir_base}/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}'
+    host_dir_base = f'{host_dir_base}/gcs/a2perf/web_navigation/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}'
     root_dir_base = f"/mnt/gcs/a2perf/web_navigation/difficulty_level_{difficulty_level}/{FLAGS.algo}/{debug_path}"
 
     for seed in seeds:

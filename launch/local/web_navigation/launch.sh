@@ -200,9 +200,10 @@ else
     docker_run_command+=" --gpus all"
   fi
 
+  USER_HOME_DIR=$(eval echo "~$USER")
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
-  docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
+  docker_run_command+=" -v ${USER_HOME_DIR}/workspace/gcs:/mnt/gcs/"
   docker_run_command+=" -v /dev/shm:/dev/shm"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""

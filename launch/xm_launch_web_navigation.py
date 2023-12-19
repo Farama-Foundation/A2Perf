@@ -90,14 +90,14 @@ def main(_):
       batch_size_values = [32, ]
       timesteps_per_actorbatch_values = [8]
       web_nav_seeds = [_SEED.value]
-      env_batch_sizes = [2]
-      total_env_steps = [50000]
+      env_batch_sizes = [1]
+      total_env_steps = [100000]
       difficulty_levels = [_DIFFICULTY_LEVEL.value]
       learning_rates = [1e-4]
       eval_intervals = [5000]
       train_checkpoint_intervals = [10000]
       policy_checkpoint_intervals = [10000]
-      algorithms = [_ALGO.value]
+      num_website_values = [1]
     else:
       # Non-debug mode hyperparameters
       algorithms = [_ALGO.value]
@@ -119,8 +119,10 @@ def main(_):
       eval_intervals = [50000]
       train_checkpoint_intervals = [100000]
       policy_checkpoint_intervals = [100000]
+      num_website_values = [10]
     web_nav_hparam_sweeps = [
         {
+            'num_websites': num_websites,
             'seed': seed,
             'env_batch_size': env_batch_size,
             'total_env_steps': env_steps,
@@ -137,7 +139,7 @@ def main(_):
             'timesteps_per_actorbatch': tpab,
         }
         for
-        seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci, si, li, rb, rci, bs, tpab
+        seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci, si, li, rb, rci, bs, tpab, num_websites
         in
         itertools.product(
             web_nav_seeds,
@@ -154,6 +156,7 @@ def main(_):
             rb_checkpoint_intervals,  # Added rb_checkpoint_intervals here
             batch_size_values,
             timesteps_per_actorbatch_values,
+            num_website_values
         )
     ]
     # Define Executable
