@@ -16,11 +16,12 @@ setup(
 
             # Include default gin config files for each domain
             'domains/web_navigation/configs/web_navigation_env_config.gin',
-            'domains/quadruped_locomotion/configs/quadruped_locomotion_env_config.gin',
-            'domains/circuit_training/configs/circuit_training_env_config.gin'
+            'domains/quadruped_locomotion/configs/motion_imitation/configs/envdesign.gin',
+            'domains/circuit_training/circuit_training/configs/envdesign.gin',
 
             # Include designs for creating web navigation environments
             'domains/web_navigation/environment_generation/data/difficulty_levels.zip',
+
         ]
     }
 )

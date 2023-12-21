@@ -167,8 +167,7 @@ yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N 
 # install xhost
 sudo apt-get install x11-xserver-utils
 
-#docker build \
-docker build --network=host --no-cache \
+docker build --network=host \
   --rm \
   --pull \
   -f "${DOCKERFILE_PATH}" \
@@ -223,7 +222,7 @@ else
   pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
 fi
 EOF
-
+exit 0
 # Remove stray single quotes first
 TRAIN_LOGS_DIRS=$(echo "$TRAIN_LOGS_DIRS" | tr -d "'")
 
