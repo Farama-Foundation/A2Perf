@@ -12,9 +12,9 @@ flags.DEFINE_multi_string(
     ' metrics will be calculated on',
 )
 flags.DEFINE_integer('seed', 0, 'Global seed.')
-flags.DEFINE_integer('num_websites', 1, 'Number of websites.')
+flags.DEFINE_integer('num_websites', 0, 'Number of websites.')
 flags.DEFINE_integer(
-    'env_batch_size', 8, 'Batch size for the environment.'
+    'env_batch_size', 0, 'Batch size for the environment.'
 )  # added default
 flags.DEFINE_integer(
     'total_env_steps', 10000, 'Total steps in the environment.'
@@ -28,10 +28,10 @@ flags.DEFINE_boolean(
     'run_offline_metrics_only', False, 'Run offline metrics only.'
 )
 flags.DEFINE_integer(
-    'rb_capacity', 50000, 'Replay buffer capacity.'
+    'rb_capacity', 0, 'Replay buffer capacity.'
 )  # added default
 flags.DEFINE_integer(
-    'batch_size', 64, 'Batch size for training.'
+    'batch_size', 0, 'Batch size for training.'
 )  # added default
 flags.DEFINE_integer(
     'eval_interval', 100, 'Evaluation interval.'
@@ -53,7 +53,9 @@ flags.DEFINE_integer(
     'timesteps_per_actorbatch', 0, 'Summary interval.'
 )  # added default
 flags.DEFINE_float('learning_rate', 0, 'the learning rate')
-
+flags.DEFINE_boolean('debug', False, 'Debug mode.')
+flags.DEFINE_float('entropy_regularization', 0.0, 'Entropy regularization.')
+flags.DEFINE_float('epsilon_greedy', 0.0, 'Epsilon greedy.')
 FLAGS = flags.FLAGS
 
 
@@ -80,6 +82,8 @@ def main(_):
   # New environment variables for rb_capacity and batch_size
   os.environ['RB_CAPACITY'] = str(FLAGS.rb_capacity)
   os.environ['BATCH_SIZE'] = str(FLAGS.batch_size)
+  os.environ['ENTROPY_REGULARIZATION'] = str(FLAGS.entropy_regularization)
+  os.environ['EPSILON_GREEDY'] = str(FLAGS.epsilon_greedy)
 
   # Get the current working directory
   cwd = os.getcwd()
@@ -96,7 +100,10 @@ def main(_):
       f'--participant_module_path={FLAGS.participant_module_path} '
       f'--root_dir={FLAGS.root_dir} '
       f'--train_logs_dirs={train_logs_dirs_str} '
-      f'--run_offline_metrics_only={FLAGS.run_offline_metrics_only}'
+      f'--run_offline_metrics_only={FLAGS.run_offline_metrics_only} '
+      '--verbosity=2'
+      if FLAGS.debug
+      else f'--verbosity=1'
   )
 
   process = subprocess.Popen(command, shell=True)

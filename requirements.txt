@@ -18,6 +18,3 @@ setuptools
 
 # web_navigation
 -r ./a2perf/domains/web_navigation/requirements.txt
-
-# a2perf
--e ./

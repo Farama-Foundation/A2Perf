@@ -2,7 +2,8 @@ import csv
 import enum
 import importlib
 import json
-import logging
+# import logging
+from absl import logging
 import multiprocessing
 import os
 import sys
@@ -233,6 +234,10 @@ class Submission:
 
   def _train(self, participant_event: multiprocessing.Event,
       profiler_events: typing.List[multiprocessing.Event]):
+
+    # Set logging level to info in absl
+    logging.set_verbosity(logging.INFO)
+    logging.info('Logging level set to INFO')
     gin.parse_config(self.gin_config_str)
     participant_event.set()
 
@@ -240,26 +245,38 @@ class Submission:
     for profiler_event in profiler_events:
       profiler_event.wait()
 
+    logging.info('All profilers started')
     with working_directory(self.participant_module_path):
-      participant_module, participant_module_spec = self._load_participant_module(
-          'train.py')
-      print(self.participant_module_path)
-      print(participant_module_spec)
+      logging.info('Successfully changed working directory to '
+                    f'{self.participant_module_path}')
+
+      participant_module, participant_module_spec = (
+          self._load_participant_module('train.py')
+      )
       participant_module_spec.loader.exec_module(participant_module)
+      logging.info('Successfully loaded participant module from '
+                    f'{self.participant_module_path}')
 
       if self.measure_emissions:
         @codecarbon.track_emissions(output_dir=self.metric_values_dir,
-                                    output_file='train_emissions.csv', )
+                                    output_file='train_emissions.csv')
         def train():
-          return participant_module.train()
+          participant_module.train()
 
+        logging.info('Starting training and tracking emissions')
         train()
       else:
+        logging.info('Starting training without tracking emissions')
         participant_module.train()
 
     participant_event.clear()
+    logging.info('Participant event cleared')
+
+    logging.info('Attempting to clear profiler events:'
+                  f'{profiler_events}')
     for profiler_event in profiler_events:
       profiler_event.clear()
+    logging.info('Profiler events cleared')
 
   def _inference(self, participant_event: multiprocessing.Event,
       profiler_events: typing.List[multiprocessing.Event],
