@@ -21,9 +21,7 @@ _NUM_SAMPLES = flags.DEFINE_integer('num_samples', 100,
                                     'Number of samples to generate.')
 _NUM_PROCESSES = flags.DEFINE_integer('num_processes', 1,
                                       'Number of processes to use.')
-_SKILL_LEVEL = flags.DEFINE_enum('skill_level', 'novice',
-                                 ['novice', 'intermediate', 'expert'],
-                                 'Skill level of the expert.')
+
 _DATASET_ID = flags.DEFINE_string('dataset_id', 'QuadrupedLocomotion',
                                   'Dataset ID.')
 _SEED = flags.DEFINE_integer('seed', 0, 'Seed to use.')
@@ -34,6 +32,9 @@ _AUTHOR = flags.DEFINE_string('author', 'Ikechukwu Uchendu', 'Author name.')
 _AUTHOR_EMAIL = flags.DEFINE_string('author_email', 'iuchendu@g.harvard.edu',
                                     'Author email.')
 _CODE_PERMALINK = flags.DEFINE_string('code_permalink', '', 'Code permalink.')
+_SKILL_LEVEL = flags.DEFINE_enum('skill_level', 'novice',
+                                 ['novice', 'intermediate', 'expert'],
+                                 'Skill level of the expert.')
 _TASK = flags.DEFINE_enum('task', 'dog_pace',
                           ['dog_pace', 'dog_trot', 'dog_spin'],
                           'Task to run.')
