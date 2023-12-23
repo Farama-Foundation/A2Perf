@@ -248,14 +248,16 @@ class Submission:
     logging.info('All profilers started')
     with working_directory(self.participant_module_path):
       logging.info('Successfully changed working directory to '
-                    f'{self.participant_module_path}')
+                   f'{self.participant_module_path}')
 
       participant_module, participant_module_spec = (
           self._load_participant_module('train.py')
       )
-      participant_module_spec.loader.exec_module(participant_module)
       logging.info('Successfully loaded participant module from '
-                    f'{self.participant_module_path}')
+                   f'{self.participant_module_path}')
+
+      participant_module_spec.loader.exec_module(participant_module)
+      logging.info('Successfully executed participant module')
 
       if self.measure_emissions:
         @codecarbon.track_emissions(output_dir=self.metric_values_dir,
@@ -273,7 +275,7 @@ class Submission:
     logging.info('Participant event cleared')
 
     logging.info('Attempting to clear profiler events:'
-                  f'{profiler_events}')
+                 f'{profiler_events}')
     for profiler_event in profiler_events:
       profiler_event.clear()
     logging.info('Profiler events cleared')

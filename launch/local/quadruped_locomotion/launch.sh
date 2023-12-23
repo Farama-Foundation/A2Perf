@@ -18,12 +18,17 @@ PARALLEL_CORES=0
 MODE=""
 VISUALIZE=false
 MOTION_FILE_PATH=""
+DATASET_ID=""
 INT_SAVE_FREQ=0
 INT_EVAL_FREQ=0
 EXTRA_GIN_BINDINGS='--extra_gin_bindings="track_emissions.default_cpu_tdp=240"'
 ALGORITHM=""
 SETUP_PATH=""
 DEBUG=""
+BATCH_SIZE=0
+NUM_EPOCHS=0
+LEARNING_RATE=0.0
+SKILL_LEVEL=0
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -40,16 +45,28 @@ for arg in "$@"; do
     RUN_OFFLINE_METRICS_ONLY="${arg#*=}"
     shift
     ;;
+  --learning_rate=*)
+    LEARNING_RATE="${arg#*=}"
+    shift
+    ;;
   --algo=*)
     ALGORITHM="${arg#*=}"
     shift
     ;;
-  --env_batch_size=*)
-    ENV_BATCH_SIZE="${arg#*=}"
+  --dataset_id=*)
+    DATASET_ID="${arg#*=}"
     shift
     ;;
   --extra_gin_bindings=*)
     EXTRA_GIN_BINDINGS="${arg#*=}"
+    shift
+    ;;
+  --skill_level=*)
+    SKILL_LEVEL="${arg#*=}"
+    shift
+    ;;
+  --batch_size=*)
+    BATCH_SIZE="${arg#*=}"
     shift
     ;;
   --total_env_steps=*)
@@ -108,6 +125,10 @@ for arg in "$@"; do
     MODE="${arg#*=}"
     shift
     ;;
+  --num_epochs=*)
+    NUM_EPOCHS="${arg#*=}"
+    shift
+    ;;
   --visualize=*)
     VISUALIZE="${arg#*=}"
     shift
@@ -156,6 +177,8 @@ if [ "$ALGORITHM" = "ppo" ]; then
   SETUP_PATH="ppo_actor.py"
 elif [ "$ALGORITHM" = "ddpg" ]; then
   SETUP_PATH="ddpg_actor.py"
+elif [ "$ALGORITHM" = "bc" ]; then
+  SETUP_PATH=""
 else
   echo "Invalid algorithm: $ALGORITHM"
   exit 1
@@ -166,7 +189,7 @@ yes | ssh-keygen -t rsa -b 4096 -C "quadruped_locomotion" -f "$SSH_KEY_PATH" -N 
 
 # install xhost
 sudo apt-get install x11-xserver-utils
-
+xhost + local:
 docker build --network=host \
   --rm \
   --pull \
@@ -199,10 +222,11 @@ else
     docker_run_command+=" --gpus all"
   fi
 
+  USER_HOME_DIR=$(eval echo "~$USER")
+
   # append the rest of the flags
   docker_run_command+=" -v $(pwd):/rl-perf"
-  docker_run_command+=" -v /dev/shm:/dev/shm"
-  docker_run_command+=" -v /home/ikechukwuu/workspace/gcs:/mnt/gcs/"
+  docker_run_command+=" -v ${USER_HOME_DIR}/workspace/gcs:/mnt/gcs/"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
@@ -222,7 +246,8 @@ else
   pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
 fi
 EOF
-exit 0
+
+#exit 0
 # Remove stray single quotes first
 TRAIN_LOGS_DIRS=$(echo "$TRAIN_LOGS_DIRS" | tr -d "'")
 
@@ -249,9 +274,15 @@ export VISUALIZE="$VISUALIZE"
 export INT_SAVE_FREQ="$INT_SAVE_FREQ"
 export INT_EVAL_FREQ="$INT_EVAL_FREQ"
 export SETUP_PATH="$SETUP_PATH"
+export DATASET_ID="$DATASET_ID"
+export BATCH_SIZE="$BATCH_SIZE"
+export NUM_EPOCHS="$NUM_EPOCHS"
+export LEARNING_RATE="$LEARNING_RATE"
+export SKILL_LEVEL="$SKILL_LEVEL"
+export MINARI_DATASETS_PATH="/rl-perf/datasets"
 
 cd /rl-perf/a2perf/submission
-export DISPLAY=:0
+
 python3.9 -u main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \

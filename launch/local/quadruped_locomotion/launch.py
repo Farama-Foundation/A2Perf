@@ -15,6 +15,9 @@ _EXPERIMENT_NUMBER = flags.DEFINE_string(
 _DEBUG = flags.DEFINE_boolean('debug', False, 'Enable debug mode')
 _MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
 _SKILL_LEVEL = flags.DEFINE_string('skill_level', None, 'Skill level')
+_HOST_DIR_BASE = flags.DEFINE_string('host_dir_base',
+
+                                     None, 'Base directory for host')
 
 
 def get_next_experiment_number(host_dir_base):
@@ -31,8 +34,7 @@ def get_next_experiment_number(host_dir_base):
 
 
 def main(_):
-  os.chdir("/home/ikechukwuu/workspace/rl-perf")
-
+  host_dir_base = os.path.expanduser(_HOST_DIR_BASE.value)
   debug_path = "debug" if _DEBUG.value else ""
   seeds = [int(seed) for seed in _SEED.value]
   base_gin_config = f'/rl-perf/a2perf/submission/configs/quadruped_locomotion/' + debug_path
@@ -41,7 +43,7 @@ def main(_):
 
   for algo in _ALGO.value:  # Loop through each algorithm
     for motion_file in _MOTION_FILES.value:  # Loop through each motion file
-      host_dir_base = f"/home/ikechukwuu/workspace/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
+      host_dir_base = f"{host_dir_base}/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
       root_dir_base = f"/mnt/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
 
       for seed in seeds:
@@ -53,7 +55,7 @@ def main(_):
         next_exp_num = FLAGS.experiment_number if FLAGS.experiment_number is not None else next_exp_num
         # Launch the xmanager command
         xmanager_cmd = [
-            "/home/ikechukwuu/workspace/rl-perf/env/bin/xmanager", "launch",
+            "xmanager", "launch",
             "launch/xm_launch_quadruped_locomotion.py", "--",
             f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
             f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion', algo, debug_path)}",
@@ -61,13 +63,14 @@ def main(_):
             f"--gin_config={os.path.join(base_gin_config, gin_config_name)}",
             "--local",
             f"--algo={algo}",
+            f'--task={motion_file}',
             '--debug' if FLAGS.debug else '',
             f"--seed={seed}",
             f"--mode={FLAGS.mode}",
+            f'--skill_level={FLAGS.skill_level}',
             f"--experiment_number={next_exp_num}",
             f'--extra_gin_bindings=Submission.create_domain.motion_files=["{motion_file_path}"]',
             f'--extra_gin_bindings=Submission.create_domain.mode="{env_mode}"',
-
         ]
 
         subprocess.run(xmanager_cmd, check=True)

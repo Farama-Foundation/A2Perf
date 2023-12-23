@@ -56,7 +56,10 @@ _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
 _MOTION_FILE_PATH = flags.DEFINE_string('motion_file_path',
                                         None,
                                         'Motion file')
+_TASK = flags.DEFINE_string('task', None, 'Task')
 _MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
+_SKILL_LEVEL = flags.DEFINE_string('skill_level', None, 'Skill level')
+
 FLAGS = flags.FLAGS
 
 
@@ -98,20 +101,26 @@ def main(_):
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
+      batch_size_values = [32]
+      num_epoch_values = [10]
       num_parallel_cores = [170]
       total_env_steps = [200000, ]
       int_save_freqs = [100000]
       int_eval_freqs = [10000]
+      learning_rates = [3e-4]
       algos = [_ALGO.value]
     else:
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
+      batch_size_values = [64]
+      num_epoch_values = [500]
       total_env_steps = [200000000, ]
       num_parallel_cores = [170]
       int_save_freqs = [1000000]
       int_eval_freqs = [100000]
       algos = [_ALGO.value]
+      learning_rates = [3e-4]
 
     quadruped_locomotion_hparam_sweeps = list(
         dict([
@@ -120,14 +129,18 @@ def main(_):
             ('parallel_cores', parallel_cores),
             ('int_save_freq', int_save_freq),
             ('algo', algo),
-            ('int_eval_freq', int_eval_freq)
-
+            ('int_eval_freq', int_eval_freq),
+            ('batch_size', batch_size),
+            ('num_epochs', num_epochs),
+            ('learning_rate', learning_rate),
         ])
-        for seed, env_steps, parallel_cores, int_save_freq, algo, int_eval_freq
+        for
+        seed, env_steps, parallel_cores, int_save_freq, algo, int_eval_freq, batch_size, num_epochs, learning_rate
         in
         itertools.product(quadruped_locomotion_seeds,
                           total_env_steps, num_parallel_cores,
-                          int_save_freqs, algos, int_eval_freqs
+                          int_save_freqs, algos, int_eval_freqs,
+                          batch_size_values, num_epoch_values, learning_rates
                           )
     )
 
@@ -158,6 +171,11 @@ def main(_):
       participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
       run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
 
+      if _SKILL_LEVEL.value is not None:
+        dataset_id = f'QuadrupedLocomotion-{_TASK.value}-{_SKILL_LEVEL.value}-v0'
+      else:
+        dataset_id = None
+
       # Add additional arguments that are constant across all runs
       hparam_config.update(dict(
           root_dir=root_dir,
@@ -166,6 +184,8 @@ def main(_):
           quad_loco_dir=quadruped_locomotion_dir,
           train_logs_dirs=','.join(_TRAIN_LOGS_DIRS.value),
           motion_file_path=_MOTION_FILE_PATH.value,
+          dataset_id=dataset_id,
+          skill_level=_SKILL_LEVEL.value,
           run_offline_metrics_only=run_offline_metrics_only,
           mode=_MODE.value,
           extra_gin_bindings=','.join(_EXTRA_GIN_BINDINGS.value),
