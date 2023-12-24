@@ -77,7 +77,7 @@ track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
 track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
-track_emissions.baseline_measure_sec=30
+track_emissions.baseline_measure_sec=2
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write='append'
