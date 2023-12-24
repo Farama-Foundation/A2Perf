@@ -5,6 +5,7 @@ from absl import app
 from absl import flags
 
 # Define only the necessary flags
+_DEBUG = flags.DEFINE_bool('debug', False, 'debugging mode')
 flags.DEFINE_integer('seed', 0, 'Global seed.')
 flags.DEFINE_integer('num_parallel_cores', 1, 'Number of parallel cores.')
 flags.DEFINE_integer('num_epochs', 0, 'Number of epochs.')
@@ -45,7 +46,6 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-  # Set environment variables
   os.environ['OMPI_MCA_btl_vader_single_copy_mechanism'] = 'none'
   os.environ['SEED'] = str(FLAGS.seed)
   os.environ['PARALLEL_CORES'] = str(FLAGS.num_parallel_cores)
@@ -58,7 +58,7 @@ def main(_):
   os.environ['PARALLEL_MODE'] = 'True'
   os.environ['MODE'] = FLAGS.mode
   os.environ['SKILL_LEVEL'] = FLAGS.skill_level
-  os.environ['NUM_EPOCHS'] = FLAGS.num_epochs
+  os.environ['NUM_EPOCHS'] = str(FLAGS.num_epochs)
   os.environ['VISUALIZE'] = 'False'
   os.environ['DATASET_ID'] = (
       f'QuadrupedLocomotion-{FLAGS.task}-{FLAGS.skill_level}-v0'
@@ -69,6 +69,8 @@ def main(_):
   os.environ['MOTION_FILE_PATH'] = FLAGS.motion_file_path
   os.environ['SETUP_PATH'] = f'{FLAGS.algo}_actor.py'
   os.environ['TASK'] = FLAGS.task
+  os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
   cwd = os.getcwd()
   os.environ['PYTHONPATH'] = cwd + os.pathsep + os.getenv('PYTHONPATH', '')
   os.makedirs(FLAGS.root_dir, exist_ok=True)
@@ -76,7 +78,7 @@ def main(_):
 
   participant_module_path = FLAGS.participant_module_path
   command = (
-      'python3.9 rl_perf/submission/main_submission.py '
+      'python3.9 a2perf/submission/main_submission.py '
       f'--gin_config={FLAGS.gin_config} '
       f'--participant_module_path={participant_module_path} '
       f'--root_dir={FLAGS.root_dir} '
@@ -84,7 +86,7 @@ def main(_):
       f'--run_offline_metrics_only={FLAGS.run_offline_metrics_only}'
   )
 
-  process = subprocess.Popen(command, shell=True)
+  process = subprocess.Popen(command, shell=True, env=os.environ.copy())
   process.communicate()
 
 

@@ -1,32 +1,34 @@
+from contextlib import contextmanager
 import csv
 import enum
 import importlib
 import json
-# import logging
-from absl import logging
 import multiprocessing
 import os
 import sys
 import timeit
 import typing
-from contextlib import contextmanager
 
+from a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
+from a2perf.metrics.reliability.rl_reliability_metrics.metrics import (
+    IqrAcrossRollouts,
+    IqrAcrossRuns,
+    IqrWithinRuns,
+    LowerCVaRAcrossRollouts,
+    LowerCVaROnAcross,
+    LowerCVaROnDiffs,
+    MadAcrossRollouts,
+    MedianPerfDuringTraining,
+    StddevAcrossRollouts,
+    UpperCVaRAcrossRollouts,
+)
+from a2perf.metrics.system import codecarbon
+from a2perf.metrics.system.profiler.base_profiler import BaseProfiler
+from absl import logging
 import gin
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
-
-from a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import \
-  Evaluator
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import (
-  IqrAcrossRuns, IqrWithinRuns,
-  LowerCVaROnAcross,
-  LowerCVaROnDiffs,
-  IqrAcrossRollouts, MedianPerfDuringTraining
-, StddevAcrossRollouts, MadAcrossRollouts, UpperCVaRAcrossRollouts,
-  LowerCVaRAcrossRollouts, )
-from a2perf.metrics.system import codecarbon
-from a2perf.metrics.system.profiler.base_profiler import BaseProfiler
 
 
 @contextmanager
@@ -77,37 +79,53 @@ class ReliabilityMetrics(enum.Enum):
   LowerCVaRAcrossRollouts = 'LowerCVaRAcrossRollouts'
 
 
-def _start_profilers(profilers: typing.List[typing.Type[BaseProfiler]],
+def _start_profilers(
+    profilers: typing.List[typing.Type[BaseProfiler]],
     profiler_events: typing.List[multiprocessing.Event],
     participant_event: multiprocessing.Event,
-    participant_process: multiprocessing.Process, log_dir: str, mp_context) -> \
-    typing.List[multiprocessing.Process]:
+    participant_process: multiprocessing.Process,
+    log_dir: str,
+    mp_context,
+) -> typing.List[multiprocessing.Process]:
   processes = []
   for profiler_class, profiler_event in zip(profilers, profiler_events):
     logging.info(f'Starting profiler: {profiler_class}')
-    profiler = profiler_class(participant_process_event=participant_event,
-                              profiler_event=profiler_event,
-                              participant_process=participant_process,
-                              base_log_dir=log_dir)
+    profiler = profiler_class(
+        participant_process_event=participant_event,
+        profiler_event=profiler_event,
+        participant_process=participant_process,
+        base_log_dir=log_dir,
+    )
     profiler_process = mp_context.Process(target=profiler.start)
     profiler_process.start()
     processes.append(profiler_process)
   return processes
 
 
-def _start_inference_profilers(participant_event, profilers, pipes,
-    profiler_started_events, base_log_dir, mp_context):
+def _start_inference_profilers(
+    participant_event,
+    profilers,
+    pipes,
+    profiler_started_events,
+    base_log_dir,
+    mp_context,
+):
   processes = []
   profiler_objects = []
-  for profiler_class, pipe, profiler_event in zip(profilers, pipes,
-                                                  profiler_started_events):
+  for profiler_class, pipe, profiler_event in zip(
+      profilers, pipes, profiler_started_events
+  ):
     logging.info(f'Starting profiler: {profiler_class}')
-    profiler = profiler_class(pipe_for_participant_process=pipe,
-                              profiler_event=profiler_event,
-                              participant_process_event=participant_event,
-                              base_log_dir=base_log_dir)
+    profiler = profiler_class(
+        pipe_for_participant_process=pipe,
+        profiler_event=profiler_event,
+        participant_process_event=participant_event,
+        base_log_dir=base_log_dir,
+    )
     profiler_objects.append(profiler)
-    profiler_process = mp_context.Process(target=profiler.start, )
+    profiler_process = mp_context.Process(
+        target=profiler.start,
+    )
     profiler_process.start()
     processes.append(profiler_process)
   return processes, profiler_objects
@@ -115,7 +133,9 @@ def _start_inference_profilers(participant_event, profilers, pipes,
 
 @gin.configurable
 class Submission:
-  def __init__(self,
+
+  def __init__(
+      self,
       root_dir: str,
       participant_module_path: str = None,
       profilers: typing.List[typing.Type[BaseProfiler]] = None,
@@ -131,17 +151,21 @@ class Submission:
       plot_metrics: bool = True,
       run_offline_metrics_only: bool = False,
       reliability_metrics: typing.List[ReliabilityMetrics] = None,
-      tracking_mode: str = None):
+      tracking_mode: str = None,
+  ):
     """Object that represents a submission to the benchmark.
 
     Args:
-        participant_module_path: Path to the module that contains the participant's code.
+        participant_module_path: Path to the module that contains the
+          participant's code.
         profilers: List of profilers to use.
         mode: Benchmark mode (train or inference).
-        domain: Benchmark domain (web navigation, circuit training or quadruped locomotion).
+        domain: Benchmark domain (web navigation, circuit training or quadruped
+          locomotion).
         root_dir: Root directory for the submission.
         metric_values_dir: Directory where the metric values will be saved.
-        train_logs_dirs: List of directories where the training logs are saved. Relative to the root directory.
+        train_logs_dirs: List of directories where the training logs are saved.
+          Relative to the root directory.
         num_inference_steps: Number of steps to run inference for.
         num_inference_episodes: Number of episodes to run inference for.
         time_participant_code: Whether to time the participant's code.
@@ -160,9 +184,10 @@ class Submission:
       self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
     os.makedirs(self.metric_values_dir, exist_ok=True)
     if self.train_logs_dirs is not None:
-      self.train_logs_dirs = [os.path.join(self.root_dir, train_logs_dir) for
-                              train_logs_dir in
-                              self.train_logs_dirs]
+      self.train_logs_dirs = [
+          os.path.join(self.root_dir, train_logs_dir)
+          for train_logs_dir in self.train_logs_dirs
+      ]
     self.run_offline_metrics_only = run_offline_metrics_only
     self.baseline_measure_sec = baseline_measure_sec
     self.tracking_mode = tracking_mode
@@ -183,19 +208,23 @@ class Submission:
     self.reliability_metrics = reliability_metrics
 
     self.metrics_results = {}
-    metrics_path = os.path.join(self.metric_values_dir,
-                                'inference_metrics.json' if self.mode == BenchmarkMode.INFERENCE else 'train_metrics.json')
+    metrics_path = os.path.join(
+        self.metric_values_dir,
+        'inference_metrics.json'
+        if self.mode == BenchmarkMode.INFERENCE
+        else 'train_metrics.json',
+    )
     if os.path.exists(metrics_path):
-      logging.info(
-          f'Loading pre-existing metric results from {metrics_path}')
+      logging.info(f'Loading pre-existing metric results from {metrics_path}')
       with open(metrics_path, 'r') as f:
         self.metrics_results = json.load(f)
 
   def _load_participant_spec(self, filename):
     """Loads the participant spec from the participant module path."""
     participant_file_path = os.path.join(self.participant_module_path, filename)
-    spec = importlib.util.spec_from_file_location(f"{filename}",
-                                                  participant_file_path)
+    spec = importlib.util.spec_from_file_location(
+        f'{filename}', participant_file_path
+    )
     return spec
 
   def _load_participant_module(self, filename):
@@ -204,7 +233,7 @@ class Submission:
     participant_module = importlib.util.module_from_spec(spec)
     return participant_module, spec
 
-  @gin.configurable("Submission.create_domain")
+  @gin.configurable('Submission.create_domain')
   def create_domain(self, **kwargs):
     if self.domain == BenchmarkDomain.WEB_NAVIGATION:
       from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
@@ -212,7 +241,8 @@ class Submission:
       if kwargs.get('reload_vocab', False):
         global_vocab_dict = np.load(
             os.path.join(self.root_dir, 'train', 'global_vocab.npy'),
-            allow_pickle=True).item()
+            allow_pickle=True,
+        ).item()
         global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
         global_vocab.restore(dict(global_vocab=global_vocab_dict))
         kwargs['global_vocabulary'] = global_vocab
@@ -232,8 +262,11 @@ class Submission:
       data.append(observation)
     return data
 
-  def _train(self, participant_event: multiprocessing.Event,
-      profiler_events: typing.List[multiprocessing.Event]):
+  def _train(
+      self,
+      participant_event: multiprocessing.Event,
+      profiler_events: typing.List[multiprocessing.Event],
+  ):
 
     # Set logging level to info in absl
     logging.set_verbosity(logging.INFO)
@@ -247,21 +280,27 @@ class Submission:
 
     logging.info('All profilers started')
     with working_directory(self.participant_module_path):
-      logging.info('Successfully changed working directory to '
-                   f'{self.participant_module_path}')
+      logging.info(
+          'Successfully changed working directory to '
+          f'{self.participant_module_path}'
+      )
 
       participant_module, participant_module_spec = (
           self._load_participant_module('train.py')
       )
-      logging.info('Successfully loaded participant module from '
-                   f'{self.participant_module_path}')
+      logging.info(
+          'Successfully loaded participant module from '
+          f'{self.participant_module_path}'
+      )
 
       participant_module_spec.loader.exec_module(participant_module)
       logging.info('Successfully executed participant module')
 
       if self.measure_emissions:
-        @codecarbon.track_emissions(output_dir=self.metric_values_dir,
-                                    output_file='train_emissions.csv')
+
+        @codecarbon.track_emissions(
+            output_dir=self.metric_values_dir, output_file='train_emissions.csv'
+        )
         def train():
           participant_module.train()
 
@@ -274,13 +313,14 @@ class Submission:
     participant_event.clear()
     logging.info('Participant event cleared')
 
-    logging.info('Attempting to clear profiler events:'
-                 f'{profiler_events}')
+    logging.info(f'Attempting to clear profiler events:{profiler_events}')
     for profiler_event in profiler_events:
       profiler_event.clear()
     logging.info('Profiler events cleared')
 
-  def _inference(self, participant_event: multiprocessing.Event,
+  def _inference(
+      self,
+      participant_event: multiprocessing.Event,
       profiler_events: typing.List[multiprocessing.Event],
       inference_data: typing.List[typing.Any],
   ):
@@ -290,30 +330,34 @@ class Submission:
     env = self.create_domain()
     metric_results = {}
     with working_directory(self.participant_module_path):
-      participant_module, participant_module_spec = self._load_participant_module(
-          'inference.py')
+      participant_module, participant_module_spec = (
+          self._load_participant_module('inference.py')
+      )
       print(self.participant_module_path)
       print(participant_module_spec)
       participant_module_spec.loader.exec_module(participant_module)
       participant_model = participant_module.load_model(env=env)
 
-      preprocessed_data = [participant_module.preprocess_observation(x) for x in
-                           inference_data]
+      preprocessed_data = [
+          participant_module.preprocess_observation(x) for x in inference_data
+      ]
 
       if self.time_inference_steps:
+
         def inference_step():
-          return participant_module.infer_once(model=participant_model,
-                                               observation=preprocessed_data[i])
+          return participant_module.infer_once(
+              model=participant_model, observation=preprocessed_data[i]
+          )
 
         inference_times = []
         for i in range(self.num_inference_steps):
           inference_times.append(timeit.timeit(inference_step, number=1))
 
-        metric_results['inference_time'] = dict(values=inference_times,
-                                                mean=np.mean(
-                                                    inference_times),
-                                                std=np.std(
-                                                    inference_times))
+        metric_results['inference_time'] = dict(
+            values=inference_times,
+            mean=np.mean(inference_times),
+            std=np.std(inference_times),
+        )
         print(f'Inference time: {np.mean(inference_times)}')
         del inference_times
 
@@ -329,9 +373,11 @@ class Submission:
           rewards = 0
           while not terminated and not truncated:
             preprocessed_obs = participant_module.preprocess_observation(
-                observation)
-            action = participant_module.infer_once(model=participant_model,
-                                                   observation=preprocessed_obs)
+                observation
+            )
+            action = participant_module.infer_once(
+                model=participant_model, observation=preprocessed_obs
+            )
             observation, reward, terminated, truncated, _ = env.step(action)
             rewards += reward
           all_rewards.append(rewards)
@@ -339,8 +385,11 @@ class Submission:
         return all_rewards
 
       if self.measure_emissions:
-        @codecarbon.track_emissions(output_dir=self.metric_values_dir,
-                                    output_file='inference_emissions.csv', )
+
+        @codecarbon.track_emissions(
+            output_dir=self.metric_values_dir,
+            output_file='inference_emissions.csv',
+        )
         def perform_rollouts_and_track_emissions():
           return perform_rollouts()
 
@@ -348,18 +397,19 @@ class Submission:
       else:
         all_rewards = perform_rollouts()
 
-      metric_results['rollout_returns'] = dict(values=all_rewards,
-                                               mean=np.mean(all_rewards),
-                                               std=np.std(all_rewards))
+      metric_results['rollout_returns'] = dict(
+          values=all_rewards, mean=np.mean(all_rewards), std=np.std(all_rewards)
+      )
       # rollout_data_queue.put(metric_results)
     participant_event.clear()
     for profiler_event in profiler_events:
       profiler_event.clear()
 
     print('Finished inference. Now saving')
-    with open(os.path.join(self.metric_values_dir,
-                           'inference_metrics_results.json'),
-              'w') as f:
+    with open(
+        os.path.join(self.metric_values_dir, 'inference_metrics_results.json'),
+        'w',
+    ) as f:
       json.dump(metric_results, f)
 
   def _run_inference_reliability_metrics(self, values=None):
@@ -387,9 +437,12 @@ class Submission:
       for i, value in enumerate(values):
         writer.writerow([i, value])
 
-    evaluator = Evaluator(metrics=metrics, )
+    evaluator = Evaluator(
+        metrics=metrics,
+    )
     reliability_metrics = evaluator.evaluate(
-        run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')], )
+        run_paths=[os.path.join(self.metric_values_dir, 'rollouts.csv')],
+    )
     self.metrics_results.update(reliability_metrics)
 
   def _run_train_reliability_metrics(self):
@@ -419,8 +472,12 @@ class Submission:
       logging.info(f'Found {len(run_paths)} runs in {self.train_logs_dirs}')
       logging.info(f'Run paths: {run_paths}')
 
-      evaluator = Evaluator(metrics=metrics, )
-      reliability_metrics = evaluator.evaluate(run_paths=run_paths, )
+      evaluator = Evaluator(
+          metrics=metrics,
+      )
+      reliability_metrics = evaluator.evaluate(
+          run_paths=run_paths,
+      )
     else:
       logging.warning(f'No runs found in {self.train_logs_dirs}')
       reliability_metrics = {}
@@ -430,29 +487,35 @@ class Submission:
     if not self.run_offline_metrics_only:
       # Need a participant event to signal to profilers
       participant_started_event = multiprocessing.Event()
-      profilers_started_events = [multiprocessing.Event() for _ in
-                                  self.profilers]
+      profilers_started_events = [
+          multiprocessing.Event() for _ in self.profilers
+      ]
 
-      participant_process = self.mp_context.Process(target=self._train,
-                                                    args=(
-                                                        participant_started_event,
-                                                        profilers_started_events))
+      participant_process = self.mp_context.Process(
+          target=self._train,
+          args=(participant_started_event, profilers_started_events),
+      )
       participant_process.start()
-      profilers = _start_profilers(profilers=self.profilers,
-                                   participant_event=participant_started_event,
-                                   profiler_events=profilers_started_events,
-                                   participant_process=participant_process,
-                                   log_dir=self.root_dir,
-                                   mp_context=self.mp_context)
+      profilers = _start_profilers(
+          profilers=self.profilers,
+          participant_event=participant_started_event,
+          profiler_events=profilers_started_events,
+          participant_process=participant_process,
+          log_dir=self.root_dir,
+          mp_context=self.mp_context,
+      )
       logging.info(f'Participant module process ID: {participant_process.pid}')
       participant_process.join()
       logging.info(
-          f'Participant module process {participant_process.pid} finished')
+          f'Participant module process {participant_process.pid} finished'
+      )
       if participant_process.is_alive():
         logging.error('Participant process is still running')
       elif participant_process.exitcode != 0:
         logging.error(
-            f'Participant process exited with code {participant_process.exitcode}')
+            'Participant process exited with code'
+            f' {participant_process.exitcode}'
+        )
       else:
         logging.info(f'Participant process {participant_process.pid} finished')
 
@@ -462,7 +525,9 @@ class Submission:
           logging.error(f'Profiler process {profiler.pid} is still running')
         elif profiler.exitcode != 0:
           logging.error(
-              f'Profiler process {profiler.pid} exited with code {profiler.exitcode}')
+              f'Profiler process {profiler.pid} exited with code'
+              f' {profiler.exitcode}'
+          )
         else:
           logging.info(f'Profiler process {profiler.pid} finished')
 
@@ -473,8 +538,9 @@ class Submission:
       # Save raw metrics to disk, and plot results
       ##################################################
 
-      with open(os.path.join(self.metric_values_dir, 'metric_results.json'),
-                'w') as f:
+      with open(
+          os.path.join(self.metric_values_dir, 'metric_results.json'), 'w'
+      ) as f:
         json.dump(self.metrics_results, f)
 
       # Plot metrics and save to file
@@ -491,33 +557,41 @@ class Submission:
 
       # Need a participant event to signal to profilers
       participant_started_event = multiprocessing.Event()
-      profilers_started_events = [multiprocessing.Event() for _ in
-                                  self.profilers]
+      profilers_started_events = [
+          multiprocessing.Event() for _ in self.profilers
+      ]
 
-      participant_process = self.mp_context.Process(target=self._inference,
-                                                    args=(
-                                                        participant_started_event,
-                                                        profilers_started_events,
-                                                        inference_data,
-                                                    ))
+      participant_process = self.mp_context.Process(
+          target=self._inference,
+          args=(
+              participant_started_event,
+              profilers_started_events,
+              inference_data,
+          ),
+      )
 
       participant_process.start()
-      profilers = _start_profilers(profilers=self.profilers,
-                                   participant_event=participant_started_event,
-                                   profiler_events=profilers_started_events,
-                                   participant_process=participant_process,
-                                   log_dir=self.root_dir,
-                                   mp_context=self.mp_context)
+      profilers = _start_profilers(
+          profilers=self.profilers,
+          participant_event=participant_started_event,
+          profiler_events=profilers_started_events,
+          participant_process=participant_process,
+          log_dir=self.root_dir,
+          mp_context=self.mp_context,
+      )
 
       logging.info(f'Participant module process ID: {participant_process.pid}')
       participant_process.join()
       logging.info(
-          f'Participant module process {participant_process.pid} finished')
+          f'Participant module process {participant_process.pid} finished'
+      )
       if participant_process.is_alive():
         logging.error('Participant process is still running')
       elif participant_process.exitcode != 0:
         logging.error(
-            f'Participant process exited with code {participant_process.exitcode}')
+            'Participant process exited with code'
+            f' {participant_process.exitcode}'
+        )
       else:
         logging.info(f'Participant process {participant_process.pid} finished')
 
@@ -527,12 +601,16 @@ class Submission:
           logging.error(f'Profiler process {profiler.pid} is still running')
         elif profiler.exitcode != 0:
           logging.error(
-              f'Profiler process {profiler.pid} exited with code {profiler.exitcode}')
+              f'Profiler process {profiler.pid} exited with code'
+              f' {profiler.exitcode}'
+          )
         else:
           logging.info(f'Profiler process {profiler.pid} finished')
 
   def run_benchmark(self):
-    self.gin_config_str = gin.config_str()  # save gin configs for multiprocessing
+    self.gin_config_str = (
+        gin.config_str()
+    )  # save gin configs for multiprocessing
     if self.mode == BenchmarkMode.TRAIN:
       self._run_training_benchmark()
     elif self.mode == BenchmarkMode.INFERENCE:
