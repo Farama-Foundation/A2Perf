@@ -1,5 +1,4 @@
 absl-py
-black
 gin-config
 gym
 gymnasium
@@ -16,5 +15,8 @@ setuptools
 # codecarbon
 -r ./a2perf/metrics/system/codecarbon/requirements-dev.txt
 
-# web_navigation
+# Web Navigation
 -r ./a2perf/domains/web_navigation/requirements.txt
+
+# Quadruped Locomotion
+-r ./a2perf/domains/quadruped_locomotion/requirements.txt

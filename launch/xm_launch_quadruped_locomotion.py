@@ -82,9 +82,9 @@ def main(_):
     env_vars = dict(
         quadruped_locomotion_DIR=quadruped_locomotion_dir,
         TF_FORCE_GPU_ALLOW_GROWTH='true',
+        DISPLAY=os.environ.get('DISPLAY', ''),
 
     )
-
   else:
     # Create log dirs since singularity needs them to exist
     executable_path = '/usr/bin/sbatch'
@@ -92,6 +92,7 @@ def main(_):
     additional_args = []
     env_vars = dict(
         TF_FORCE_GPU_ALLOW_GROWTH='true',
+        DISPLAY=os.environ.get('DISPLAY', ''),
         # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
     )
 

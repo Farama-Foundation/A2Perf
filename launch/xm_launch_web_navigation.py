@@ -20,6 +20,8 @@ _TRAIN_LOGS_DIRS = flags.DEFINE_multi_string(
     ['train'],
     'Directory patterns fr train logs that will be used to calculate reliability metrics. Should be glob patterns',
 )
+_NUM_WEBSITES = flags.DEFINE_integer('num_websites', 1,
+                                     'Number of websites to run')
 _LOCAL = flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
 _ALGO = flags.DEFINE_string(
@@ -66,7 +68,8 @@ def main(_):
     env_vars = dict(
         WEB_NAV_DIR=web_nav_dir,
         TF_FORCE_GPU_ALLOW_GROWTH='true',
-        TF_GPU_ALLOCATOR='cuda_malloc_async'
+        TF_GPU_ALLOCATOR='cuda_malloc_async',
+        DISPLAY=os.environ.get('DISPLAY', ''),
     )
 
   else:
@@ -82,22 +85,22 @@ def main(_):
 
     if _DEBUG.value:
       # Debug mode hyperparameters
-      summary_intervals = [5000]
-      log_intervals = [5000]
+      summary_intervals = [1000]
+      log_intervals = [1000]
       rb_capacity_values = [10000, ]
       rb_checkpoint_intervals = [
           5000]  # Assuming a default value for debug mode
       batch_size_values = [32, ]
-      timesteps_per_actorbatch_values = [8]
+      timesteps_per_actorbatch_values = [256]
       web_nav_seeds = [_SEED.value]
-      env_batch_sizes = [1]
+      env_batch_sizes = [3]
       total_env_steps = [100000]
       difficulty_levels = [_DIFFICULTY_LEVEL.value]
       learning_rates = [1e-4]
-      eval_intervals = [5000]
-      train_checkpoint_intervals = [10000]
-      policy_checkpoint_intervals = [10000]
-      num_website_values = [1]
+      eval_intervals = [1000]
+      train_checkpoint_intervals = [5000]
+      policy_checkpoint_intervals = [5000]
+      num_website_values = [_NUM_WEBSITES.value]
     else:
       # Non-debug mode hyperparameters
       algorithms = [_ALGO.value]
@@ -119,7 +122,7 @@ def main(_):
       eval_intervals = [50000]
       train_checkpoint_intervals = [100000]
       policy_checkpoint_intervals = [100000]
-      num_website_values = [10]
+      num_website_values = [_NUM_WEBSITES.value]
     web_nav_hparam_sweeps = [
         {
             'num_websites': num_websites,

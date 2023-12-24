@@ -2,6 +2,7 @@
 cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
+
 SEED=0
 ENV_BATCH_SIZE=16 # Adjusted default value
 BATCH_SIZE=0
@@ -172,7 +173,8 @@ echo "Requirements path: $REQUIREMENTS_PATH"
 mkdir -p "$WEB_NAV_DIR/docker/.ssh"
 yes | ssh-keygen -t rsa -b 4096 -C "web_nav" -f "$SSH_KEY_PATH" -N ""
 
-# Build the Docker image
+
+# Build the Docker image and let it use the display
 docker build --rm --network=host \
   --build-arg REQUIREMENTS_PATH="$REQUIREMENTS_PATH" \
   --build-arg USER_ID="$(id -u)" \
@@ -201,13 +203,16 @@ else
   fi
 
   USER_HOME_DIR=$(eval echo "~$USER")
-  # append the rest of the flags
+
+  # append the rest of the flags, along with display setup
   docker_run_command+=" -v $(pwd):/rl-perf"
   docker_run_command+=" -v ${USER_HOME_DIR}/workspace/gcs:/mnt/gcs/"
   docker_run_command+=" -v /dev/shm:/dev/shm"
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+  docker_run_command+=" -v /tmp/.X11-unix:/tmp/.X11-unix"
+  docker_run_command+=" -e DISPLAY=$DISPLAY"
   docker_run_command+=" --privileged"
 
   echo "Running command: $docker_run_command"
@@ -223,6 +228,9 @@ if [ "$DEBUG" = "true" ]; then
 else
   pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
 fi
+
+# Install the a2perf package
+pip install -e /rl-perf
 EOF
 
 # Run the benchmarking code
@@ -247,9 +255,11 @@ export LOG_INTERVAL=$LOG_INTERVAL
 export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
 export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
 export NUM_WEBSITES=$NUM_WEBSITES
+export DISPLAY=$DISPLAY
+
 cd /rl-perf/a2perf/submission
-export DISPLAY=:0
-python3 main_submission.py \
+
+python3.8 main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
