@@ -19,7 +19,6 @@ DOCKERFILE_PATH="$(pwd)/a2perf/domains/web_navigation/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=""
 LOG_INTERVAL=0
-WORK_UNIT_ID=0
 LEARNING_RATE=0.001               # Default value, adjust if needed
 EVAL_INTERVAL=50000               # Adjusted default value
 TRAIN_CHECKPOINT_INTERVAL=100000  # Default value, adjust if needed
@@ -62,10 +61,6 @@ for arg in "$@"; do
     ;;
   --timesteps_per_actorbatch=*)
     TIMESTEPS_PER_ACTORBATCH="${arg#*=}"
-    shift
-    ;;
-  --work_unit_id=*)
-    WORK_UNIT_ID="${arg#*=}"
     shift
     ;;
   --env_batch_size=*)
@@ -221,18 +216,19 @@ fi
 
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
-pip install -U -r requirements.txt
 
+pip  install -U -r requirements.txt
 if [ "$DEBUG" = "true" ]; then
-  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/debug/requirements.txt
+ pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/debug/requirements.txt
 else
-  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
+ pip  install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
 fi
 
 # Install the a2perf package
-pip install -e /rl-perf
+pip install -e .
 EOF
 
+exit 0
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 
