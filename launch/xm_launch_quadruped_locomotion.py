@@ -102,7 +102,7 @@ def main(_):
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
-      batch_size_values = [32]
+      batch_size_values = [512]
       num_epoch_values = [10]
       num_parallel_cores = [170]
       total_env_steps = [200000, ]
@@ -114,7 +114,7 @@ def main(_):
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
-      batch_size_values = [64]
+      batch_size_values = [512]
       num_epoch_values = [500]
       total_env_steps = [200000000, ]
       num_parallel_cores = [170]
@@ -179,26 +179,26 @@ def main(_):
 
       # Add additional arguments that are constant across all runs
       hparam_config.update(dict(
-          root_dir=root_dir,
+          dataset_id=dataset_id,
+          extra_gin_bindings=','.join(_EXTRA_GIN_BINDINGS.value),
           gin_config=_GIN_CONFIG.value,
+          mode=_MODE.value,
+          motion_file_path=_MOTION_FILE_PATH.value,
           participant_module_path=participant_module_path,
           quad_loco_dir=quadruped_locomotion_dir,
-          train_logs_dirs=','.join(_TRAIN_LOGS_DIRS.value),
-          motion_file_path=_MOTION_FILE_PATH.value,
-          dataset_id=dataset_id,
-          skill_level=_SKILL_LEVEL.value,
+          root_dir=root_dir,
+          debug=str(_DEBUG.value).lower(),
           run_offline_metrics_only=run_offline_metrics_only,
-          mode=_MODE.value,
-          extra_gin_bindings=','.join(_EXTRA_GIN_BINDINGS.value),
-
+          skill_level=_SKILL_LEVEL.value,
+          train_logs_dirs=','.join(_TRAIN_LOGS_DIRS.value),
       ))
 
       print(hparam_config)
       experiment.add(xm.Job(
-          executable=executable,
-          executor=xm_local.Local(),
           args=hparam_config,
           env_vars=env_vars,
+          executable=executable,
+          executor=xm_local.Local(),
       ))
 
 

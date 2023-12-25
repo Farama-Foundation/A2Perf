@@ -190,6 +190,7 @@ def main(_):
       hparam_config.update(dict(root_dir=root_dir,
                                 gin_config=_GIN_CONFIG.value,
                                 participant_module_path=participant_module_path,
+                                debug=str(_DEBUG.value).lower(),
                                 web_nav_dir=web_nav_dir,
                                 algo=_ALGO.value,
                                 train_logs_dirs=_TRAIN_LOGS_DIRS.value,

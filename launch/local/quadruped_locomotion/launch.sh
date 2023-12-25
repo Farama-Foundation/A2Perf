@@ -237,14 +237,15 @@ fi
 
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
-python3.9 -m pip install -r requirements.txt
-python3.9 -m pip install -e .
+pip install -r requirements.txt
+pip install -e .
 
 if [ "$DEBUG" = "true" ]; then
-  python3.9 -m pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/debug/requirements.txt
+  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/debug/requirements.txt
 else
-  python3.9 -m pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
+  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
 fi
+
 EOF
 
 #exit 0
