@@ -216,19 +216,16 @@ fi
 
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
+pip  install -r requirements.txt
+pip install -e .
 
-pip  install -U -r requirements.txt
 if [ "$DEBUG" = "true" ]; then
  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/debug/requirements.txt
 else
  pip  install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
 fi
-
-# Install the a2perf package
-pip install -e .
 EOF
 
-exit 0
 # Run the benchmarking code
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 
