@@ -63,13 +63,10 @@ def main(_):
   os.environ['DATASET_ID'] = (
       f'QuadrupedLocomotion-{FLAGS.task}-{FLAGS.skill_level}-v0'
   )
-  os.environ['MINARI_DATASETS_PATH'] = (
-      '/gcs/xcloud-shared/ikechukwuu/a2perf/datasets'
-  )
+  os.environ['MINARI_DATASETS_PATH'] = '/workdir/a2perf/datasets/data'
   os.environ['MOTION_FILE_PATH'] = FLAGS.motion_file_path
   os.environ['SETUP_PATH'] = f'{FLAGS.algo}_actor.py'
   os.environ['TASK'] = FLAGS.task
-  os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
   cwd = os.getcwd()
   os.environ['PYTHONPATH'] = cwd + os.pathsep + os.getenv('PYTHONPATH', '')
