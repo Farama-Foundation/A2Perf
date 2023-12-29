@@ -63,7 +63,7 @@ def main(_):
           f'env/bin/xmanager', 'launch',
           "launch/xm_launch_web_navigation.py", "--",
           f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
-          f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/web_navigation', FLAGS.algo, debug_path)}",
+          f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/web_navigation', FLAGS.algo)}",
           f"--difficulty_level={difficulty_level}",
           f"--gin_config={os.path.join(base_gin_config, gin_config_name)}",
           "--local",
