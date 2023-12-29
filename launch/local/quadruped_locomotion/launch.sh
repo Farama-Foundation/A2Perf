@@ -230,6 +230,7 @@ else
   docker_run_command+=" --workdir /rl-perf"
   docker_run_command+=" --name \"$DOCKER_CONTAINER_NAME\""
   docker_run_command+=" \"$DOCKER_IMAGE_NAME\""
+  docker_run_command+=" -e MINARI_DATASETS_PATH=$MINARI_DATASETS_PATH"
 
   echo "Running command: $docker_run_command"
   eval "$docker_run_command"
@@ -280,7 +281,7 @@ export BATCH_SIZE="$BATCH_SIZE"
 export NUM_EPOCHS="$NUM_EPOCHS"
 export LEARNING_RATE="$LEARNING_RATE"
 export SKILL_LEVEL="$SKILL_LEVEL"
-export MINARI_DATASETS_PATH="/rl-perf/datasets"
+export MINARI_DATASETS_PATH="$MINARI_DATASETS_PATH"
 
 cd /rl-perf/a2perf/submission
 

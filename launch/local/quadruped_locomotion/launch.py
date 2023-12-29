@@ -8,13 +8,13 @@ FLAGS = flags.FLAGS
 # Define flags
 _MOTION_FILES = flags.DEFINE_list(
     'motion_files', None, 'List of motion file names without extensions')
-_ALGO = flags.DEFINE_list('algo', None, 'List of algorithms')
-_SEED = flags.DEFINE_list('seed', None, 'List of seed numbers')
+_ALGO = flags.DEFINE_list('algos', None, 'List of algorithms')
+_SEED = flags.DEFINE_list('seeds', None, 'List of seed numbers')
 _EXPERIMENT_NUMBER = flags.DEFINE_string(
     'experiment_number', None, 'Experiment number')
 _DEBUG = flags.DEFINE_boolean('debug', False, 'Enable debug mode')
 _MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
-_SKILL_LEVEL = flags.DEFINE_string('skill_level', None, 'Skill level')
+_SKILL_LEVEL = flags.DEFINE_list('skill_levels', None, 'Skill level')
 _HOST_DIR_BASE = flags.DEFINE_string('host_dir_base',
 
                                      None, 'Base directory for host')
@@ -41,44 +41,44 @@ def main(_):
   gin_config_name = f'train.gin' if _MODE.value == 'train' else f'inference.gin'
   env_mode = 'train' if _MODE.value == 'train' else 'test'
 
-  for algo in _ALGO.value:  # Loop through each algorithm
-    for motion_file in _MOTION_FILES.value:  # Loop through each motion file
-      host_dir_base = f"{host_dir_base}/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
-      root_dir_base = f"/mnt/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
+  # Docker cleanup
+  subprocess.run(
+      ["docker", "rm", "-f", "quadruped_locomotion_container"],
+      check=True)
 
-      for seed in seeds:
-        next_exp_num = get_next_experiment_number(host_dir_base)
+  for skill_level in _SKILL_LEVEL.value:  # Loop through each skill level
+    for algo in _ALGO.value:  # Loop through each algorithm
+      for motion_file in _MOTION_FILES.value:  # Loop through each motion file
+        host_dir_base = f"{host_dir_base}/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
+        root_dir_base = f"/mnt/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
 
-        # Construct the motion file path
-        motion_file_path = f"/rl-perf/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/{motion_file}.txt"
+        for seed in seeds:
+          next_exp_num = get_next_experiment_number(host_dir_base)
 
-        next_exp_num = FLAGS.experiment_number if FLAGS.experiment_number is not None else next_exp_num
-        # Launch the xmanager command
-        xmanager_cmd = [
-            "xmanager", "launch",
-            "launch/xm_launch_quadruped_locomotion.py", "--",
-            f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
-            f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion', algo, debug_path)}",
-            f"--motion_file_path={motion_file_path}",
-            f"--gin_config={os.path.join(base_gin_config, gin_config_name)}",
-            "--local",
-            f"--algo={algo}",
-            f'--task={motion_file}',
-            '--debug' if FLAGS.debug else '',
-            f"--seed={seed}",
-            f"--mode={FLAGS.mode}",
-            f'--skill_level={FLAGS.skill_level}',
-            f"--experiment_number={next_exp_num}",
-            f'--extra_gin_bindings=Submission.create_domain.motion_files=["{motion_file_path}"]',
-            f'--extra_gin_bindings=Submission.create_domain.mode="{env_mode}"',
-        ]
+          # Construct the motion file path
+          motion_file_path = f"/rl-perf/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/{motion_file}.txt"
 
-        subprocess.run(xmanager_cmd, check=True)
+          next_exp_num = FLAGS.experiment_number if FLAGS.experiment_number is not None else next_exp_num
+          # Launch the xmanager command
+          xmanager_cmd = [
+              "xmanager", "launch",
+              "launch/xm_launch_quadruped_locomotion.py", "--",
+              f"--root_dir={root_dir_base.rstrip('/')}/{next_exp_num}",
+              f"--participant_module_path={os.path.join('/rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion', algo, debug_path)}",
+              f"--gin_config={os.path.join(base_gin_config, gin_config_name)}",
+              "--local",
+              f"--algo={algo}",
+              f'--task={motion_file}',
+              '--debug' if FLAGS.debug else '',
+              f"--seed={seed}",
+              f"--mode={FLAGS.mode}",
+              f'--skill_level={skill_level}',
+              f"--experiment_number={next_exp_num}",
+              f'--extra_gin_bindings=Submission.create_domain.motion_files=["{motion_file_path}"]',
+              f'--extra_gin_bindings=Submission.create_domain.mode="{env_mode}"',
+          ]
 
-        # Docker cleanup
-        # subprocess.run(
-        #     ["docker", "rm", "-f", "quadruped_locomotion_container"],
-        #     check=True)
+          subprocess.run(xmanager_cmd, check=True)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,3 @@
-import copy
 import itertools
 import os
 
@@ -45,22 +44,26 @@ _EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
     [],
     'Extra gin bindings to add to the default bindings',
 )
-_ALGO = flags.DEFINE_string(
-    'algo',
-    None,
-    'Name of algorithm to run',
-)
+_ALGO = flags.DEFINE_enum('algo', None, ['bc', 'ddpg', 'ppo'], 'Algorithm')
 _SEED = flags.DEFINE_integer('seed', 0, 'Random seed')
 _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
                                          'Experiment number')
-_MOTION_FILE_PATH = flags.DEFINE_string('motion_file_path',
-                                        None,
-                                        'Motion file')
-_TASK = flags.DEFINE_string('task', None, 'Task')
+_MOTION_FILE_PATH = flags.DEFINE_string('motion_file_path', None,
+                                        'Motion file path')
+_TASK = flags.DEFINE_enum('task', None, ['dog_pace', 'dog_trot', 'dog_spin'],
+                          'Task')
 _MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
-_SKILL_LEVEL = flags.DEFINE_string('skill_level', None, 'Skill level')
+_SKILL_LEVEL = flags.DEFINE_enum('skill_level', None,
+                                 ['novice', 'intermediate', 'expert'],
+                                 'Skill level')
 
 FLAGS = flags.FLAGS
+
+
+def create_experiment_name(hparams):
+  """Creates an experiment name from a dictionary of hyperparameters."""
+  return '_'.join(f"{key}_{hparams[key]}" for key in sorted(hparams.keys()) if
+                  key in ['seed', 'domain', 'algo', 'task', 'skill_level'])
 
 
 def main(_):
@@ -80,21 +83,17 @@ def main(_):
     binary_path = './local/quadruped_locomotion/launch.sh'
     additional_args = []
     env_vars = dict(
-        quadruped_locomotion_DIR=quadruped_locomotion_dir,
-        TF_FORCE_GPU_ALLOW_GROWTH='true',
+        QUADRUPED_LOCOMOTION_DIR=quadruped_locomotion_dir,
         DISPLAY=os.environ.get('DISPLAY', ''),
-
+        MINARI_DATASETS_PATH=os.path.join(
+            '/rl-perf/a2perf/datasets/data/quadruped_locomotion'),
     )
   else:
     # Create log dirs since singularity needs them to exist
     executable_path = '/usr/bin/sbatch'
     binary_path = './singularity/quadruped_locomotion/launch.slurm'
     additional_args = []
-    env_vars = dict(
-        TF_FORCE_GPU_ALLOW_GROWTH='true',
-        DISPLAY=os.environ.get('DISPLAY', ''),
-        # TF_GPU_ALLOCATOR='cuda_malloc_async' # doesn't work on some of the FASRC machines???
-    )
+    env_vars = dict()
 
   with xm_local.create_experiment(
       experiment_title=_EXPERIMENT_NAME.value) as experiment:
@@ -102,25 +101,23 @@ def main(_):
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
-      batch_size_values = [512]
+      batch_size_values = [32]
       num_epoch_values = [10]
       num_parallel_cores = [170]
       total_env_steps = [200000, ]
       int_save_freqs = [100000]
       int_eval_freqs = [10000]
       learning_rates = [3e-4]
-      algos = [_ALGO.value]
     else:
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
       batch_size_values = [512]
-      num_epoch_values = [500]
+      num_epoch_values = [100]
       total_env_steps = [200000000, ]
       num_parallel_cores = [170]
       int_save_freqs = [1000000]
       int_eval_freqs = [100000]
-      algos = [_ALGO.value]
       learning_rates = [3e-4]
 
     quadruped_locomotion_hparam_sweeps = list(
@@ -129,18 +126,17 @@ def main(_):
             ('total_env_steps', env_steps),
             ('parallel_cores', parallel_cores),
             ('int_save_freq', int_save_freq),
-            ('algo', algo),
             ('int_eval_freq', int_eval_freq),
             ('batch_size', batch_size),
             ('num_epochs', num_epochs),
             ('learning_rate', learning_rate),
         ])
         for
-        seed, env_steps, parallel_cores, int_save_freq, algo, int_eval_freq, batch_size, num_epochs, learning_rate
+        seed, env_steps, parallel_cores, int_save_freq, int_eval_freq, batch_size, num_epochs, learning_rate
         in
         itertools.product(quadruped_locomotion_seeds,
                           total_env_steps, num_parallel_cores,
-                          int_save_freqs, algos, int_eval_freqs,
+                          int_save_freqs, int_eval_freqs,
                           batch_size_values, num_epoch_values, learning_rates
                           )
     )
@@ -156,16 +152,16 @@ def main(_):
     ])
 
     for hparam_config in quadruped_locomotion_hparam_sweeps:
-      hparam_reduced = dict()
-      for key in hparam_config.keys():
-        new_key = ''.join(
-            [x[0] for x in key.split('_')])
-        hparam_reduced[new_key] = hparam_config[key]
+      hparam_config.update(dict(
+          domain='quadruped_locomotion',
+          algo=_ALGO.value,
+          task=_TASK.value,
+          skill_level=_SKILL_LEVEL.value,
+      ))
 
-      hparam_reduced = hparam_config  # replacing for debug
-      experiment_name = _EXPERIMENT_NAME.value + '_' + '_'.join(
-          f"{key}_{hparam_reduced[key]}" for key in
-          sorted(hparam_reduced.keys()))
+      experiment_name = create_experiment_name(hparam_config)
+      hparam_config.pop('domain')
+      hparam_config.pop('task')
 
       root_dir = os.path.abspath(root_dir_flag)
       root_dir = os.path.join(root_dir, experiment_name)
