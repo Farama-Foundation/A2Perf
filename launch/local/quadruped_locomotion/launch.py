@@ -34,8 +34,13 @@ def get_next_experiment_number(host_dir_base):
 
 
 def main(_):
-  host_dir_base = os.path.expanduser(_HOST_DIR_BASE.value)
-  debug_path = "debug" if _DEBUG.value else ""
+  # change directory to the root of the repo
+  os.chdir(
+      os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../../')
+  )
+  debug_path = "debug" if FLAGS.debug else ""
+  host_dir_base = os.path.expanduser(FLAGS.host_dir_base)
+  host_dir_base = os.path.abspath(host_dir_base)
   seeds = [int(seed) for seed in _SEED.value]
   base_gin_config = f'/rl-perf/a2perf/submission/configs/quadruped_locomotion/' + debug_path
   gin_config_name = f'train.gin' if _MODE.value == 'train' else f'inference.gin'

@@ -28,6 +28,8 @@ SUMMARY_INTERVAL=10000            # Default value, adjust if needed
 ALGORITHM=""
 DEBUG=""
 NUM_WEBSITES=0
+EPSILON_GREEDY=-1
+SKILL_LEVEL=0
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -55,6 +57,10 @@ for arg in "$@"; do
     SUMMARY_INTERVAL="${arg#*=}"
     shift
     ;;
+  --skill_level=*)
+    SKILL_LEVEL="${arg#*=}"
+    shift
+    ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
     shift
@@ -65,6 +71,10 @@ for arg in "$@"; do
     ;;
   --env_batch_size=*)
     ENV_BATCH_SIZE="${arg#*=}"
+    shift
+    ;;
+  --epsilon_greedy=*)
+    EPSILON_GREEDY="${arg#*=}"
     shift
     ;;
   --total_env_steps=*)
@@ -217,15 +227,22 @@ fi
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip  install -r requirements.txt
-pip install -e .
+
+# Web Navigation specific requirements
+pip install -r /rl-perf/a2perf/domains/web_navigation/requirements.txt
+
+# Install the a2perf package
+pip install -e /rl-perf
+
+# Install the participant's package
 pip  install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
 EOF
 
-# Run the benchmarking code
+
+verbosity_level=$( [ -z "$DEBUG" ] && echo "-2" || echo "2" )
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
-
 export TF_FORCE_GPU_ALLOW_GROWTH=true
-
+export WRAPT_DISABLE_EXTENSIONS=true
 export SEED=$SEED
 export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
 export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
@@ -243,15 +260,17 @@ export LOG_INTERVAL=$LOG_INTERVAL
 export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
 export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
 export NUM_WEBSITES=$NUM_WEBSITES
+export EPSILON_GREEDY=$EPSILON_GREEDY
 export DISPLAY=$DISPLAY
-
+export SKILL_LEVEL=$SKILL_LEVEL
 cd /rl-perf/a2perf/submission
 
-python3.8 main_submission.py \
+# Use verbosity 2 if we are debugging, otherwise verbosity -2
+python3.10 main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
-  --verbosity=2
+  --verbosity=$verbosity_level
 EOF
