@@ -57,8 +57,6 @@ _SKILL_LEVEL = flags.DEFINE_enum('skill_level', None,
                                  ['novice', 'intermediate', 'expert'],
                                  'Skill level')
 
-FLAGS = flags.FLAGS
-
 
 def create_experiment_name(hparams):
   """Creates an experiment name from a dictionary of hyperparameters."""
@@ -108,6 +106,7 @@ def main(_):
       int_save_freqs = [100000]
       int_eval_freqs = [10000]
       learning_rates = [3e-4]
+      entropy_regularization_values = [0.01]
     else:
       quadruped_locomotion_seeds = [
           _SEED.value,
@@ -119,6 +118,7 @@ def main(_):
       int_save_freqs = [1000000]
       int_eval_freqs = [100000]
       learning_rates = [3e-4]
+      entropy_regularization_values = [0.01]
 
     quadruped_locomotion_hparam_sweeps = list(
         dict([
@@ -130,14 +130,16 @@ def main(_):
             ('batch_size', batch_size),
             ('num_epochs', num_epochs),
             ('learning_rate', learning_rate),
+            ('entropy_regularization', entropy_regularization),
         ])
         for
-        seed, env_steps, parallel_cores, int_save_freq, int_eval_freq, batch_size, num_epochs, learning_rate
+        seed, env_steps, parallel_cores, int_save_freq, int_eval_freq, batch_size, num_epochs, learning_rate, entropy_regularization
         in
         itertools.product(quadruped_locomotion_seeds,
                           total_env_steps, num_parallel_cores,
                           int_save_freqs, int_eval_freqs,
                           batch_size_values, num_epoch_values, learning_rates
+                          , entropy_regularization_values
                           )
     )
 
