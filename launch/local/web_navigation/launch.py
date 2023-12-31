@@ -44,10 +44,6 @@ def main(_):
   host_dir_base = os.path.expanduser(_HOST_DIR_BASE.value)
   host_dir_base = os.path.abspath(host_dir_base)
 
-  # Docker cleanup, but don't fail if it doesn't exist
-  subprocess.run(["docker", "rm", "-f", "web_nav_container"],
-                 check=False)
-
   seeds = [int(seed) for seed in _SEED.value]
   base_gin_config = f'/rl-perf/a2perf/submission/configs/web_navigation/' + debug_path
   gin_config_name = f'train.gin' if _MODE.value == 'train' else f'inference.gin'
@@ -59,6 +55,10 @@ def main(_):
           root_dir_base = f"/mnt/gcs/a2perf/web_navigation/difficulty_level_{difficulty_level}/{algo}/{debug_path}"
 
           for seed in seeds:
+            # Docker cleanup, but don't fail if it doesn't exist
+            subprocess.run(["docker", "rm", "-f", "web_nav_container"],
+                           check=False)
+            
             next_exp_num = get_next_experiment_number(host_dir_base)
             next_exp_num = _EXPERIMENT_NUMBER.value if _EXPERIMENT_NUMBER.value is not None else next_exp_num
             print(f"Next experiment number: {next_exp_num}")

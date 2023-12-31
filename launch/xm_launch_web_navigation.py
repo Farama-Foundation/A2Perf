@@ -94,7 +94,7 @@ def main(_):
 
     if _DEBUG.value:
       log_intervals = [1000]
-      rb_capacity_values = [1000, ]
+      rb_capacity_values = [100000, ]
       rb_checkpoint_intervals = [
           5000]
       batch_size_values = [32, ]
