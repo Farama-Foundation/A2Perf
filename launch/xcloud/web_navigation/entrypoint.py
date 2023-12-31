@@ -47,9 +47,6 @@ flags.DEFINE_integer(
 )  # added default
 flags.DEFINE_integer('log_interval', 10000, 'Log interval.')  # added default
 flags.DEFINE_integer(
-    'summary_interval', 10000, 'Summary interval.'
-)  # added default
-flags.DEFINE_integer(
     'timesteps_per_actorbatch', 0, 'Summary interval.'
 )  # added default
 flags.DEFINE_float('learning_rate', 0, 'the learning rate')
@@ -76,7 +73,6 @@ def main(_):
   os.environ['NUM_WEBSITES'] = str(FLAGS.num_websites)
   os.environ['RB_CHECKPOINT_INTERVAL'] = str(FLAGS.rb_checkpoint_interval)
   os.environ['LOG_INTERVAL'] = str(FLAGS.log_interval)
-  os.environ['SUMMARY_INTERVAL'] = str(FLAGS.summary_interval)
   os.environ['LEARNING_RATE'] = str(FLAGS.learning_rate)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(FLAGS.timesteps_per_actorbatch)
   # New environment variables for rb_capacity and batch_size
