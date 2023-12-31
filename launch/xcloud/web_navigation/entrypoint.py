@@ -95,15 +95,9 @@ def main(_):
   train_logs_dirs_str = ','.join(FLAGS.train_logs_dirs)
 
   command = (
-      'python3.8 a2perf/submission/main_submission.py '
-      f'--gin_config={FLAGS.gin_config} '
-      f'--participant_module_path={FLAGS.participant_module_path} '
-      f'--root_dir={FLAGS.root_dir} '
-      f'--train_logs_dirs={train_logs_dirs_str} '
-      f'--run_offline_metrics_only={FLAGS.run_offline_metrics_only} '
-      '--verbosity=2'
-      if FLAGS.debug
-      else f'--verbosity=1'
+      'python3.10 a2perf/submission/main_submission.py'
+      f' --gin_config={FLAGS.gin_config} --participant_module_path={FLAGS.participant_module_path} --root_dir={FLAGS.root_dir} --train_logs_dirs={train_logs_dirs_str} --run_offline_metrics_only={FLAGS.run_offline_metrics_only} '
+      + ('--verbosity=2' if FLAGS.debug else '--verbosity=-2')
   )
 
   process = subprocess.Popen(command, shell=True)
