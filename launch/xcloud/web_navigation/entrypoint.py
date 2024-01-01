@@ -70,6 +70,7 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       FLAGS.policy_checkpoint_interval
   )
+  os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
   os.environ['NUM_WEBSITES'] = str(FLAGS.num_websites)
   os.environ['RB_CHECKPOINT_INTERVAL'] = str(FLAGS.rb_checkpoint_interval)
   os.environ['LOG_INTERVAL'] = str(FLAGS.log_interval)
