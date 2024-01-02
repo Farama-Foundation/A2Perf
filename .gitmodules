@@ -18,3 +18,5 @@
 [submodule "rl_perf/metrics/reliability"]
 	path = a2perf/metrics/reliability
 	url = https://github.com/harvard-edge/rl-reliability-metrics.git
+[submodule "a2perf/a2perf_benchmark_submission"]
+	branch = locomotion_tf_agents
