@@ -3,31 +3,35 @@ cd "$(dirname "$0")" || exit
 cd ../../.. || exit
 
 
-SEED=0
-ENV_BATCH_SIZE=16 # Adjusted default value
-BATCH_SIZE=0
-TOTAL_ENV_STEPS=1000000
-ROOT_DIR=../logs/quadruped_locomotion
-GIN_CONFIG=""
-DIFFICULTY_LEVEL=-1
-TIMESTEPS_PER_ACTORBATCH=0
-PARTICIPANT_MODULE_PATH=""
-WEB_NAV_DIR="$(pwd)/a2perf/domains/web_nav"
-DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
-DOCKER_CONTAINER_NAME="web_nav_container"
-DOCKERFILE_PATH="$(pwd)/a2perf/domains/web_navigation/docker/Dockerfile"
-REQUIREMENTS_PATH="./requirements.txt"
-RUN_OFFLINE_METRICS_ONLY=""
-LOG_INTERVAL=0
-LEARNING_RATE=0.001               # Default value, adjust if needed
-EVAL_INTERVAL=50000               # Adjusted default value
-TRAIN_CHECKPOINT_INTERVAL=100000  # Default value, adjust if needed
-POLICY_CHECKPOINT_INTERVAL=100000 # Default value, adjust if needed
-RB_CAPACITY=100000                # Default replay buffer capacity
-SUMMARY_INTERVAL=10000            # Default value, adjust if needed
 ALGORITHM=""
+BATCH_SIZE=0
+DATASET_ID=""
 DEBUG=""
+DIFFICULTY_LEVEL=-1
+DOCKERFILE_PATH="$(pwd)/a2perf/domains/web_navigation/docker/Dockerfile"
+DOCKER_CONTAINER_NAME="web_nav_container"
+DOCKER_IMAGE_NAME="rlperf/web_nav:latest"
+ENTROPY_REGULARIZATION=0.0
+ENV_BATCH_SIZE=0
+EPSILON_GREEDY=-1
+EVAL_INTERVAL=50000
+GIN_CONFIG=""
+LEARNING_RATE=0.001
+LOG_INTERVAL=0
 NUM_WEBSITES=0
+PARTICIPANT_MODULE_PATH=""
+POLICY_CHECKPOINT_INTERVAL=100000
+RB_CAPACITY=100000
+REQUIREMENTS_PATH="./requirements.txt"
+ROOT_DIR=../logs/quadruped_locomotion
+RUN_OFFLINE_METRICS_ONLY=""
+SEED=0
+SKILL_LEVEL=0
+SUMMARY_INTERVAL=10000
+TIMESTEPS_PER_ACTORBATCH=0
+TOTAL_ENV_STEPS=1000000
+TRAIN_CHECKPOINT_INTERVAL=100000
+WEB_NAV_DIR="$(pwd)/a2perf/domains/web_nav"
 
 # parse command-line arguments
 for arg in "$@"; do
@@ -55,6 +59,14 @@ for arg in "$@"; do
     SUMMARY_INTERVAL="${arg#*=}"
     shift
     ;;
+  --entropy_regularization=*)
+    ENTROPY_REGULARIZATION="${arg#*=}"
+    shift
+    ;;
+  --skill_level=*)
+    SKILL_LEVEL="${arg#*=}"
+    shift
+    ;;
   --difficulty_level=*)
     DIFFICULTY_LEVEL="${arg#*=}"
     shift
@@ -65,6 +77,10 @@ for arg in "$@"; do
     ;;
   --env_batch_size=*)
     ENV_BATCH_SIZE="${arg#*=}"
+    shift
+    ;;
+  --epsilon_greedy=*)
+    EPSILON_GREEDY="${arg#*=}"
     shift
     ;;
   --total_env_steps=*)
@@ -117,6 +133,10 @@ for arg in "$@"; do
     ;;
   --learning_rate=*)
     LEARNING_RATE="${arg#*=}"
+    shift
+    ;;
+  --dataset_id=*)
+    DATASET_ID="${arg#*=}"
     shift
     ;;
   --eval_interval=*)
@@ -217,46 +237,52 @@ fi
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
 cd /rl-perf
 pip  install -r requirements.txt
-pip install -e .
 
-if [ "$DEBUG" = "true" ]; then
- pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/debug/requirements.txt
-else
- pip  install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
-fi
+# Web Navigation specific requirements
+pip install -r /rl-perf/a2perf/domains/web_navigation/requirements.txt
+
+# Install the a2perf package
+pip install -e /rl-perf
+
+# Install the participant's package
+pip  install -r /rl-perf/a2perf/a2perf_benchmark_submission/web_navigation/${ALGORITHM}/requirements.txt
 EOF
 
-# Run the benchmarking code
+
+verbosity_level=$( [ -z "$DEBUG" ] && echo "-2" || echo "2" )
 cat <<EOF | docker exec --interactive "$DOCKER_CONTAINER_NAME" bash
-
-export TF_FORCE_GPU_ALLOW_GROWTH=true
-
-export SEED=$SEED
-export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
-export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
-export ROOT_DIR=$ROOT_DIR
-export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
+export BATCH_SIZE=$BATCH_SIZE
+export DATASET_ID=$DATASET_ID
 export DIFFICULTY_LEVEL=$DIFFICULTY_LEVEL
-export LEARNING_RATE=$LEARNING_RATE
+export DISPLAY=$DISPLAY
+export ENTROPY_REGULARIZATION=$ENTROPY_REGULARIZATION
+export ENV_BATCH_SIZE=$ENV_BATCH_SIZE
+export EPSILON_GREEDY=$EPSILON_GREEDY
 export EVAL_INTERVAL=$EVAL_INTERVAL
-export TRAIN_CHECKPOINT_INTERVAL=$TRAIN_CHECKPOINT_INTERVAL
+export LEARNING_RATE=$LEARNING_RATE
+export LOG_INTERVAL=$LOG_INTERVAL
+export NUM_WEBSITES=$NUM_WEBSITES
 export POLICY_CHECKPOINT_INTERVAL=$POLICY_CHECKPOINT_INTERVAL
 export RB_CAPACITY=$RB_CAPACITY
-export SUMMARY_INTERVAL=$SUMMARY_INTERVAL
-export BATCH_SIZE=$BATCH_SIZE
-export LOG_INTERVAL=$LOG_INTERVAL
-export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
 export RB_CHECKPOINT_INTERVAL=$RB_CHECKPOINT_INTERVAL
-export NUM_WEBSITES=$NUM_WEBSITES
-export DISPLAY=$DISPLAY
-
+export ROOT_DIR=$ROOT_DIR
+export SEED=$SEED
+export SKILL_LEVEL=$SKILL_LEVEL
+export SUMMARY_INTERVAL=$SUMMARY_INTERVAL
+export TF_FORCE_GPU_ALLOW_GROWTH=true
+export TIMESTEPS_PER_ACTORBATCH=$TIMESTEPS_PER_ACTORBATCH
+export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
+export TRAIN_CHECKPOINT_INTERVAL=$TRAIN_CHECKPOINT_INTERVAL
+export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
+export WRAPT_DISABLE_EXTENSIONS=true
 cd /rl-perf/a2perf/submission
 
-python3.8 main_submission.py \
+# Use verbosity 2 if we are debugging, otherwise verbosity -2
+python3.10 main_submission.py \
   --gin_config=$GIN_CONFIG \
   --participant_module_path=$PARTICIPANT_MODULE_PATH \
   --root_dir=$ROOT_DIR \
   --train_logs_dirs=$TRAIN_LOGS_DIRS \
   --run_offline_metrics_only=$RUN_OFFLINE_METRICS_ONLY \
-  --verbosity=2
+  --verbosity=$verbosity_level
 EOF

@@ -1,4 +1,3 @@
-import copy
 import itertools
 import os
 
@@ -22,6 +21,11 @@ _TRAIN_LOGS_DIRS = flags.DEFINE_multi_string(
 )
 _NUM_WEBSITES = flags.DEFINE_integer('num_websites', 1,
                                      'Number of websites to run')
+_SKILL_LEVEL = flags.DEFINE_enum('skill_level', None,
+                                 ['novice', 'intermediate', 'expert'],
+                                 'Skill level')
+_TASK = flags.DEFINE_enum('task', None, ['1', '2', '3'],
+                          'Task')
 _LOCAL = flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
 _ALGO = flags.DEFINE_string(
@@ -47,7 +51,12 @@ _GIN_CONFIG = flags.DEFINE_string(
 _DIFFICULTY_LEVEL = flags.DEFINE_integer('difficulty_level', 1,
                                          'Difficulty level')
 _SEED = flags.DEFINE_integer('seed', 0, 'Random seed')
-FLAGS = flags.FLAGS
+
+
+def create_experiment_name(hparams):
+  """Creates an experiment name from a dictionary of hyperparameters."""
+  return '_'.join(f"{key}_{hparams[key]}" for key in sorted(hparams.keys()) if
+                  key in ['seed', 'domain', 'algo', 'task', 'skill_level'])
 
 
 def main(_):
@@ -84,27 +93,23 @@ def main(_):
       experiment_title=_EXPERIMENT_NAME.value) as experiment:
 
     if _DEBUG.value:
-      # Debug mode hyperparameters
-      summary_intervals = [1000]
       log_intervals = [1000]
-      rb_capacity_values = [10000, ]
+      rb_capacity_values = [100000, ]
       rb_checkpoint_intervals = [
-          5000]  # Assuming a default value for debug mode
+          5000]
       batch_size_values = [32, ]
       timesteps_per_actorbatch_values = [256]
       web_nav_seeds = [_SEED.value]
+      epsilon_greedy_values = [0.2]
       env_batch_sizes = [3]
       total_env_steps = [100000]
-      difficulty_levels = [_DIFFICULTY_LEVEL.value]
       learning_rates = [1e-4]
       eval_intervals = [1000]
       train_checkpoint_intervals = [5000]
       policy_checkpoint_intervals = [5000]
-      num_website_values = [_NUM_WEBSITES.value]
+      entropy_regularization_values = [0.01]
     else:
-      # Non-debug mode hyperparameters
-      algorithms = [_ALGO.value]
-      summary_intervals = [50000]  # Adjusted to match the non-debug scale
+      epsilon_greedy_values = [0.1]
       log_intervals = [50000]  # Adjusted to match the non-debug scale
       rb_capacity_values = [100000,
                             200000]  # Hypothetical values for non-debug mode
@@ -117,24 +122,23 @@ def main(_):
       web_nav_seeds = [_SEED.value]
       env_batch_sizes = [16]
       total_env_steps = [1000000]
-      difficulty_levels = [_DIFFICULTY_LEVEL.value]
       learning_rates = [1e-4]
       eval_intervals = [50000]
       train_checkpoint_intervals = [100000]
       policy_checkpoint_intervals = [100000]
-      num_website_values = [_NUM_WEBSITES.value]
+      entropy_regularization_values = [0.01]
+
     web_nav_hparam_sweeps = [
         {
-            'num_websites': num_websites,
+            'epsilon_greedy': epsilon_greedy,
             'seed': seed,
             'env_batch_size': env_batch_size,
             'total_env_steps': env_steps,
-            'difficulty_level': difficulty_level,
-            'learning_rate': lr,
-            'eval_interval': ei,
-            'train_checkpoint_interval': tci,
-            'policy_checkpoint_interval': pci,
-            'summary_interval': si,
+            'learning_rate': learning_rate,
+            'eval_interval': eval_interval,
+            'entropy_regularization': er,
+            'train_checkpoint_interval': train_ci,
+            'policy_checkpoint_interval': policy_ci,
             'log_interval': li,
             'rb_capacity': rb,
             'rb_checkpoint_interval': rci,  # Added rb_checkpoint_interval
@@ -142,24 +146,24 @@ def main(_):
             'timesteps_per_actorbatch': tpab,
         }
         for
-        seed, env_batch_size, env_steps, difficulty_level, lr, ei, tci, pci, si, li, rb, rci, bs, tpab, num_websites
+        seed, env_batch_size, env_steps, learning_rate, eval_interval,
+        train_ci, policy_ci, li, rb, rci, bs, tpab, epsilon_greedy, er
         in
         itertools.product(
             web_nav_seeds,
             env_batch_sizes,
             total_env_steps,
-            difficulty_levels,
             learning_rates,
             eval_intervals,
             train_checkpoint_intervals,
             policy_checkpoint_intervals,
-            summary_intervals,
             log_intervals,
             rb_capacity_values,
-            rb_checkpoint_intervals,  # Added rb_checkpoint_intervals here
+            rb_checkpoint_intervals,
             batch_size_values,
             timesteps_per_actorbatch_values,
-            num_website_values
+            epsilon_greedy_values,
+            entropy_regularization_values,
         )
     ]
     # Define Executable
@@ -173,21 +177,30 @@ def main(_):
     ])
 
     for i, hparam_config in enumerate(web_nav_hparam_sweeps):
-      hparam_reduced = dict()
-      for key in hparam_config.keys():
-        new_key = ''.join(
-            [x[0] for x in key.split('_')])
-        hparam_reduced[new_key] = hparam_config[key]
-      experiment_name = _EXPERIMENT_NAME.value + '_' + '_'.join(
-          f"{key}_{hparam_reduced[key]}" for key in
-          sorted(hparam_reduced.keys()))
+      hparam_config.update(dict(
+          domain='quadruped_locomotion',
+          algo=_ALGO.value,
+          task=_TASK.value,
+          difficulty_level=_DIFFICULTY_LEVEL.value,
+          num_websites=_NUM_WEBSITES.value,
+          skill_level=_SKILL_LEVEL.value,
+      ))
 
+      experiment_name = create_experiment_name(hparam_config)
+      hparam_config.pop('domain')
+      hparam_config.pop('task')
       root_dir = os.path.abspath(root_dir_flag)
       root_dir = os.path.join(root_dir, experiment_name)
       participant_module_path = os.path.join(_PARTICIPANT_MODULE_PATH.value)
       run_offline_metrics_only = str(_RUN_OFFLINE_METRICS_ONLY.value)
 
+      if _SKILL_LEVEL.value is not None:
+        dataset_id = f'WebNavigation-difficulty_level_{_TASK.value}-{_SKILL_LEVEL.value}-v0'
+      else:
+        dataset_id = None
+
       hparam_config.update(dict(root_dir=root_dir,
+                                dataset_id=dataset_id,
                                 gin_config=_GIN_CONFIG.value,
                                 participant_module_path=participant_module_path,
                                 debug=str(_DEBUG.value).lower(),

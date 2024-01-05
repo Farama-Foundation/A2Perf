@@ -7,20 +7,22 @@ import multiprocessing
 import os
 import sys
 import timeit
+import traceback
 import typing
 
-from a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import Evaluator
+from a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import \
+  Evaluator
 from a2perf.metrics.reliability.rl_reliability_metrics.metrics import (
-    IqrAcrossRollouts,
-    IqrAcrossRuns,
-    IqrWithinRuns,
-    LowerCVaRAcrossRollouts,
-    LowerCVaROnAcross,
-    LowerCVaROnDiffs,
-    MadAcrossRollouts,
-    MedianPerfDuringTraining,
-    StddevAcrossRollouts,
-    UpperCVaRAcrossRollouts,
+  IqrAcrossRollouts,
+  IqrAcrossRuns,
+  IqrWithinRuns,
+  LowerCVaRAcrossRollouts,
+  LowerCVaROnAcross,
+  LowerCVaROnDiffs,
+  MadAcrossRollouts,
+  MedianPerfDuringTraining,
+  StddevAcrossRollouts,
+  UpperCVaRAcrossRollouts,
 )
 from a2perf.metrics.system import codecarbon
 from a2perf.metrics.system.profiler.base_profiler import BaseProfiler
@@ -296,19 +298,26 @@ class Submission:
       participant_module_spec.loader.exec_module(participant_module)
       logging.info('Successfully executed participant module')
 
-      if self.measure_emissions:
+      def run_train():
+        try:
+          participant_module.train()
+        except Exception as e:
+          logging.error(f"Error occurred during training: {e}")
+          logging.error(traceback.format_exc())
+          raise  # Re-raise the exception to handle it as per your application's needs
 
+      if self.measure_emissions:
         @codecarbon.track_emissions(
             output_dir=self.metric_values_dir, output_file='train_emissions.csv'
         )
-        def train():
-          participant_module.train()
+        def train_with_emission_tracking():
+          run_train()
 
         logging.info('Starting training and tracking emissions')
-        train()
+        train_with_emission_tracking()
       else:
         logging.info('Starting training without tracking emissions')
-        participant_module.train()
+        run_train()
 
     participant_event.clear()
     logging.info('Participant event cleared')

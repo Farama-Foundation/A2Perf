@@ -47,9 +47,6 @@ flags.DEFINE_integer(
 )  # added default
 flags.DEFINE_integer('log_interval', 10000, 'Log interval.')  # added default
 flags.DEFINE_integer(
-    'summary_interval', 10000, 'Summary interval.'
-)  # added default
-flags.DEFINE_integer(
     'timesteps_per_actorbatch', 0, 'Summary interval.'
 )  # added default
 flags.DEFINE_float('learning_rate', 0, 'the learning rate')
@@ -73,10 +70,10 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       FLAGS.policy_checkpoint_interval
   )
+  os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
   os.environ['NUM_WEBSITES'] = str(FLAGS.num_websites)
   os.environ['RB_CHECKPOINT_INTERVAL'] = str(FLAGS.rb_checkpoint_interval)
   os.environ['LOG_INTERVAL'] = str(FLAGS.log_interval)
-  os.environ['SUMMARY_INTERVAL'] = str(FLAGS.summary_interval)
   os.environ['LEARNING_RATE'] = str(FLAGS.learning_rate)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(FLAGS.timesteps_per_actorbatch)
   # New environment variables for rb_capacity and batch_size
@@ -95,15 +92,9 @@ def main(_):
   train_logs_dirs_str = ','.join(FLAGS.train_logs_dirs)
 
   command = (
-      'python3.8 a2perf/submission/main_submission.py '
-      f'--gin_config={FLAGS.gin_config} '
-      f'--participant_module_path={FLAGS.participant_module_path} '
-      f'--root_dir={FLAGS.root_dir} '
-      f'--train_logs_dirs={train_logs_dirs_str} '
-      f'--run_offline_metrics_only={FLAGS.run_offline_metrics_only} '
-      '--verbosity=2'
-      if FLAGS.debug
-      else f'--verbosity=1'
+      'python3.10 a2perf/submission/main_submission.py'
+      f' --gin_config={FLAGS.gin_config} --participant_module_path={FLAGS.participant_module_path} --root_dir={FLAGS.root_dir} --train_logs_dirs={train_logs_dirs_str} --run_offline_metrics_only={FLAGS.run_offline_metrics_only} '
+      + ('--verbosity=2' if FLAGS.debug else '--verbosity=-2')
   )
 
   process = subprocess.Popen(command, shell=True)

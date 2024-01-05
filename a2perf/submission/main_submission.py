@@ -1,11 +1,11 @@
 import multiprocessing
 import os
 
-from a2perf.submission.submission_util import Submission
+import gin
 from absl import app
 from absl import flags
-from absl import logging
-import gin
+
+from a2perf.submission.submission_util import Submission
 
 flags.DEFINE_string('gin_config', None, 'Path to the gin-config file.')
 flags.DEFINE_string(
@@ -37,8 +37,10 @@ FLAGS = flags.FLAGS
 def main(_):
   # Set the working directory to the submission directory.
   os.chdir(os.path.dirname(os.path.abspath(__file__)))
-  multiprocessing.set_start_method('spawn', force=True)
+  multiprocessing.set_start_method('spawn', force=False)
 
+  # Need to use fork to avoid problems with gin and tf
+  # multiprocessing.set_start_method('fork', force=True)
   print('FLAGS.gin_config', FLAGS.gin_config)
   print('FLAGS.participant_module_path', FLAGS.participant_module_path)
 
@@ -57,9 +59,9 @@ def main(_):
   submission.run_benchmark()
 
   # multiprocessing make sure all processes are terminated
-  # for p in multiprocessing.active_children():
-  #   p.terminate()
-  #   p.join()
+  for p in multiprocessing.active_children():
+    p.terminate()
+    p.join()
 
 
 if __name__ == '__main__':
