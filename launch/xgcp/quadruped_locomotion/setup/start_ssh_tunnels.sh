@@ -21,7 +21,7 @@ for index in "${!servers[@]}"; do
   # Source the virtual environment for better ssh tunnel performance
   tmux new-window -t tunnels_locomotion -n "$server" "/usr/bin/expect -c \"
         set timeout -1
-        spawn gcloud compute ssh $server --zone $zone --tunnel-through-iap -- -L $local_port:localhost:22
+        spawn gcloud compute ssh $server --project=brain-complex-systems-xgcp --zone $zone --tunnel-through-iap -- -L $local_port:localhost:22
         expect \\\"Enter passphrase for key '/usr/local/google/home/ikechukwuu/.ssh/google_compute_engine':\\\"
         send \\\"password\\r\\\"
         interact
