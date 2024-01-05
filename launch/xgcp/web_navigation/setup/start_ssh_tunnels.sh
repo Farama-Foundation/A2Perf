@@ -16,7 +16,7 @@ for server in "${servers[@]}"; do
   source /usr/local/google/home/ikechukwuu/workspace/a2perf/a2perf-repo/env/bin/activate
   tmux new-window -t tunnels_webnav -n "$server" "/usr/bin/expect -c \"
         set timeout -1
-        spawn gcloud compute ssh $server --tunnel-through-iap -- -L $local_port:localhost:22
+        spawn gcloud compute ssh $server --project=brain-complex-systems-xgcp --tunnel-through-iap -- -L $local_port:localhost:22
         expect \\\"Enter passphrase for key '/usr/local/google/home/ikechukwuu/.ssh/google_compute_engine':\\\"
         send \\\"password\\r\\\"
         interact

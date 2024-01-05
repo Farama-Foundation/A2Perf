@@ -14,7 +14,6 @@ DOCKERFILE_PATH="$(pwd)/a2perf/domains/quadruped_locomotion/docker/Dockerfile"
 REQUIREMENTS_PATH="./requirements.txt"
 RUN_OFFLINE_METRICS_ONLY=false
 PARALLEL_MODE=true
-PARALLEL_CORES=0
 MODE=""
 VISUALIZE=false
 MOTION_FILE_PATH=""
@@ -26,6 +25,7 @@ ALGORITHM=""
 SETUP_PATH=""
 DEBUG=""
 BATCH_SIZE=0
+ENV_BATCH_SIZE=0
 NUM_EPOCHS=0
 LEARNING_RATE=0.0
 SKILL_LEVEL=0
@@ -117,8 +117,8 @@ for arg in "$@"; do
     PARALLEL_MODE="${arg#*=}"
     shift
     ;;
-  --parallel_cores=*)
-    PARALLEL_CORES="${arg#*=}"
+  --env_batch_size=*)
+    ENV_BATCH_SIZE="${arg#*=}"
     shift
     ;;
   --mode=*)
@@ -240,10 +240,7 @@ cd /rl-perf
 pip install -r requirements.txt
 pip install -e .
 
-if [ "$DEBUG" = "true" ]; then
-  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/debug/requirements.txt
-else
-  pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
+pip install -r /rl-perf/a2perf/a2perf_benchmark_submission/quadruped_locomotion/${ALGORITHM}/requirements.txt
 fi
 
 EOF
@@ -268,7 +265,7 @@ export TOTAL_ENV_STEPS=$TOTAL_ENV_STEPS
 export ROOT_DIR=$ROOT_DIR
 export TRAIN_LOGS_DIRS=$TRAIN_LOGS_DIRS
 export PARALLEL_MODE="$PARALLEL_MODE"
-export PARALLEL_CORES="$PARALLEL_CORES"
+export ENV_BATCH_SIZE="$ENV_BATCH_SIZE"
 export MODE="$MODE"
 export MOTION_FILE_PATH="$MOTION_FILE_PATH"
 export VISUALIZE="$VISUALIZE"

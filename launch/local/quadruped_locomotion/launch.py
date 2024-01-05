@@ -47,6 +47,10 @@ def main(_):
       root_dir_base = f"/mnt/gcs/a2perf/quadruped_locomotion/{motion_file}/{algo}/{debug_path}"
 
       for seed in seeds:
+        subprocess.run(
+            ["docker", "rm", "-f", "quadruped_locomotion_container"],
+            check=True)
+
         next_exp_num = get_next_experiment_number(host_dir_base)
 
         # Construct the motion file path
@@ -74,11 +78,6 @@ def main(_):
         ]
 
         subprocess.run(xmanager_cmd, check=True)
-
-        # Docker cleanup
-        # subprocess.run(
-        #     ["docker", "rm", "-f", "quadruped_locomotion_container"],
-        #     check=True)
 
 
 if __name__ == "__main__":

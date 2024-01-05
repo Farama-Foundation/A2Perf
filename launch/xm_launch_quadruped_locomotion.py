@@ -102,9 +102,9 @@ def main(_):
       quadruped_locomotion_seeds = [
           _SEED.value,
       ]
-      batch_size_values = [512]
-      num_epoch_values = [10]
-      num_parallel_cores = [170]
+      batch_size_values = [32]
+      num_epoch_values = [20]
+      env_batch_sizes = [3]
       total_env_steps = [200000, ]
       int_save_freqs = [100000]
       int_eval_freqs = [10000]
@@ -117,7 +117,7 @@ def main(_):
       batch_size_values = [512]
       num_epoch_values = [500]
       total_env_steps = [200000000, ]
-      num_parallel_cores = [170]
+      env_batch_sizes = [3]
       int_save_freqs = [1000000]
       int_eval_freqs = [100000]
       algos = [_ALGO.value]
@@ -127,7 +127,7 @@ def main(_):
         dict([
             ('seed', seed),
             ('total_env_steps', env_steps),
-            ('parallel_cores', parallel_cores),
+            ('env_batch_size', env_batch_size),
             ('int_save_freq', int_save_freq),
             ('algo', algo),
             ('int_eval_freq', int_eval_freq),
@@ -136,10 +136,10 @@ def main(_):
             ('learning_rate', learning_rate),
         ])
         for
-        seed, env_steps, parallel_cores, int_save_freq, algo, int_eval_freq, batch_size, num_epochs, learning_rate
+        seed, env_steps, env_batch_size, int_save_freq, algo, int_eval_freq, batch_size, num_epochs, learning_rate
         in
         itertools.product(quadruped_locomotion_seeds,
-                          total_env_steps, num_parallel_cores,
+                          total_env_steps, env_batch_sizes,
                           int_save_freqs, algos, int_eval_freqs,
                           batch_size_values, num_epoch_values, learning_rates
                           )
