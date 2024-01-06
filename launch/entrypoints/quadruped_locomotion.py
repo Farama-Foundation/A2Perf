@@ -93,7 +93,7 @@ def main(_):
     if process.poll() is not None:
       break
     if output:
-      print(output.strip().decode('utf-8'))
+      print(output.strip().decode('utf-8', 'ignore'))
 
 
 if __name__ == '__main__':

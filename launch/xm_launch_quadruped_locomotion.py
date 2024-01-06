@@ -48,6 +48,7 @@ _GIN_CONFIG = flags.DEFINE_string(
     None,
     'Path to gin config file that determines which experiment to run',
 )
+
 _EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
     'extra_gin_bindings',
     [],
@@ -166,14 +167,27 @@ def create_experiment_name(hparams):
                   key in ['seed', 'domain', 'algo', 'task', 'skill_level'])
 
 
+def get_next_experiment_number(host_dir_base):
+  try:
+    base_number = host_dir_base.rstrip('/')
+    print(base_number)
+    last_exp_num = \
+      sorted([int(d) for d in os.listdir(host_dir_base) if d.isdigit()])[-1]
+  except IndexError:
+    return "0001"
+  except FileNotFoundError:
+    return "0001"
+  return f"{last_exp_num + 1:04d}"
+
+
 def get_hparam_sweeps(domain, debug):
   if domain == 'quadruped_locomotion':
     if debug:
       # Debug mode: simpler hyperparameters for faster iteration
       hyperparameters = {
-          'batch_size': [32],
-          'num_epochs': [10],
-          'env_batch_size': [8],
+          'batch_size': [512],
+          'num_epochs': [20],
+          'env_batch_size': [32],
           'total_env_steps': [1000000],
           'learning_rate': [3e-4],
           'eval_interval': [10000],
@@ -181,20 +195,20 @@ def get_hparam_sweeps(domain, debug):
           'policy_checkpoint_interval': [100000],
           'log_interval': [10000],
           'entropy_regularization': [0.05],
-          'timesteps_per_actorbatch': [512]
+          'timesteps_per_actorbatch': [1024]
       }
     else:
       # Normal mode: more extensive range of hyperparameters
       hyperparameters = {
-          'batch_size': [512],
-          'num_epochs': [10],
-          'env_batch_size': [32],
-          'total_env_steps': [200000000],
+          'batch_size': [32],
+          'num_epochs': [20],
+          'env_batch_size': [40],
+          'total_env_steps': [1000000],
           'learning_rate': [3e-4],
           'eval_interval': [100000],
-          'train_checkpoint_interval': [100000],
-          'policy_checkpoint_interval': [100000],
-          'log_interval': [10000],
+          'train_checkpoint_interval': [10000],
+          'policy_checkpoint_interval': [10000],
+          'log_interval': [1000],
           'entropy_regularization': [0.05],
           'timesteps_per_actorbatch': [4096]
       }
@@ -210,31 +224,29 @@ def get_hparam_sweeps(domain, debug):
 
 
 def main(_):
-  # If experiment number is defined, replace the last part of root_dir with experiment number
-  if _EXPERIMENT_NUMBER.value is not None:
-    root_dir_flag = os.path.join(os.path.dirname(_ROOT_DIR.value),
-                                 _EXPERIMENT_NUMBER.value)
-  else:
-    root_dir_flag = _ROOT_DIR.value
-
   with xm_local.create_experiment(
       experiment_title=_EXPERIMENT_NAME.value) as experiment:
     hparam_sweeps = get_hparam_sweeps(_DOMAIN.value, _DEBUG.value)
 
     # Define Executor
-    executor = xm_local.Local(docker_options=xm_local.DockerOptions(
-        ports=None,
-        volumes=None,
-        mount_gcs_path=False,
-        interactive=_INTERACTIVE.value, ),
+    executor = xm_local.Local(
+        requirements=xm.JobRequirements(
+            resources={
+                xm.ResourceType.LOCAL_GPU: 8,
+            },
+        ),
+        docker_options=xm_local.DockerOptions(
+            ports=None,
+            volumes=None,
+            mount_gcs_path=True,
+            interactive=_INTERACTIVE.value, ),
         experimental_stream_output=True, )
 
     # Define Executable
     [executable] = experiment.package([
         xm.python_container(
-            executor_spec=xm_local.LocalSpec(),
+            executor_spec=executor.Spec(),
             path='../',
-            # path='.',
             use_deep_module=True,
             base_image=BASE_IMAGE[_DOMAIN.value],
             docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
@@ -272,10 +284,26 @@ def main(_):
                   run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
               ))
 
+              root_dir = os.path.join('/gcs',
+                                      'a2perf',
+                                      _DOMAIN.value,
+                                      task,
+                                      algo,
+                                      'debug' if _DEBUG.value else '', )
+
+              if _EXPERIMENT_NUMBER.value:
+                experiment_number = _EXPERIMENT_NUMBER.value
+              else:
+                local_gcs_path = os.path.expanduser(_ROOT_DIR.value)
+                local_root_dir = root_dir.replace('/gcs', local_gcs_path)
+                experiment_number = get_next_experiment_number(local_root_dir)
+
               experiment_name = create_experiment_name(hparam_config)
-              root_dir = os.path.abspath(root_dir_flag)
-              root_dir = os.path.join(root_dir, experiment_name)
-              hparam_config['root_dir'] = root_dir
+              root_dir = os.path.join(root_dir, experiment_number,
+                                      experiment_name)
+              hparam_config.update(dict(
+                  root_dir=root_dir,
+              ))
 
               if _DOMAIN.value == 'quadruped_locomotion':
                 hparam_config.update(dict(
