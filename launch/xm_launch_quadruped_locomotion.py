@@ -53,20 +53,17 @@ _EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
     [],
     'Extra gin bindings to add to the default bindings',
 )
-_ALGO = flags.DEFINE_string(
-    'algo',
-    None,
-    'Name of algorithm to run',
-)
-_SEED = flags.DEFINE_integer('seed', 0, 'Random seed')
+_ALGOS = flags.DEFINE_list(
+    'algos',
+    ['ppo'],
+    'Algorithms to run. If multiple are specified, they will be run in sequence', )
 _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
                                          'Experiment number')
-_MOTION_FILE_PATH = flags.DEFINE_string('motion_file_path',
-                                        None,
-                                        'Motion file')
-_TASK = flags.DEFINE_string('task', None, 'Task')
-_MODE = flags.DEFINE_string('mode', None, 'Mode to run in')
-_SKILL_LEVEL = flags.DEFINE_string('skill_level', None, 'Skill level')
+_TASKS = flags.DEFINE_list('tasks', None, 'Tasks to run')
+_SEEDS = flags.DEFINE_list('seeds', None, 'Seeds to run')
+_MODE = flags.DEFINE_enum('mode', 'train', ['train', 'inference'],
+                          'Mode of execution')
+_SKILL_LEVELS = flags.DEFINE_list('skill_levels', None, 'Skill levels to run')
 
 REPO_DIR = os.path.basename(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -122,6 +119,7 @@ DOCKER_INSTRUCTIONS = {
         'ENV PATH="/home/clouduser/venv/bin:${PATH}"',
         'ENV PATH="/usr/local/cuda/bin:${PATH}"',
         'ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"',
+        'RUN ln -s /home/clouduser/venv/bin/pip /usr/bin/pip',
         'WORKDIR /workdir',
         f'COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt ./a2perf/metrics/reliability/requirements.txt',
         f'COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt ./a2perf/metrics/system/codecarbon/',
@@ -130,9 +128,10 @@ DOCKER_INSTRUCTIONS = {
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
         'RUN pip install -r ./requirements.txt',
         'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
+        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt',
         f'COPY {REPO_DIR} .',
-        'RUN chmod -R 777 .',
-        'RUN pip install .',
+        'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
+        'RUN pip install /workdir'
     ],
     'web_navigation': [],
     'circuit_training': []
@@ -140,8 +139,9 @@ DOCKER_INSTRUCTIONS = {
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        # make sure the terminal is kept open
-        'sudo service ssh start && sudo service ssh status &&  bash'
+        'sudo service ssh start',
+        'sudo service dbus start',
+        'python3.9 /workdir/launch/entrypoints/quadruped_locomotion.py',
     ]),
     'web_navigation': xm.CommandList([]),
     'circuit_training': xm.CommandList([])
@@ -171,32 +171,32 @@ def get_hparam_sweeps(domain, debug):
     if debug:
       # Debug mode: simpler hyperparameters for faster iteration
       hyperparameters = {
-          'batch_size_values': [32],
-          'num_epoch_values': [20],
-          'env_batch_sizes': [8],
-          'total_env_steps': [200000],
-          'learning_rates': [3e-4],
-          'eval_intervals': [1000],
-          'train_checkpoint_intervals': [5000],
-          'policy_checkpoint_intervals': [5000],
-          'log_intervals': [100],
-          'entropy_regularization_values': [0.05],
-          'timesteps_per_actorbatch_values': [512]
+          'batch_size': [32],
+          'num_epochs': [10],
+          'env_batch_size': [8],
+          'total_env_steps': [1000000],
+          'learning_rate': [3e-4],
+          'eval_interval': [10000],
+          'train_checkpoint_interval': [100000],
+          'policy_checkpoint_interval': [100000],
+          'log_interval': [10000],
+          'entropy_regularization': [0.05],
+          'timesteps_per_actorbatch': [512]
       }
     else:
       # Normal mode: more extensive range of hyperparameters
       hyperparameters = {
-          'batch_size_values': [512],
-          'num_epoch_values': [10],
-          'env_batch_sizes': [32],
+          'batch_size': [512],
+          'num_epochs': [10],
+          'env_batch_size': [32],
           'total_env_steps': [200000000],
-          'learning_rates': [3e-4],
-          'eval_intervals': [100000],
-          'train_checkpoint_intervals': [100000],
-          'policy_checkpoint_intervals': [100000],
-          'log_intervals': [10000],
-          'entropy_regularization_values': [0.05],
-          'timesteps_per_actorbatch_values': [4096]
+          'learning_rate': [3e-4],
+          'eval_interval': [100000],
+          'train_checkpoint_interval': [100000],
+          'policy_checkpoint_interval': [100000],
+          'log_interval': [10000],
+          'entropy_regularization': [0.05],
+          'timesteps_per_actorbatch': [4096]
       }
 
     # Generate all combinations of hyperparameters
@@ -210,9 +210,6 @@ def get_hparam_sweeps(domain, debug):
 
 
 def main(_):
-  # set directory of this script as working directory
-  os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
   # If experiment number is defined, replace the last part of root_dir with experiment number
   if _EXPERIMENT_NUMBER.value is not None:
     root_dir_flag = os.path.join(os.path.dirname(_ROOT_DIR.value),
@@ -237,6 +234,7 @@ def main(_):
         xm.python_container(
             executor_spec=xm_local.LocalSpec(),
             path='../',
+            # path='.',
             use_deep_module=True,
             base_image=BASE_IMAGE[_DOMAIN.value],
             docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
@@ -246,51 +244,50 @@ def main(_):
     ])
 
     for i, hparam_config in enumerate(hparam_sweeps):
-      experiment_name = create_experiment_name(hparam_config)
-      root_dir = os.path.abspath(root_dir_flag)
-      root_dir = os.path.join(root_dir, experiment_name)
+      for seed in _SEEDS.value:
+        for algo in _ALGOS.value:
+          for task in _TASKS.value:
+            skill_levels = _SKILL_LEVELS.value
+            if not skill_levels:
+              skill_levels = ['novice']
 
-      if _SKILL_LEVEL.value is not None:
-        dataset_id = f'{_DOMAIN.value[0].upper() + _DOMAIN.value[1:]}-{_TASK.value}-{_SKILL_LEVEL.value}-v0'
-      else:
-        dataset_id = None
+            for skill_level in skill_levels:
+              dataset_id = f'{_DOMAIN.value[0].upper() + _DOMAIN.value[1:]}-{task}-{skill_level}-v0'
+              hparam_config.update(dict(
+                  seed=seed,
+                  algo=algo,
+                  task=task,
+                  mode=_MODE.value,
+                  dataset_id=dataset_id,
+                  skill_level=skill_level,
+                  gin_config=os.path.join('/workdir/a2perf/submission/configs',
+                                          _DOMAIN.value,
+                                          'debug' if _DEBUG.value else '',
+                                          f'{_MODE.value}.gin'),
+                  participant_module_path=os.path.join(
+                      '/workdir/a2perf/a2perf_benchmark_submission',
+                      _DOMAIN.value,
+                      algo,
+                  ),
+                  run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
+              ))
 
-      # Add additional arguments that are constant across all runs
-      hparam_config.update(dict(
-          dataset_id=dataset_id,
-          domain=_DOMAIN.value,
-          seed=_SEED.value,
-          algo=_ALGO.value,
-          task=_TASK.value,
-          skill_level=_SKILL_LEVEL.value,
-          extra_gin_bindings=','.join(_EXTRA_GIN_BINDINGS.value),
-          gin_config=_GIN_CONFIG.value,
-          mode=_MODE.value,
-          motion_file_path=_MOTION_FILE_PATH.value,
-          participant_module_path=_PARTICIPANT_MODULE_PATH.value,
-          root_dir=root_dir,
-          debug=str(_DEBUG.value).lower(),
-          run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY,
-          train_logs_dirs=','.join(_TRAIN_LOGS_DIRS.value),
-      ))
+              experiment_name = create_experiment_name(hparam_config)
+              root_dir = os.path.abspath(root_dir_flag)
+              root_dir = os.path.join(root_dir, experiment_name)
+              hparam_config['root_dir'] = root_dir
 
-      print(hparam_config)
-      hparam_config.pop('domain')
-      hparam_config.pop('task')
-      hparam_config.pop('algo')
+              if _DOMAIN.value == 'quadruped_locomotion':
+                hparam_config.update(dict(
+                    motion_file_path=os.path.join(
+                        '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
+                        task + '.txt'), ))
 
-      # Export all hyperparameters as environment variables
-      env_vars = {}
-      for key, value in hparam_config.items():
-        env_vars[key.upper()] = str(value)
-
-      hparam_config.clear()
-      experiment.add(xm.Job(
-          args=hparam_config,
-          env_vars=env_vars,
-          executable=executable,
-          executor=executor,
-      ))
+              experiment.add(xm.Job(
+                  args=hparam_config,
+                  executable=executable,
+                  executor=executor,
+              ))
 
 
 if __name__ == '__main__':
