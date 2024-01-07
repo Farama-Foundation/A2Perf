@@ -345,7 +345,7 @@ class Submission:
       print(self.participant_module_path)
       print(participant_module_spec)
       participant_module_spec.loader.exec_module(participant_module)
-      participant_model = participant_module.load_model(env=env)
+      participant_model = participant_module.load_policy(env=env)
 
       preprocessed_data = [
           participant_module.preprocess_observation(x) for x in inference_data

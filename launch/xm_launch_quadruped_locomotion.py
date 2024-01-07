@@ -132,7 +132,7 @@ DOCKER_INSTRUCTIONS = {
         'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt',
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
-        'RUN pip install /workdir'
+        'RUN pip install /workdir',
     ],
     'web_navigation': [],
     'circuit_training': []
@@ -140,8 +140,10 @@ DOCKER_INSTRUCTIONS = {
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        'sudo service ssh start',
-        'sudo service dbus start',
+        'service ssh start',
+        'service dbus start',
+        # change user
+        'su - clouduser',
         'python3.9 /workdir/launch/entrypoints/quadruped_locomotion.py',
     ]),
     'web_navigation': xm.CommandList([]),
@@ -185,31 +187,31 @@ def get_hparam_sweeps(domain, debug):
     if debug:
       # Debug mode: simpler hyperparameters for faster iteration
       hyperparameters = {
-          'batch_size': [512],
-          'num_epochs': [20],
+          'batch_size': [32],
+          'num_epochs': [1],
           'env_batch_size': [32],
-          'total_env_steps': [1000000],
+          'total_env_steps': [100000],
           'learning_rate': [3e-4],
-          'eval_interval': [10000],
-          'train_checkpoint_interval': [100000],
-          'policy_checkpoint_interval': [100000],
-          'log_interval': [10000],
+          'eval_interval': [1000],
+          'train_checkpoint_interval': [10000],
+          'policy_checkpoint_interval': [10000],
+          'log_interval': [1000],
           'entropy_regularization': [0.05],
-          'timesteps_per_actorbatch': [1024]
+          'timesteps_per_actorbatch': [4096]
       }
     else:
       # Normal mode: more extensive range of hyperparameters
       hyperparameters = {
           'batch_size': [32],
-          'num_epochs': [20],
-          'env_batch_size': [40],
-          'total_env_steps': [1000000],
-          'learning_rate': [3e-4],
-          'eval_interval': [100000],
-          'train_checkpoint_interval': [10000],
-          'policy_checkpoint_interval': [10000],
+          'num_epochs': [10],
+          'env_batch_size': [32],
+          'total_env_steps': [200000000],
+          'learning_rate': [1e-5],
+          'eval_interval': [1000],
+          'train_checkpoint_interval': [1000000],
+          'policy_checkpoint_interval': [1000000],
           'log_interval': [1000],
-          'entropy_regularization': [0.05],
+          'entropy_regularization': [1e-4],
           'timesteps_per_actorbatch': [4096]
       }
 

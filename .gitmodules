@@ -10,7 +10,7 @@
 [submodule "rl_perf/rlperf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/harvard-edge/rlperf_benchmark_submission.git
-	branch = locomotion_tf_agents
+	branch = tf_agents
 [submodule "rl_perf/metrics/system/codecarbon"]
 	path = a2perf/metrics/system/codecarbon
     url = https://github.com/harvard-edge/codecarbon.git
