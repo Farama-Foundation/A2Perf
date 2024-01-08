@@ -13,7 +13,7 @@ for server in "${servers[@]}"; do
   echo "Establishing tunnel for $server on local port $local_port..."
 
   # Run expect within tmux
-  source /usr/local/google/home/ikechukwuu/workspace/a2perf/a2perf-repo/env/bin/activate
+  source /usr/local/google/home/ikechukwuu/workspace/a2perf/a2perf-repo/venv/bin/activate
   tmux new-window -t tunnels_webnav -n "$server" "/usr/bin/expect -c \"
         set timeout -1
         spawn gcloud compute ssh $server --project=brain-complex-systems-xgcp --tunnel-through-iap -- -L $local_port:localhost:22

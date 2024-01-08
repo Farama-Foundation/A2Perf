@@ -14,7 +14,7 @@ for index in "${!servers[@]}"; do
   server="${servers[$index]}"
   zone="${zones[$index]}"
 
-  source /usr/local/google/home/ikechukwuu/workspace/a2perf/a2perf-repo/env/bin/activate
+  source /usr/local/google/home/ikechukwuu/workspace/a2perf/a2perf-repo/venv/bin/activate
   echo "Establishing tunnel for $server in zone $zone on local port $local_port..."
 
   # Run expect within tmux, also adding the zone parameter
