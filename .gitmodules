@@ -24,3 +24,9 @@
 	branch = main
 [submodule "a2perf/a2perf_benchmark_submission"]
 	branch = locomotion_tf_agents
+[submodule "a2perf/domains/quadruped_locomotion"]
+	branch = main
+[submodule "a2perf/domains/web_navigation"]
+	branch = main
+[submodule "a2perf/domains/circuit_training"]
+	branch = main
