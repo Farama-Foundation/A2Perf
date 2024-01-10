@@ -77,8 +77,7 @@ DOCKER_INSTRUCTIONS = {
         '${APT_COMMAND} install software-properties-common && ' +
         'add-apt-repository ppa:deadsnakes/ppa && ' +
         '${APT_COMMAND} update && ' +
-        '${APT_COMMAND} upgrade && ' +
-        '${APT_COMMAND} install --allow-change-held-packages ' +
+        '${APT_COMMAND} install '
         'python3.9 ' +
         'python3.9-dev ' +
         'python3.9-venv ' +
@@ -93,26 +92,37 @@ DOCKER_INSTRUCTIONS = {
         'x11-apps ' +
         'libopenmpi-dev ' +
         'x11-utils ' +
-        'libcudnn8 ' +
-        'libcudnn8-dev && ' +
-        'rm -rf /var/lib/apt/lists/*',
-        'RUN wget https://bootstrap.pypa.io/get-pip.py && ' +
-        'python3.9 get-pip.py && ' +
-        'rm get-pip.py',
+        '&& rm -rf /var/lib/apt/lists/*',
+
+        # Now update libcudnn dependencies
+        # 'RUN ${APT_COMMAND} update && ${APT_COMMAND} install \
+        #   libcudnn8=8.9.6.50-1+cuda11.8 \
+        #   libcudnn8-dev=8.9.6.50-1+cuda11.8',
+
+        # Now update libcudnn dependencies
+        'RUN ${APT_COMMAND} update && ${APT_COMMAND} install --allow-downgrades --allow-change-held-packages \
+          libcudnn8=8.7.*-1+cuda11.8 \
+          libcudnn8-dev=8.7.*-1+cuda11.8',
+
+        # Python
+        (
+            'RUN wget https://bootstrap.pypa.io/get-pip.py && python3.9 get-pip.py && rm get-pip.py'
+        ),
         'RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1 && ' +
         'update-alternatives --set python /usr/bin/python3.9',
-        'RUN echo "X11UseLocalhost no\\nX11DisplayOffset 10\\nPasswordAuthentication yes\\nPort 2020" >> /etc/ssh/sshd_config && ' +
-        'mkdir /run/sshd',
-        'EXPOSE 2020',
-        f'RUN groupadd -g {os.getgid()} user_group && ' +
-        'groupadd -g 998 docker && ' +
-        'usermod -aG sudo,user_group clouduser && ' +
-        'echo "clouduser:password" | chpasswd && ' +
-        'echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && ' +
-        'mkdir -p /home/clouduser/.ssh && ' +
-        'chmod 700 /home/clouduser/.ssh && ' +
-        'touch /home/clouduser/.ssh/authorized_keys && ' +
-        'chmod 600 /home/clouduser/.ssh/authorized_keys',
+        (
+            'RUN echo "X11UseLocalhost no\\nX11DisplayOffset 10\\nPasswordAuthentication yes\\nPort 2020" >> /etc/ssh/sshd_config && mkdir /run/sshd'
+        ),
+        # (
+        #     f'RUN groupadd -g {os.getgid()} cloudgroup && if ! id {os.getuid()}; then'
+        #     f' useradd -m -u {os.getuid()} -G cloudgroup clouduser; fi'
+        # ),
+        'RUN echo "clouduser:password" | chpasswd && ' +
+        ' echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+        'RUN mkdir -p /home/clouduser/.ssh && ' +
+        ' chmod 700 /home/clouduser/.ssh && ' +
+        ' touch /home/clouduser/.ssh/authorized_keys && ' +
+        ' chmod 600 /home/clouduser/.ssh/authorized_keys',
         'WORKDIR /home/clouduser',
         'RUN python3.9 -m venv venv && ' +
         '. venv/bin/activate && ' +
@@ -152,6 +162,7 @@ ENTRYPOINT = {
 
 BASE_IMAGE = {
     'quadruped_locomotion': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
+    # 'quadruped_locomotion': 'us-docker.pkg.dev/deeplearning-platform-release/gcr.io/base-cu113.py310',
     'web_navigation': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
     'circuit_training': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04'
 }

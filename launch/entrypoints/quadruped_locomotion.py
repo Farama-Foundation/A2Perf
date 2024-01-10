@@ -84,7 +84,7 @@ def main(_):
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
   os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
   os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-  os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+  # os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
   os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
