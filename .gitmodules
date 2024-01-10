@@ -4,15 +4,13 @@
 [submodule "circuit_training"]
     path = circuit_training
     url = https://github.com/Farama-Foundation/a2perf-circuit-training.git  # Updated URL
+	branch = r0.0.4
 [submodule "quadruped_locomotion"]
     path = quadruped_locomotion
     url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
 [submodule "src/quadruped_locomotion"]
     path = rl_perf/domains/quadruped_locomotion
     url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
-[submodule "src/circuit_training"]
-    path = rl_perf/domains/circuit_training
-    url = https://github.com/Farama-Foundation/a2perf-circuit-training.git  # Updated URL
 [submodule "src/web_nav"]
     path = rl_perf/domains/web_nav
     url = https://github.com/Farama-Foundation/a2perf-web-nav.git  # Updated URL
@@ -25,3 +23,7 @@
 [submodule "rl_perf/metrics/system/codecarbon"]
     path = rl_perf/metrics/system/codecarbon
     url = https://github.com/Farama-Foundation/a2perf-code-carbon.git
+[submodule "rl_perf/domains/circuit_training"]
+	path = rl_perf/domains/circuit_training
+	url = https://github.com/google-research/circuit_training.git
+	branch = r0.0.4
