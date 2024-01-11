@@ -4,7 +4,14 @@ import subprocess
 from absl import app
 from absl import flags
 
+
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debugging mode')
+_DOMAIN = flags.DEFINE_enum(
+    'domain',
+    None,
+    ['quadruped_locomotion'],
+    'Domain to run.',
+)
 _SEED = flags.DEFINE_integer('seed', None, 'Global seed.')
 _ENV_BATCH_SIZE = flags.DEFINE_integer(
     'env_batch_size', None, 'Number of environments to run in parallel.'
