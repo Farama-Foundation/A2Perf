@@ -218,75 +218,73 @@ def get_next_experiment_number(host_dir_base):
   return f"{last_exp_num + 1:04d}"
 
 
+import itertools
+
+
 def get_hparam_sweeps(domain, algo, debug):
   if domain == 'quadruped_locomotion':
-    if algo == 'ppo':
-      if debug:
-        hyperparameters = {
-            'batch_size': [32],
-            'num_epochs': [1],
-            'env_batch_size': [4],
-            'total_env_steps': [100000],
-            'learning_rate': [1e-4],
-            'eval_interval': [1000],
-            'train_checkpoint_interval': [10000],
-            'policy_checkpoint_interval': [10000],
-            'log_interval': [100],
-            'timesteps_per_actorbatch': [256],
-        }
-      else:
-        hyperparameters = {
-            'batch_size': [32],
-            'num_epochs': [10],
-            'env_batch_size': [32],
-            'total_env_steps': [200000000],
-            'learning_rate': [1e-4],
-            'eval_interval': [1000],
-            'train_checkpoint_interval': [1000000],
-            'policy_checkpoint_interval': [1000000],
-            'log_interval': [1000],
-            'entropy_regularization': [1e-4],
-            'timesteps_per_actorbatch': [4096],
-        }
-    elif algo == 'sac':
-      if debug:
-        hyperparameters = {
-            'batch_size': [32],
-            'env_batch_size': [4],
-            'total_env_steps': [100000],
-            'learning_rate': [3e-4],
-            'eval_interval': [1000],
-            'train_checkpoint_interval': [10000],
-            'policy_checkpoint_interval': [10000],
-            'log_interval': [100],
-            'timesteps_per_actorbatch': [256],
-            'rb_capacity': [100000],
-        }
-      else:
-        # Normal mode: more extensive range of hyperparameters
-        hyperparameters = {
-            'batch_size': [32],
-            'num_epochs': [10],
-            'env_batch_size': [32],
-            'total_env_steps': [200000000],
-            'learning_rate': [1e-5],
-            'eval_interval': [1000],
-            'train_checkpoint_interval': [1000000],
-            'policy_checkpoint_interval': [1000000],
-            'log_interval': [1000],
-            'timesteps_per_actorbatch': [4096],
-            'rb_capacity': [10000000],
-        }
+    general_hyperparameters = {
+        'batch_size': [32],
+        'eval_interval': [100],
+        'log_interval': [100]}
+
+    if debug:
+      general_hyperparameters.update({
+          'env_batch_size': [8],
+          'total_env_steps': [1000000],
+          'train_checkpoint_interval': [10000],
+          'policy_checkpoint_interval': [10000],
+          'timesteps_per_actorbatch': [256],
+      })
+
+      ppo_hyperparameters = {
+          'num_epochs': [1],
+          'learning_rate': [3e-4],
+          'entropy_regularization': [1e-4],
+      }
+
+      sac_hyperparameters = {
+          'learning_rate': [3e-4],
+          'rb_capacity': [100000],
+      }
     else:
-      raise ValueError(
-          f"Environment {domain} does not support algorithm {algo}")
-    # Generate all combinations of hyperparameters
-    keys, values = zip(*hyperparameters.items())
-    hparam_sweeps = [dict(zip(keys, v)) for v in itertools.product(*values)]
+      general_hyperparameters.update({
+          'env_batch_size': [44],
+          'total_env_steps': [200000000],
+          'train_checkpoint_interval': [1000000],
+          'policy_checkpoint_interval': [1000000],
+          'timesteps_per_actorbatch': [4096],
+      })
+      ppo_hyperparameters = {
+          'entropy_regularization': [1e-4],
+          'learning_rate': [3e-4],
+          'num_epochs': [10],
+      }
+      sac_hyperparameters = {
+          'learning_rate': [3e-4],
+          'rb_capacity': [10000000],
+      }
+
+    # Use the `algo` argument to determine which hyperparameters to use
+    if algo == 'ppo':
+      algo_specific_hyperparameters = ppo_hyperparameters
+    elif algo == 'sac':
+      algo_specific_hyperparameters = sac_hyperparameters
+    else:
+      raise ValueError(f'Domain {domain} does not support algorithm {algo}')
   elif domain == 'web_navigation':
-    pass
+    general_hyperparameters = {}
+    algo_specific_hyperparameters = {}
   else:
     raise ValueError(f"Unknown domain: {domain}")
+
+  # Combine general and algorithm-specific hyperparameters
+  hyperparameters = {**general_hyperparameters,
+                     **algo_specific_hyperparameters}
+
+  # Generate all combinations of hyperparameters
+  keys, values = zip(*hyperparameters.items())
+  hparam_sweeps = [dict(zip(keys, v)) for v in itertools.product(*values)]
   return hparam_sweeps
 
 
