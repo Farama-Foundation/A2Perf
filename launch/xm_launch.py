@@ -169,7 +169,91 @@ DOCKER_INSTRUCTIONS = {
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
         'RUN pip install /workdir',
     ],
-    'web_navigation': [],
+    'web_navigation': [
+        '''ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+          --no-install-recommends -y"''',
+        'ENV DEBIAN_FRONTEND=noninteractive',
+        '''
+        RUN ${APT_COMMAND} update && \
+          ${APT_COMMAND} install software-properties-common && \
+          add-apt-repository ppa:deadsnakes/ppa && \
+          ${APT_COMMAND} update && \
+          ${APT_COMMAND} install \
+          python3.10 \
+          python3.10-dev \
+          python3.10-venv \
+          python3.10-distutils \
+          wget \
+          sudo \
+          build-essential \
+          libnss3 \
+          unzip \
+          x11-apps \
+          libopenmpi-dev \
+          x11-utils \
+          && rm -rf /var/lib/apt/lists/*
+        ''',
+
+        # Add TensorRT
+        '''
+        RUN ${APT_COMMAND} update && \
+          ${APT_COMMAND} install python3-libnvinfer-dev \
+          python3-libnvinfer''',
+        '''
+        RUN wget https://bootstrap.pypa.io/get-pip.py && \
+          python3.10 get-pip.py && \
+          rm get-pip.py
+        ''',
+        '''
+        RUN update-alternatives --install /usr/bin/python \
+          python /usr/bin/python3.10 1 && update-alternatives --set python \
+          /usr/bin/python3.10 \
+          && rm -rf /var/lib/apt/lists/*
+        ''',
+        '''
+        RUN echo "clouduser:password" | chpasswd && \
+          echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+        ''',
+        'WORKDIR /home/clouduser',
+        '''
+        RUN python3.10 -m venv venv && \
+          . venv/bin/activate && \
+          pip install --upgrade pip setuptools
+        ''',
+        'ENV PATH="/home/clouduser/venv/bin:${PATH}"',
+        'RUN ln -s /home/clouduser/venv/bin/pip /usr/bin/pip',
+
+        # Set up CUDA environment variables so that they appear BEFORE the virtualenv
+        # This is necessary because we install tensorflow[and-cuda] in the virtualenv
+        'ENV PATH="/usr/local/cuda-12.2/bin:${PATH}"',
+        'ENV CUDA_HOME="/usr/local/cuda-12.2"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/local/cuda-12.2/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
+        'ENV CUDNN_VERSION="8.9"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
+
+        'WORKDIR /workdir',
+        f'''COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          ./a2perf/metrics/reliability/requirements.txt''',
+        f'''
+        COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
+          ./a2perf/metrics/system/codecarbon/
+        ''',
+        f'''
+        COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
+          ./a2perf/domains/quadruped_locomotion/requirements.txt
+        ''',
+        f'''
+        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt \
+          ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt
+        ''',
+        f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
+        'RUN pip install -r ./requirements.txt',
+        'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
+        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt',
+        f'COPY {REPO_DIR} .',
+        'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
+        'RUN pip install /workdir',
+    ],
     'circuit_training': []
 }
 
@@ -178,7 +262,10 @@ ENTRYPOINT = {
         'su - clouduser',
         'python3.9 /workdir/launch/entrypoints/quadruped_locomotion.py',
     ]),
-    'web_navigation': xm.CommandList([]),
+    'web_navigation': xm.CommandList([
+        'su - clouduser',
+        'python3.10 /workdir/launch/entrypoints/web_navigation.py',
+    ]),
     'circuit_training': xm.CommandList([])
 }
 
@@ -194,7 +281,11 @@ ENV_VARS = {
                              'TF_GPU_THREAD_MODE': 'gpu_private',
                              'TF_USE_LEGACY_KERAS': '1'
                              },
-    'web_navigation': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
+    'web_navigation': {'WRAPT_DISABLE_EXTENSIONS': 'true',
+                       'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+                       'TF_GPU_THREAD_MODE': 'gpu_private',
+                       'TF_USE_LEGACY_KERAS': '1'
+                       },
     'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'}
 }
 
