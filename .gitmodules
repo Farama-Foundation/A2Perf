@@ -1,32 +1,29 @@
-[submodule "src/web_nav"]
+[submodule "web_navigation"]
 	path = a2perf/domains/web_navigation
     url = https://github.com/harvard-edge/web_nav.git
-[submodule "src/quadruped_locomotion"]
+    branch = main
+
+[submodule "quadruped_locomotion"]
 	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/harvard-edge/quadruped_locomotion.git
-	branch = origin/main
-[submodule "src/circuit_training"]
+    branch = main
+
+[submodule "circuit_training"]
 	path = a2perf/domains/circuit_training
     url = https://github.com/harvard-edge/circuit_training.git
-[submodule "rl_perf/rlperf_benchmark_submission"]
+    branch = main
+
+[submodule "a2perf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/harvard-edge/rlperf_benchmark_submission.git
-	branch = tf_agents
-[submodule "rl_perf/metrics/system/codecarbon"]
+    branch = tf_agents
+
+[submodule "codecarbon"]
 	path = a2perf/metrics/system/codecarbon
     url = https://github.com/harvard-edge/codecarbon.git
-	branch = main
-[submodule "reliability"]
-	url = https://github.com/harvard-edge/rl-reliability-metrics.git
-[submodule "rl_perf/metrics/reliability"]
+    branch = main
+
+[submodule "reliability_metrics"]
 	path = a2perf/metrics/reliability
 	url = https://github.com/harvard-edge/rl-reliability-metrics.git
-	branch = main
-[submodule "a2perf/a2perf_benchmark_submission"]
-	branch = locomotion_tf_agents
-[submodule "a2perf/domains/quadruped_locomotion"]
-	branch = main
-[submodule "a2perf/domains/web_navigation"]
-	branch = main
-[submodule "a2perf/domains/circuit_training"]
 	branch = main
