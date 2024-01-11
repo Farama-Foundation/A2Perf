@@ -39,6 +39,10 @@ _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_boolean(
     'run_offline_metrics_only', None, 'Run offline metrics only.'
 )
+_RB_CAPACITY = flags.DEFINE_integer(
+    'rb_capacity', None, 'Replay buffer capacity.'
+)
+
 _TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
     'timesteps_per_actorbatch', None, 'Timesteps per actor batch.'
 )
@@ -80,11 +84,13 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       _POLICY_CHECKPOINT_INTERVAL.value
   )
+  os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   os.environ['EVAL_INTERVAL'] = str(_EVAL_INTERVAL.value)
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
   os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
   os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-  # os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+  os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
+  os.environ['TF_USE_LEGACY_KERAS'] = '1'
   os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)

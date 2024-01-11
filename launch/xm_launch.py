@@ -71,71 +71,96 @@ REPO_DIR = os.path.basename(
 
 DOCKER_INSTRUCTIONS = {
     'quadruped_locomotion': [
-        'ARG APT_COMMAND="apt-get -o Acquire::Retries=3 --no-install-recommends -y"',
+        '''ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+          --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
-        'RUN ${APT_COMMAND} update && ' +
-        '${APT_COMMAND} install software-properties-common && ' +
-        'add-apt-repository ppa:deadsnakes/ppa && ' +
-        '${APT_COMMAND} update && ' +
-        '${APT_COMMAND} install '
-        'python3.9 ' +
-        'python3.9-dev ' +
-        'python3.9-venv ' +
-        'python3.9-distutils ' +
-        'wget ' +
-        'sudo ' +
-        'build-essential ' +
-        'ssh ' +
-        'openssh-server ' +
-        'libnss3 ' +
-        'unzip ' +
-        'x11-apps ' +
-        'libopenmpi-dev ' +
-        'x11-utils ' +
-        '&& rm -rf /var/lib/apt/lists/*',
+        '''
+        RUN ${APT_COMMAND} update && \
+          ${APT_COMMAND} install software-properties-common && \
+          add-apt-repository ppa:deadsnakes/ppa && \
+          ${APT_COMMAND} update && \
+          ${APT_COMMAND} install \
+          python3.9 \
+          python3.9-dev \
+          python3.9-venv \
+          python3.9-distutils \
+          wget \
+          sudo \
+          build-essential \
+          libnss3 \
+          unzip \
+          x11-apps \
+          libopenmpi-dev \
+          x11-utils \
+          && rm -rf /var/lib/apt/lists/*
+        ''',
 
-        # Now update libcudnn dependencies
-        # 'RUN ${APT_COMMAND} update && ${APT_COMMAND} install \
-        #   libcudnn8=8.9.6.50-1+cuda11.8 \
-        #   libcudnn8-dev=8.9.6.50-1+cuda11.8',
+        # Add TensorRT
+        '''
+        RUN ${APT_COMMAND} update && \
+          ${APT_COMMAND} install python3-libnvinfer-dev \
+          python3-libnvinfer''',
 
-        # Now update libcudnn dependencies
-        'RUN ${APT_COMMAND} update && ${APT_COMMAND} install --allow-downgrades --allow-change-held-packages \
-          libcudnn8=8.7.*-1+cuda11.8 \
-          libcudnn8-dev=8.7.*-1+cuda11.8',
+        # Install remaining CUDA dependencies
+        '''
+        RUN ${APT_COMMAND} update && \
+          ${APT_COMMAND} install \
+          cuda-nvcc-12-2 \
+          cuda-toolkit-12-2 \
+          cuda-libraries-12-2 \
+          cuda-libraries-dev-12-2 \
+          cuda-tools-12-2 \
+          cuda-command-line-tools-12-2 \
+          && rm -rf /var/lib/apt/lists/*
+        ''',
 
-        # Python
-        (
-            'RUN wget https://bootstrap.pypa.io/get-pip.py && python3.9 get-pip.py && rm get-pip.py'
-        ),
-        'RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1 && ' +
-        'update-alternatives --set python /usr/bin/python3.9',
-        (
-            'RUN echo "X11UseLocalhost no\\nX11DisplayOffset 10\\nPasswordAuthentication yes\\nPort 2020" >> /etc/ssh/sshd_config && mkdir /run/sshd'
-        ),
-        # (
-        #     f'RUN groupadd -g {os.getgid()} cloudgroup && if ! id {os.getuid()}; then'
-        #     f' useradd -m -u {os.getuid()} -G cloudgroup clouduser; fi'
-        # ),
-        'RUN echo "clouduser:password" | chpasswd && ' +
-        ' echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'RUN mkdir -p /home/clouduser/.ssh && ' +
-        ' chmod 700 /home/clouduser/.ssh && ' +
-        ' touch /home/clouduser/.ssh/authorized_keys && ' +
-        ' chmod 600 /home/clouduser/.ssh/authorized_keys',
+        '''
+        RUN wget https://bootstrap.pypa.io/get-pip.py && \
+          python3.9 get-pip.py && \
+          rm get-pip.py
+        ''',
+        '''
+        RUN update-alternatives --install /usr/bin/python \
+          python /usr/bin/python3.9 1 && update-alternatives --set python \
+          /usr/bin/python3.9 \
+          && rm -rf /var/lib/apt/lists/*
+        ''',
+        '''
+        RUN echo "clouduser:password" | chpasswd && \
+          echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+        ''',
         'WORKDIR /home/clouduser',
-        'RUN python3.9 -m venv venv && ' +
-        '. venv/bin/activate && ' +
-        'pip install --upgrade pip setuptools ',
+        '''
+        RUN python3.9 -m venv venv && \
+          . venv/bin/activate && \
+          pip install --upgrade pip setuptools
+        ''',
         'ENV PATH="/home/clouduser/venv/bin:${PATH}"',
-        'ENV PATH="/usr/local/cuda/bin:${PATH}"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"',
         'RUN ln -s /home/clouduser/venv/bin/pip /usr/bin/pip',
+
+        # Set up CUDA environment variables so that they appear BEFORE the virtualenv
+        # This is necessary because we install tensorflow[and-cuda] in the virtualenv
+        'ENV PATH="/usr/local/cuda-12.2/bin:${PATH}"',
+        'ENV CUDA_HOME="/usr/local/cuda-12.2"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/local/cuda-12.2/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
+        'ENV CUDNN_VERSION="8.9"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
+
         'WORKDIR /workdir',
-        f'COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt ./a2perf/metrics/reliability/requirements.txt',
-        f'COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt ./a2perf/metrics/system/codecarbon/',
-        f'COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt ./a2perf/domains/quadruped_locomotion/requirements.txt',
-        f'COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt',
+        f'''COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          ./a2perf/metrics/reliability/requirements.txt''',
+        f'''
+        COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
+          ./a2perf/metrics/system/codecarbon/
+        ''',
+        f'''
+        COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
+          ./a2perf/domains/quadruped_locomotion/requirements.txt
+        ''',
+        f'''
+        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt \
+          ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt
+        ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
         'RUN pip install -r ./requirements.txt',
         'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
@@ -150,9 +175,6 @@ DOCKER_INSTRUCTIONS = {
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        'service ssh start',
-        'service dbus start',
-        # change user
         'su - clouduser',
         'python3.9 /workdir/launch/entrypoints/quadruped_locomotion.py',
     ]),
@@ -161,14 +183,17 @@ ENTRYPOINT = {
 }
 
 BASE_IMAGE = {
-    'quadruped_locomotion': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
-    # 'quadruped_locomotion': 'us-docker.pkg.dev/deeplearning-platform-release/gcr.io/base-cu113.py310',
-    'web_navigation': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
-    'circuit_training': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04'
+    'quadruped_locomotion': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
+    'web_navigation': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
+    'circuit_training': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
 }
 
 ENV_VARS = {
-    'quadruped_locomotion': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
+    'quadruped_locomotion': {'WRAPT_DISABLE_EXTENSIONS': 'true',
+                             'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+                             'TF_GPU_THREAD_MODE': 'gpu_private',
+                             'TF_USE_LEGACY_KERAS': '1'
+                             },
     'web_navigation': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
     'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'}
 }
@@ -193,39 +218,68 @@ def get_next_experiment_number(host_dir_base):
   return f"{last_exp_num + 1:04d}"
 
 
-def get_hparam_sweeps(domain, debug):
+def get_hparam_sweeps(domain, algo, debug):
   if domain == 'quadruped_locomotion':
-    if debug:
-      # Debug mode: simpler hyperparameters for faster iteration
-      hyperparameters = {
-          'batch_size': [32],
-          'num_epochs': [1],
-          'env_batch_size': [32],
-          'total_env_steps': [100000],
-          'learning_rate': [3e-4],
-          'eval_interval': [1000],
-          'train_checkpoint_interval': [10000],
-          'policy_checkpoint_interval': [10000],
-          'log_interval': [1000],
-          'entropy_regularization': [0.05],
-          'timesteps_per_actorbatch': [4096]
-      }
+    if algo == 'ppo':
+      if debug:
+        hyperparameters = {
+            'batch_size': [32],
+            'num_epochs': [1],
+            'env_batch_size': [4],
+            'total_env_steps': [100000],
+            'learning_rate': [1e-4],
+            'eval_interval': [1000],
+            'train_checkpoint_interval': [10000],
+            'policy_checkpoint_interval': [10000],
+            'log_interval': [100],
+            'timesteps_per_actorbatch': [256],
+        }
+      else:
+        hyperparameters = {
+            'batch_size': [32],
+            'num_epochs': [10],
+            'env_batch_size': [32],
+            'total_env_steps': [200000000],
+            'learning_rate': [1e-4],
+            'eval_interval': [1000],
+            'train_checkpoint_interval': [1000000],
+            'policy_checkpoint_interval': [1000000],
+            'log_interval': [1000],
+            'entropy_regularization': [1e-4],
+            'timesteps_per_actorbatch': [4096],
+        }
+    elif algo == 'sac':
+      if debug:
+        hyperparameters = {
+            'batch_size': [32],
+            'env_batch_size': [4],
+            'total_env_steps': [100000],
+            'learning_rate': [3e-4],
+            'eval_interval': [1000],
+            'train_checkpoint_interval': [10000],
+            'policy_checkpoint_interval': [10000],
+            'log_interval': [100],
+            'timesteps_per_actorbatch': [256],
+            'rb_capacity': [100000],
+        }
+      else:
+        # Normal mode: more extensive range of hyperparameters
+        hyperparameters = {
+            'batch_size': [32],
+            'num_epochs': [10],
+            'env_batch_size': [32],
+            'total_env_steps': [200000000],
+            'learning_rate': [1e-5],
+            'eval_interval': [1000],
+            'train_checkpoint_interval': [1000000],
+            'policy_checkpoint_interval': [1000000],
+            'log_interval': [1000],
+            'timesteps_per_actorbatch': [4096],
+            'rb_capacity': [10000000],
+        }
     else:
-      # Normal mode: more extensive range of hyperparameters
-      hyperparameters = {
-          'batch_size': [32],
-          'num_epochs': [10],
-          'env_batch_size': [32],
-          'total_env_steps': [200000000],
-          'learning_rate': [1e-5],
-          'eval_interval': [1000],
-          'train_checkpoint_interval': [1000000],
-          'policy_checkpoint_interval': [1000000],
-          'log_interval': [1000],
-          'entropy_regularization': [1e-4],
-          'timesteps_per_actorbatch': [4096]
-      }
-
+      raise ValueError(
+          f"Environment {domain} does not support algorithm {algo}")
     # Generate all combinations of hyperparameters
     keys, values = zip(*hyperparameters.items())
     hparam_sweeps = [dict(zip(keys, v)) for v in itertools.product(*values)]
@@ -239,8 +293,6 @@ def get_hparam_sweeps(domain, debug):
 def main(_):
   with xm_local.create_experiment(
       experiment_title=_EXPERIMENT_NAME.value) as experiment:
-    hparam_sweeps = get_hparam_sweeps(_DOMAIN.value, _DEBUG.value)
-
     # Define Executor
     executor = xm_local.Local(
         requirements=xm.JobRequirements(
@@ -265,12 +317,13 @@ def main(_):
             docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
             entrypoint=ENTRYPOINT[_DOMAIN.value],
             env_vars=ENV_VARS[_DOMAIN.value],
-        ),
-    ])
+        )])
 
-    for i, hparam_config in enumerate(hparam_sweeps):
-      for seed in _SEEDS.value:
-        for algo in _ALGOS.value:
+    for algo in _ALGOS.value:
+      hparam_sweeps = get_hparam_sweeps(domain=_DOMAIN.value, algo=algo,
+                                        debug=_DEBUG.value)
+      for i, hparam_config in enumerate(hparam_sweeps):
+        for seed in _SEEDS.value:
           for task in _TASKS.value:
             skill_levels = _SKILL_LEVELS.value
             if not skill_levels:
