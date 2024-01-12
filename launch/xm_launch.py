@@ -1,3 +1,28 @@
+"""Launches experiments for the A2Perf benchmark.
+
+Example usage:
+
+  Quadruped Locomotion:
+    xmanager launch launch/xm_launch.py -- \
+    --domain=quadruped_locomotion \
+    --seeds=4 \
+    --algos=sac \
+    --tasks=dog_pace \
+    --mode=train \
+    --root_dir=~/gcs # Be sure to make this folder first
+
+  Web Navigation:
+    xmanager launch launch/xm_launch.py -- \
+    --domain=web_navigation \
+    --seeds=4 \
+    --algos=sac_lstm \
+    --tasks=1 \
+    --num_websites=1 \
+    --mode=train \
+    --root_dir=~/gcs \
+    --debug
+"""
+
 import itertools
 import os
 
@@ -54,6 +79,7 @@ _EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
     [],
     'Extra gin bindings to add to the default bindings',
 )
+_NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
 _ALGOS = flags.DEFINE_list(
     'algos',
     ['ppo'],
@@ -61,6 +87,7 @@ _ALGOS = flags.DEFINE_list(
 _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
                                          'Experiment number')
 _TASKS = flags.DEFINE_list('tasks', None, 'Tasks to run')
+_NUM_WEBSITES = flags.DEFINE_list('num_websites', None, 'Number of websites')
 _SEEDS = flags.DEFINE_list('seeds', None, 'Seeds to run')
 _MODE = flags.DEFINE_enum('mode', 'train', ['train', 'inference'],
                           'Mode of execution')
@@ -100,19 +127,6 @@ DOCKER_INSTRUCTIONS = {
         RUN ${APT_COMMAND} update && \
           ${APT_COMMAND} install python3-libnvinfer-dev \
           python3-libnvinfer''',
-
-        # Install remaining CUDA dependencies
-        '''
-        RUN ${APT_COMMAND} update && \
-          ${APT_COMMAND} install \
-          cuda-nvcc-12-2 \
-          cuda-toolkit-12-2 \
-          cuda-libraries-12-2 \
-          cuda-libraries-dev-12-2 \
-          cuda-tools-12-2 \
-          cuda-command-line-tools-12-2 \
-          && rm -rf /var/lib/apt/lists/*
-        ''',
 
         '''
         RUN wget https://bootstrap.pypa.io/get-pip.py && \
@@ -189,8 +203,9 @@ DOCKER_INSTRUCTIONS = {
           libnss3 \
           unzip \
           x11-apps \
-          libopenmpi-dev \
           x11-utils \
+          dbus  \
+          dbus-x11 \
           && rm -rf /var/lib/apt/lists/*
         ''',
 
@@ -209,6 +224,16 @@ DOCKER_INSTRUCTIONS = {
           python /usr/bin/python3.10 1 && update-alternatives --set python \
           /usr/bin/python3.10 \
           && rm -rf /var/lib/apt/lists/*
+        ''',
+
+        # Chrome Installation
+        'ARG CHROME_VERSION="120.0.6099.216-1"',
+        '''
+        RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}_amd64.deb && \
+          ${APT_COMMAND} update && \
+          ${APT_COMMAND} --fix-broken install && \
+          ${APT_COMMAND} install /tmp/chrome.deb xvfb && \
+          rm /tmp/chrome.deb
         ''',
         '''
         RUN echo "clouduser:password" | chpasswd && \
@@ -239,17 +264,21 @@ DOCKER_INSTRUCTIONS = {
           ./a2perf/metrics/system/codecarbon/
         ''',
         f'''
-        COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
-          ./a2perf/domains/quadruped_locomotion/requirements.txt
+        COPY {REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
+          ./a2perf/domains/web_navigation/requirements.txt
         ''',
         f'''
-        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt \
-          ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt
+        COPY {REPO_DIR}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
+          ./a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt 
+        ''',
+        f'''
+        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/web_navigation/ppo_lstm/requirements.txt \
+          ./a2perf/a2perf_benchmark_submission/web_navigation/ppo_lstm/requirements.txt
         ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
         'RUN pip install -r ./requirements.txt',
-        'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
-        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt',
+        'RUN pip install -r ./a2perf/domains/web_navigation/requirements.txt',
+        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/web_navigation/ppo_lstm/requirements.txt',
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
         'RUN pip install /workdir',
@@ -260,11 +289,12 @@ DOCKER_INSTRUCTIONS = {
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
         'su - clouduser',
-        'python3.9 /workdir/launch/entrypoints/quadruped_locomotion.py',
+        'python3.9 /workdir/launch/entrypoint.py',
     ]),
     'web_navigation': xm.CommandList([
+        'service dbus start',  # For Google Chrome
         'su - clouduser',
-        'python3.10 /workdir/launch/entrypoints/web_navigation.py',
+        'python3.10 /workdir/launch/entrypoint.py',
     ]),
     'circuit_training': xm.CommandList([])
 }
@@ -274,7 +304,11 @@ BASE_IMAGE = {
     'web_navigation': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
     'circuit_training': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
 }
-
+PYTHON_VERSION = {
+    'quadruped_locomotion': '3.9',
+    'web_navigation': '3.10',
+    'circuit_training': '3.9',
+}
 ENV_VARS = {
     'quadruped_locomotion': {'WRAPT_DISABLE_EXTENSIONS': 'true',
                              'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
@@ -309,15 +343,13 @@ def get_next_experiment_number(host_dir_base):
   return f"{last_exp_num + 1:04d}"
 
 
-import itertools
-
-
 def get_hparam_sweeps(domain, algo, debug):
   if domain == 'quadruped_locomotion':
     general_hyperparameters = {
         'batch_size': [32],
         'eval_interval': [100],
-        'log_interval': [100]}
+        'log_interval': [100],
+    }
 
     if debug:
       general_hyperparameters.update({
@@ -328,15 +360,16 @@ def get_hparam_sweeps(domain, algo, debug):
           'timesteps_per_actorbatch': [256],
       })
 
-      ppo_hyperparameters = {
-          'num_epochs': [1],
-          'learning_rate': [3e-4],
-          'entropy_regularization': [1e-4],
-      }
-
-      sac_hyperparameters = {
-          'learning_rate': [3e-4],
-          'rb_capacity': [100000],
+      algo_hyperparameters = {
+          'ppo': {
+              'num_epochs': [1],
+              'learning_rate': [3e-4],
+              'entropy_regularization': [1e-4],
+          },
+          'sac': {
+              'learning_rate': [3e-4],
+              'rb_capacity': [100000],
+          },
       }
     else:
       general_hyperparameters.update({
@@ -346,32 +379,76 @@ def get_hparam_sweeps(domain, algo, debug):
           'policy_checkpoint_interval': [1000000],
           'timesteps_per_actorbatch': [4096],
       })
-      ppo_hyperparameters = {
-          'entropy_regularization': [1e-4],
-          'learning_rate': [3e-4],
-          'num_epochs': [10],
+
+      algo_hyperparameters = {
+          'ppo': {
+              'entropy_regularization': [1e-4],
+              'learning_rate': [3e-4],
+              'num_epochs': [10],
+          },
+          'sac': {
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+          },
       }
-      sac_hyperparameters = {
-          'learning_rate': [3e-4],
-          'rb_capacity': [10000000],
+  elif domain == 'web_navigation':
+    general_hyperparameters = {
+        'batch_size': [32],
+        'eval_interval': [100],
+        'log_interval': [100],
+    }
+
+    if debug:
+      general_hyperparameters.update({
+          'difficulty_level': [1],
+          'num_websites': [1],
+          'env_batch_size': [4],
+          'total_env_steps': [1000000],
+          'train_checkpoint_interval': [10000],
+          'policy_checkpoint_interval': [10000],
+          'timesteps_per_actorbatch': [256],
+      })
+
+      algo_hyperparameters = {
+          'ppo_lstm': {
+              'num_epochs': [1],
+              'learning_rate': [3e-4],
+              'entropy_regularization': [1e-4],
+          },
+          'sac_lstm': {
+              'learning_rate': [3e-4],
+              'rb_capacity': [50000],
+          },
+      }
+    else:
+      general_hyperparameters.update({
+          'difficulty_level': [1],
+          'num_websites': [10],
+          'env_batch_size': [8],
+          'total_env_steps': [200000000],
+          'train_checkpoint_interval': [1000000],
+          'policy_checkpoint_interval': [1000000],
+          'timesteps_per_actorbatch': [4096],
+      })
+
+      algo_hyperparameters = {
+          'ppo_lstm': {
+              'entropy_regularization': [1e-4],
+              'learning_rate': [3e-4],
+              'num_epochs': [10],
+          },
+          'sac_lstm': {
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+          },
       }
 
-    # Use the `algo` argument to determine which hyperparameters to use
-    if algo == 'ppo':
-      algo_specific_hyperparameters = ppo_hyperparameters
-    elif algo == 'sac':
-      algo_specific_hyperparameters = sac_hyperparameters
-    else:
-      raise ValueError(f'Domain {domain} does not support algorithm {algo}')
-  elif domain == 'web_navigation':
-    general_hyperparameters = {}
-    algo_specific_hyperparameters = {}
   else:
     raise ValueError(f"Unknown domain: {domain}")
 
   # Combine general and algorithm-specific hyperparameters
   hyperparameters = {**general_hyperparameters,
-                     **algo_specific_hyperparameters}
+                     **algo_hyperparameters[algo]}
 
   # Generate all combinations of hyperparameters
   keys, values = zip(*hyperparameters.items())
@@ -386,7 +463,7 @@ def main(_):
     executor = xm_local.Local(
         requirements=xm.JobRequirements(
             resources={
-                xm.ResourceType.LOCAL_GPU: 8,
+                xm.ResourceType.LOCAL_GPU: _NUM_GPUS.value,
             },
         ),
         docker_options=xm_local.DockerOptions(
@@ -424,6 +501,8 @@ def main(_):
                   seed=seed,
                   algo=algo,
                   task=task,
+                  python_version=PYTHON_VERSION[_DOMAIN.value],
+                  domain=_DOMAIN.value,
                   mode=_MODE.value,
                   dataset_id=dataset_id,
                   skill_level=skill_level,
@@ -465,6 +544,8 @@ def main(_):
                     motion_file_path=os.path.join(
                         '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
                         task + '.txt'), ))
+              elif _DOMAIN.value == 'web_navigation':
+                hparam_config.update(dict(use_xvfb=True))
 
               experiment.add(xm.Job(
                   args=hparam_config,

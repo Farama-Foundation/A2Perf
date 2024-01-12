@@ -4,22 +4,29 @@ import subprocess
 from absl import app
 from absl import flags
 
+_PYTHON_VERSION = flags.DEFINE_string(
+    'python_version', None, 'Python version to use.'
+)
 
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debugging mode')
 _DOMAIN = flags.DEFINE_enum(
     'domain',
     None,
-    ['quadruped_locomotion'],
+    ['quadruped_locomotion', 'web_navigation', 'circuit_training'],
     'Domain to run.',
 )
 _SEED = flags.DEFINE_integer('seed', None, 'Global seed.')
 _ENV_BATCH_SIZE = flags.DEFINE_integer(
     'env_batch_size', None, 'Number of environments to run in parallel.'
 )
+_EPSILON_GREEDY = flags.DEFINE_float(
+    'epsilon_greedy', None, 'Epsilon greedy value.'
+)
 _NUM_EPOCHS = flags.DEFINE_integer('num_epochs', None, 'Number of epochs.')
 _TOTAL_ENV_STEPS = flags.DEFINE_integer(
     'total_env_steps', None, 'Total steps in the environment.'
 )
+_USE_XVFB = flags.DEFINE_boolean('use_xvfb', False, 'Use xvfb.')
 _MOTION_FILE_PATH = flags.DEFINE_string(
     'motion_file_path', None, 'Motion file path.'
 )
@@ -31,7 +38,16 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     'Skill level of the expert.',
 )
 _TASK = flags.DEFINE_enum(
-    'task', None, ['dog_pace', 'dog_trot', 'dog_spin'], 'Task to run.'
+    'task', None, [
+        # Quadruped locomotion tasks.
+        'dog_pace', 'dog_trot', 'dog_spin',
+
+        # Web navigation tasks.
+        '1', '2', '3',
+
+        # Circuit training tasks.
+        'ariane133',
+    ], 'Task to run.'
 )
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
 _MODE = flags.DEFINE_string('mode', None, 'Mode of execution.')
@@ -67,13 +83,21 @@ _ENTROPY_REGULARIZATION = flags.DEFINE_float(
 )
 _DATASET_ID = flags.DEFINE_string('dataset_id', None, 'Dataset ID.')
 
+_NUM_WEBSITES = flags.DEFINE_integer('num_websites', None,
+                                     'Number of websites for web navigation.')
+_DIFFICULTY_LEVEL = flags.DEFINE_enum(
+    'difficulty_level',
+    None,
+    ['1', '2', '3'],
+    'Difficulty level for web navigation.',
+)
+
 
 def main(_):
   os.environ['SEED'] = str(_SEED.value)
   os.environ['ENV_BATCH_SIZE'] = str(_ENV_BATCH_SIZE.value)
   os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
   os.environ['TOTAL_ENV_STEPS'] = str(_TOTAL_ENV_STEPS.value)
-  os.environ['MOTION_FILE_PATH'] = _MOTION_FILE_PATH.value
   os.environ['ALGO'] = _ALGO.value
   os.environ['SKILL_LEVEL'] = _SKILL_LEVEL.value
   os.environ['TASK'] = _TASK.value
@@ -94,16 +118,26 @@ def main(_):
   os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   os.environ['EVAL_INTERVAL'] = str(_EVAL_INTERVAL.value)
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
-  os.environ['WRAPT_DISABLE_EXTENSIONS'] = 'true'
-  os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
-  os.environ['TF_GPU_THREAD_MODE'] = 'gpu_private'
-  os.environ['TF_USE_LEGACY_KERAS'] = '1'
   os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
+
+  if _DOMAIN.value == 'quadruped_locomotion':
+    os.environ['DOMAIN'] = 'quadruped_locomotion'
+    os.environ['MOTION_FILE_PATH'] = _MOTION_FILE_PATH.value
+  elif _DOMAIN.value == 'web_navigation':
+    os.environ['DOMAIN'] = 'web_navigation'
+    os.environ['NUM_WEBSITES'] = str(_NUM_WEBSITES.value)
+    os.environ['DIFFICULTY_LEVEL'] = _DIFFICULTY_LEVEL.value
+  elif _DOMAIN.value == 'circuit_training':
+    os.environ['DOMAIN'] = 'circuit_training'
+  else:
+    raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
+
   command = (
-      'python3.9 a2perf/submission/main_submission.py '
+      ('xvfb-run ' if _USE_XVFB.value else '') +
+      f'python{_PYTHON_VERSION.value} a2perf/submission/main_submission.py '
       f'--gin_config={_GIN_CONFIG.value} '
       f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value} '
       f'--root_dir={_ROOT_DIR.value} '
