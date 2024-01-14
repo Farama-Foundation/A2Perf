@@ -45,6 +45,9 @@ _TRAIN_LOGS_DIRS = flags.DEFINE_multi_string(
     ['train'],
     'Directory patterns fr train logs that will be used to calculate reliability metrics. Should be glob patterns',
 )
+_DIFFICULTY_LEVELS = flags.DEFINE_list(
+    'difficulty_levels', None, 'Difficulty levels to run'
+)
 _DOMAIN = flags.DEFINE_enum(
     'domain',
     'quadruped_locomotion',
@@ -86,8 +89,8 @@ _ALGOS = flags.DEFINE_list(
     'Algorithms to run. If multiple are specified, they will be run in sequence', )
 _EXPERIMENT_NUMBER = flags.DEFINE_string('experiment_number', None,
                                          'Experiment number')
-_TASKS = flags.DEFINE_list('tasks', None, 'Tasks to run')
 _NUM_WEBSITES = flags.DEFINE_list('num_websites', None, 'Number of websites')
+_MOTION_FILES = flags.DEFINE_list('motion_files', None, 'Motion files to run')
 _SEEDS = flags.DEFINE_list('seeds', None, 'Seeds to run')
 _MODE = flags.DEFINE_enum('mode', 'train', ['train', 'inference'],
                           'Mode of execution')
@@ -154,11 +157,11 @@ DOCKER_INSTRUCTIONS = {
 
         # Set up CUDA environment variables so that they appear BEFORE the virtualenv
         # This is necessary because we install tensorflow[and-cuda] in the virtualenv
-        'ENV PATH="/usr/local/cuda-12.2/bin:${PATH}"',
-        'ENV CUDA_HOME="/usr/local/cuda-12.2"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/local/cuda-12.2/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
-        'ENV CUDNN_VERSION="8.9"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
+        'ENV PATH="/usr/local/cuda-11.8/bin:${PATH}"',
+        'ENV CUDA_HOME="/usr/local/cuda-11.8"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/local/cuda-11.8/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
+        'ENV CUDNN_VERSION="8.7"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
 
         'WORKDIR /workdir',
         f'''COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
@@ -250,11 +253,11 @@ DOCKER_INSTRUCTIONS = {
 
         # Set up CUDA environment variables so that they appear BEFORE the virtualenv
         # This is necessary because we install tensorflow[and-cuda] in the virtualenv
-        'ENV PATH="/usr/local/cuda-12.2/bin:${PATH}"',
-        'ENV CUDA_HOME="/usr/local/cuda-12.2"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/local/cuda-12.2/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
-        'ENV CUDNN_VERSION="8.9"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-12.2/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
+        'ENV PATH="/usr/local/cuda-11.8/bin:${PATH}"',
+        'ENV CUDA_HOME="/usr/local/cuda-11.8"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/local/cuda-11.8/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
+        'ENV CUDNN_VERSION="8.7"',
+        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
 
         'WORKDIR /workdir',
         f'''COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
@@ -300,9 +303,9 @@ ENTRYPOINT = {
 }
 
 BASE_IMAGE = {
-    'quadruped_locomotion': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
-    'web_navigation': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
-    'circuit_training': 'nvidia/cuda:12.2.2-cudnn8-devel-ubuntu20.04',
+    'quadruped_locomotion': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
+    'web_navigation': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
+    'circuit_training': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
 }
 PYTHON_VERSION = {
     'quadruped_locomotion': '3.9',
@@ -400,8 +403,6 @@ def get_hparam_sweeps(domain, algo, debug):
 
     if debug:
       general_hyperparameters.update({
-          'difficulty_level': [1],
-          'num_websites': [1],
           'env_batch_size': [4],
           'total_env_steps': [1000000],
           'train_checkpoint_interval': [10000],
@@ -422,8 +423,6 @@ def get_hparam_sweeps(domain, algo, debug):
       }
     else:
       general_hyperparameters.update({
-          'difficulty_level': [1],
-          'num_websites': [10],
           'env_batch_size': [8],
           'total_env_steps': [200000000],
           'train_checkpoint_interval': [1000000],
@@ -490,7 +489,19 @@ def main(_):
                                         debug=_DEBUG.value)
       for i, hparam_config in enumerate(hparam_sweeps):
         for seed in _SEEDS.value:
-          for task in _TASKS.value:
+          # Build the tasks depending on the domain
+          tasks = []
+
+          if _DOMAIN.value == 'quadruped_locomotion':
+            tasks = _MOTION_FILES.value
+          elif _DOMAIN.value == 'web_navigation':
+            # permutation of num websites and difficulty level
+            # so task will be of the form difficulty_0_num_websites_0 for example
+            tasks = [f'difficulty_{difficulty}_num_websites_{num_websites}' for
+                     difficulty in _DIFFICULTY_LEVELS.value for num_websites in
+                     _NUM_WEBSITES.value]
+
+          for task in tasks:
             skill_levels = _SKILL_LEVELS.value
             if not skill_levels:
               skill_levels = ['novice']
@@ -545,7 +556,12 @@ def main(_):
                         '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
                         task + '.txt'), ))
               elif _DOMAIN.value == 'web_navigation':
-                hparam_config.update(dict(use_xvfb=True))
+                hparam_config.update(dict(use_xvfb=True, ))
+                for difficulty_level in _DIFFICULTY_LEVELS.value:
+                  for num_websites in _NUM_WEBSITES.value:
+                    hparam_config.update(dict(
+                        difficulty_level=difficulty_level,
+                        num_websites=num_websites, ))
 
               experiment.add(xm.Job(
                   args=hparam_config,
