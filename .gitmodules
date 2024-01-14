@@ -1,24 +1,24 @@
-[submodule "web_navigation"]
+[submodule "a2perf/domains/web_navigation"]
 	path = a2perf/domains/web_navigation
     url = https://github.com/harvard-edge/web_nav.git
     branch = main
 
-[submodule "quadruped_locomotion"]
+[submodule "a2perf/domains/quadruped_locomotion"]
 	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/harvard-edge/quadruped_locomotion.git
     branch = main
 
-[submodule "circuit_training"]
+[submodule "a2perf/domains/circuit_training"]
 	path = a2perf/domains/circuit_training
     url = https://github.com/harvard-edge/circuit_training.git
     branch = main
 
-[submodule "a2perf_benchmark_submission"]
+[submodule "a2perf/a2perf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/harvard-edge/rlperf_benchmark_submission.git
-    branch = tf_agents
+	branch = web_tf_agents
 
-[submodule "codecarbon"]
+[submodule "a2perf/metrics/system/codecarbon"]
 	path = a2perf/metrics/system/codecarbon
     url = https://github.com/harvard-edge/codecarbon.git
     branch = main
