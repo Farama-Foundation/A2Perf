@@ -21,6 +21,10 @@ setup(
             # Include designs for creating web navigation environments
             'domains/web_navigation/environment_generation/data/difficulty_levels.zip',
 
+            # Include base gminiwob directory with html and css files
+            'domains/web_navigation/gwob/gminiwob/*',
+            'domains/web_navigation/gwob/gminiwob/images/*',
+            
             # Include all the motion files for the quadruped locomotion domain
             'domains/quadruped_locomotion/motion_imitation/data/motions/*.txt',
 

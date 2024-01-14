@@ -7,6 +7,18 @@ from absl import flags
 _PYTHON_VERSION = flags.DEFINE_string(
     'python_version', None, 'Python version to use.'
 )
+_MAX_VOCAB_SIZE = flags.DEFINE_integer(
+    'max_vocab_size', None, 'Max vocab size for web navigation.'
+)
+_LATENT_DIM = flags.DEFINE_integer(
+    'latent_dim', None, 'Latent dimension for web navigation.'
+)
+_EMBEDDING_DIM = flags.DEFINE_integer(
+    'embedding_dim', None, 'Embedding dimension for web navigation.'
+)
+_PROFILE_VALUE_DROPOUT = flags.DEFINE_float(
+    'profile_value_dropout', None, 'Profile value dropout for web navigation.'
+)
 
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debugging mode')
 _DOMAIN = flags.DEFINE_enum(
@@ -37,18 +49,7 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     ['novice', 'intermediate', 'expert'],
     'Skill level of the expert.',
 )
-_TASK = flags.DEFINE_enum(
-    'task', None, [
-        # Quadruped locomotion tasks.
-        'dog_pace', 'dog_trot', 'dog_spin',
-
-        # Web navigation tasks.
-        '1', '2', '3',
-
-        # Circuit training tasks.
-        'ariane133',
-    ], 'Task to run.'
-)
+_TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
 _MODE = flags.DEFINE_string('mode', None, 'Mode of execution.')
 _LEARNING_RATE = flags.DEFINE_float('learning_rate', None, 'Learning rate.')
@@ -122,6 +123,12 @@ def main(_):
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
+  os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
+  os.environ['PYTHON_VERSION'] = _PYTHON_VERSION.value
+  os.environ['MAX_VOCAB_SIZE'] = str(_MAX_VOCAB_SIZE.value)
+  os.environ['LATENT_DIM'] = str(_LATENT_DIM.value)
+  os.environ['EMBEDDING_DIM'] = str(_EMBEDDING_DIM.value)
+  os.environ['PROFILE_VALUE_DROPOUT'] = str(_PROFILE_VALUE_DROPOUT.value)
 
   if _DOMAIN.value == 'quadruped_locomotion':
     os.environ['DOMAIN'] = 'quadruped_locomotion'
@@ -137,7 +144,7 @@ def main(_):
 
   command = (
       ('xvfb-run ' if _USE_XVFB.value else '') +
-      f'python{_PYTHON_VERSION.value} a2perf/submission/main_submission.py '
+      f'python{_PYTHON_VERSION.value} -u a2perf/submission/main_submission.py '
       f'--gin_config={_GIN_CONFIG.value} '
       f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value} '
       f'--root_dir={_ROOT_DIR.value} '
@@ -156,4 +163,9 @@ def main(_):
 
 
 if __name__ == '__main__':
+  # Mark the main flags as required
+  flags.mark_flags_as_required([_DOMAIN.name,
+                                _TASK.name,
+                                _ALGO.name,
+                                _SKILL_LEVEL.name], )
   app.run(main)

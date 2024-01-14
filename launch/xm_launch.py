@@ -209,6 +209,8 @@ DOCKER_INSTRUCTIONS = {
           x11-utils \
           dbus  \
           dbus-x11 \
+          libreadline-dev \
+          less \
           && rm -rf /var/lib/apt/lists/*
         ''',
 
@@ -230,7 +232,8 @@ DOCKER_INSTRUCTIONS = {
         ''',
 
         # Chrome Installation
-        'ARG CHROME_VERSION="120.0.6099.216-1"',
+        'ARG CHROME_VERSION="114.0.5735.90-1"',
+        'ARG CHROMEDRIVER_VERSION="114.0.5735.90"',
         '''
         RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}_amd64.deb && \
           ${APT_COMMAND} update && \
@@ -238,6 +241,28 @@ DOCKER_INSTRUCTIONS = {
           ${APT_COMMAND} install /tmp/chrome.deb xvfb && \
           rm /tmp/chrome.deb
         ''',
+        # [OPTIONAL] Some cloud images block internet access, so download chromedriver before experiment launch
+        # webdriver-manager package expects the drivers to be in /home/user/.wdm folder. ('/home/user/.wdm/drivers/chromedriver/linux64/120.0.6099.109/chromedriver-linux64/chromedriver')
+        # We also need to create a JSON entry for the driver like this
+        # {
+        #    "linux64_chromedriver_120.0.6099.109_for_120.0.6099": {
+        #        "timestamp": "29/12/2023",
+        #        "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/120.0.6099.109/chromedriver-linux64/chromedriver"
+        #    }
+        # }
+        '''
+        RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
+            wget --no-verbose -O /tmp/chromedriver_linux64.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip && \
+            unzip -o /tmp/chromedriver_linux64.zip -d /tmp/ && \
+            mkdir -p /home/clouduser/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
+            mv /tmp/chromedriver /home/clouduser/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
+            rm /tmp/chromedriver_linux64.zip && \
+            printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/clouduser/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/clouduser/.wdm/drivers.json && \
+            chmod -R 777 /home/clouduser/.wdm
+        ''',
+
+        # Also add it to /root/.wdm
+        '''RUN cp -r /home/clouduser/.wdm /root/''',
         '''
         RUN echo "clouduser:password" | chpasswd && \
           echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
@@ -285,20 +310,20 @@ DOCKER_INSTRUCTIONS = {
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
         'RUN pip install /workdir',
+
     ],
     'circuit_training': []
 }
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        'su - clouduser',
-        'python3.9 /workdir/launch/entrypoint.py',
+        'python3.9 -u /workdir/launch/entrypoint.py',
     ]),
     'web_navigation': xm.CommandList([
-        'service dbus start',  # For Google Chrome
-        'su - clouduser',
-        'python3.10 /workdir/launch/entrypoint.py',
+        'service dbus start',
+        'python3.10 -u /workdir/launch/entrypoint.py'
     ]),
+
     'circuit_training': xm.CommandList([])
 }
 
@@ -396,7 +421,6 @@ def get_hparam_sweeps(domain, algo, debug):
       }
   elif domain == 'web_navigation':
     general_hyperparameters = {
-        'batch_size': [32],
         'eval_interval': [100],
         'log_interval': [100],
     }
@@ -412,11 +436,16 @@ def get_hparam_sweeps(domain, algo, debug):
 
       algo_hyperparameters = {
           'ppo_lstm': {
+              'algo': ['ppo_lstm'],
+              'batch_size': [32],
               'num_epochs': [1],
               'learning_rate': [3e-4],
               'entropy_regularization': [1e-4],
           },
-          'sac_lstm': {
+          'ddqn_lstm': {
+              'algo': ['ddqn_lstm'],
+              'batch_size': [512],
+              'epsilon_greedy': [0.1],
               'learning_rate': [3e-4],
               'rb_capacity': [50000],
           },
@@ -432,15 +461,22 @@ def get_hparam_sweeps(domain, algo, debug):
 
       algo_hyperparameters = {
           'ppo_lstm': {
+              'algo': ['ppo_lstm'],
+              'batch_size': [32],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
               'num_epochs': [10],
           },
-          'sac_lstm': {
+          'ddqn_lstm': {
+              'algo': ['ddqn_lstm'],
+              'batch_size': [512],
               'learning_rate': [3e-4],
+              'epsilon_greedy': [0.1],
               'rb_capacity': [10000000],
           },
       }
+  elif domain == 'circuit_training':
+    pass
 
   else:
     raise ValueError(f"Unknown domain: {domain}")
@@ -546,9 +582,7 @@ def main(_):
               experiment_name = create_experiment_name(hparam_config)
               root_dir = os.path.join(root_dir, experiment_number,
                                       experiment_name)
-              hparam_config.update(dict(
-                  root_dir=root_dir,
-              ))
+              hparam_config['root_dir'] = root_dir
 
               if _DOMAIN.value == 'quadruped_locomotion':
                 hparam_config.update(dict(
@@ -556,18 +590,26 @@ def main(_):
                         '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
                         task + '.txt'), ))
               elif _DOMAIN.value == 'web_navigation':
-                hparam_config.update(dict(use_xvfb=True, ))
+                hparam_config.update(dict(use_xvfb=True,
+                                          max_vocab_size=500,
+                                          embedding_dim=100,
+                                          latent_dim=50,
+                                          profile_value_dropout=0.0,
+                                          ))
+
+                # TODO: Fix this cuz it doesn't launch all the tasks
                 for difficulty_level in _DIFFICULTY_LEVELS.value:
                   for num_websites in _NUM_WEBSITES.value:
                     hparam_config.update(dict(
+
                         difficulty_level=difficulty_level,
                         num_websites=num_websites, ))
 
-              experiment.add(xm.Job(
-                  args=hparam_config,
-                  executable=executable,
-                  executor=executor,
-              ))
+                    experiment.add(xm.Job(
+                        args=hparam_config,
+                        executable=executable,
+                        executor=executor,
+                    ))
 
 
 if __name__ == '__main__':
