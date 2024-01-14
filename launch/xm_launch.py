@@ -590,7 +590,7 @@ def main(_):
                         '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
                         task + '.txt'), ))
               elif _DOMAIN.value == 'web_navigation':
-                hparam_config.update(dict(use_xvfb=True,
+                hparam_config.update(dict(use_xvfb=False,
                                           max_vocab_size=500,
                                           embedding_dim=100,
                                           latent_dim=50,
