@@ -1,7 +1,7 @@
 [submodule "a2perf/domains/web_navigation"]
 	path = a2perf/domains/web_navigation
     url = https://github.com/harvard-edge/web_nav.git
-    branch = main
+	branch = main
 
 [submodule "a2perf/domains/quadruped_locomotion"]
 	path = a2perf/domains/quadruped_locomotion
