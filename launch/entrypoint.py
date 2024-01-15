@@ -37,6 +37,7 @@ _TOTAL_ENV_STEPS = flags.DEFINE_integer(
     'total_env_steps', None, 'Total steps in the environment.'
 )
 _USE_XVFB = flags.DEFINE_boolean('use_xvfb', False, 'Use xvfb.')
+_USE_GAE = flags.DEFINE_boolean('use_gae', False, 'Use GAE.')
 _MOTION_FILE_PATH = flags.DEFINE_string(
     'motion_file_path', None, 'Motion file path.'
 )
@@ -114,6 +115,7 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       _POLICY_CHECKPOINT_INTERVAL.value
   )
+  os.environ['USE_GAE'] = str(_USE_GAE.value)
   os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   os.environ['EVAL_INTERVAL'] = str(_EVAL_INTERVAL.value)
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)

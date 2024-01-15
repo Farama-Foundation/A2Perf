@@ -37,6 +37,7 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
 _ROOT_DIR = flags.DEFINE_string(
     'root_dir', '/tmp/xm_local', 'Base directory for logs and results'
 )
+_USE_XVFB = flags.DEFINE_bool('use_xvfb', False, 'Whether to use xvfb')
 _INTERACTIVE = flags.DEFINE_bool(
     'interactive', False, 'Whether to run in interactive mode'
 )
@@ -196,6 +197,10 @@ DOCKER_INSTRUCTIONS = {
     COPY {REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
       ./a2perf/domains/web_navigation/requirements.txt
     ''',
+        f'''
+        COPY {REPO_DIR}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
+          ./a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt
+        ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
         'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
         'RUN /opt/conda/envs/py310/bin/pip install -r ./a2perf/domains/web_navigation/requirements.txt',
@@ -232,16 +237,20 @@ BASE_IMAGE = {
     'circuit_training': 'gcr.io/deeplearning-platform-release/base-gpu:latest',
 }
 ENV_VARS = {
-    'quadruped_locomotion': {'WRAPT_DISABLE_EXTENSIONS': 'true',
-                             'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-                             'TF_GPU_THREAD_MODE': 'gpu_private',
-                             'TF_USE_LEGACY_KERAS': '1'
-                             },
-    'web_navigation': {'WRAPT_DISABLE_EXTENSIONS': 'true',
-                       'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-                       'TF_GPU_THREAD_MODE': 'gpu_private',
-                       'TF_USE_LEGACY_KERAS': '1'
-                       },
+    'quadruped_locomotion': {
+        'PYTHONBUFFERED': '1',
+        'WRAPT_DISABLE_EXTENSIONS': 'true',
+        'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+        'TF_GPU_THREAD_MODE': 'gpu_private',
+        'TF_USE_LEGACY_KERAS': '1'
+    },
+    'web_navigation': {
+        'PYTHONBUFFERED': '1',
+        'WRAPT_DISABLE_EXTENSIONS': 'true',
+        'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+        'TF_GPU_THREAD_MODE': 'gpu_private',
+        'TF_USE_LEGACY_KERAS': '1'
+    },
     'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'}
 }
 
@@ -271,6 +280,7 @@ def get_hparam_sweeps(domain, algo, debug):
         'batch_size': [32],
         'eval_interval': [100],
         'log_interval': [100],
+        'env_name': ['QuadrupedLocomotion-v0'],
     }
 
     if debug:
@@ -284,6 +294,7 @@ def get_hparam_sweeps(domain, algo, debug):
 
       algo_hyperparameters = {
           'ppo': {
+              'use_gae': [True],
               'num_epochs': [1],
               'learning_rate': [3e-4],
               'entropy_regularization': [1e-4],
@@ -304,6 +315,7 @@ def get_hparam_sweeps(domain, algo, debug):
 
       algo_hyperparameters = {
           'ppo': {
+              'use_gae': [True],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
               'num_epochs': [10],
@@ -317,56 +329,59 @@ def get_hparam_sweeps(domain, algo, debug):
     general_hyperparameters = {
         'eval_interval': [100],
         'log_interval': [100],
+        'env_name': ['WebNavigation-v0'],
     }
 
     if debug:
       general_hyperparameters.update({
           'env_batch_size': [4],
-          'total_env_steps': [1000000],
+          'total_env_steps': [100000],
           'train_checkpoint_interval': [10000],
           'policy_checkpoint_interval': [10000],
           'timesteps_per_actorbatch': [256],
       })
 
       algo_hyperparameters = {
-          'ppo_lstm': {
-              'algo': ['ppo_lstm'],
+          'ppo': {
+              'use_gae': [True],
+              'algo': ['ppo'],
               'batch_size': [32],
-              'num_epochs': [1],
+              'num_epochs': [5],
               'learning_rate': [3e-4],
               'entropy_regularization': [1e-4],
           },
-          'ddqn_lstm': {
-              'algo': ['ddqn_lstm'],
-              'batch_size': [512],
+          'ddqn': {
+              'algo': ['ddqn'],
+              'batch_size': [32],
               'epsilon_greedy': [0.1],
               'learning_rate': [3e-4],
-              'rb_capacity': [50000],
+              'rb_capacity': [10000],
           },
       }
     else:
       general_hyperparameters.update({
           'env_batch_size': [8],
-          'total_env_steps': [200000000],
-          'train_checkpoint_interval': [1000000],
-          'policy_checkpoint_interval': [1000000],
+          'total_env_steps': [10000000],
+          'train_checkpoint_interval': [100000],
+          'policy_checkpoint_interval': [100000],
           'timesteps_per_actorbatch': [4096],
       })
 
       algo_hyperparameters = {
-          'ppo_lstm': {
-              'algo': ['ppo_lstm'],
+          'ppo': {
+              'use_gae': [True],
+              'algo': ['ppo'],
               'batch_size': [32],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
               'num_epochs': [10],
           },
-          'ddqn_lstm': {
+          'ddqn': {
               'algo': ['ddqn_lstm'],
-              'batch_size': [512],
+              'batch_size': [32],
               'learning_rate': [3e-4],
               'epsilon_greedy': [0.1],
-              'rb_capacity': [10000000],
+              'rb_capacity': [1000000],
           },
       }
   elif domain == 'circuit_training':
@@ -440,7 +455,6 @@ def main(_):
               dataset_id = f'{_DOMAIN.value[0].upper() + _DOMAIN.value[1:]}-{task}-{skill_level}-v0'
               hparam_config.update(dict(
                   seed=seed,
-                  algo=algo,
                   task=task,
                   domain=_DOMAIN.value,
                   env_name=ENV_NAMES[_DOMAIN.value],
@@ -483,7 +497,7 @@ def main(_):
                         '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
                         task + '.txt'), ))
               elif _DOMAIN.value == 'web_navigation':
-                hparam_config.update(dict(use_xvfb=False,
+                hparam_config.update(dict(use_xvfb=_USE_XVFB.value,
                                           max_vocab_size=500,
                                           embedding_dim=100,
                                           latent_dim=50,
