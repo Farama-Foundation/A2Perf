@@ -128,9 +128,13 @@ DOCKER_INSTRUCTIONS = {
         # Add TensorRT
         '''
         RUN ${APT_COMMAND} update && \
-          ${APT_COMMAND} install python3-libnvinfer-dev \
-          python3-libnvinfer''',
-
+            ${APT_COMMAND} remove --purge libcudnn8 libcudnn8-dev && \
+            ${APT_COMMAND} install python3-libnvinfer-dev \
+            python3-libnvinfer \
+            libcudnn8=8.7.*-1+cuda11.* \
+            libcudnn8-dev=8.7.*-1+cuda11.* \
+            tensorrt
+        ''',
         '''
         RUN wget https://bootstrap.pypa.io/get-pip.py && \
           python3.9 get-pip.py && \
@@ -217,8 +221,22 @@ DOCKER_INSTRUCTIONS = {
         # Add TensorRT
         '''
         RUN ${APT_COMMAND} update && \
-          ${APT_COMMAND} install python3-libnvinfer-dev \
-          python3-libnvinfer''',
+            ${APT_COMMAND} remove --purge libcudnn8 libcudnn8-dev --allow-change-held-packages
+        ''',
+        '''
+        RUN wget -O cudnn.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcudnn8_8.7.0.84-1+cuda11.8_amd64.deb && \
+            wget -O cudnn-dev.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcudnn8-dev_8.7.0.84-1+cuda11.8_amd64.deb && \
+            dpkg -i cudnn.deb && \
+            dpkg -i cudnn-dev.deb && \
+            ${APT_COMMAND} update && \
+            ${APT_COMMAND} install -y --no-install-recommends \
+            libcudnn8=8.7.0.84-1+cuda11.8 \
+            libcudnn8-dev=8.7.0.84-1+cuda11.8 \
+            tensorrt \
+            python3-libnvinfer-dev \
+            python3-libnvinfer \
+            && rm -rf /var/lib/apt/lists/* cudnn.deb cudnn-dev.deb
+        ''',
         '''
         RUN wget https://bootstrap.pypa.io/get-pip.py && \
           python3.10 get-pip.py && \
