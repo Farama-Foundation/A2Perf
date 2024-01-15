@@ -28,6 +28,7 @@ _SEED = flags.DEFINE_integer('seed', None, 'Global seed.')
 _ENV_BATCH_SIZE = flags.DEFINE_integer(
     'env_batch_size', None, 'Number of environments to run in parallel.'
 )
+_ENV_NAME = flags.DEFINE_string('env_name', None, 'Name of the environment.')
 _EPSILON_GREEDY = flags.DEFINE_float(
     'epsilon_greedy', None, 'Epsilon greedy value.'
 )
@@ -121,17 +122,17 @@ def main(_):
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
   os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
-  os.environ['MAX_VOCAB_SIZE'] = str(_MAX_VOCAB_SIZE.value)
   os.environ['LATENT_DIM'] = str(_LATENT_DIM.value)
   os.environ['EMBEDDING_DIM'] = str(_EMBEDDING_DIM.value)
   os.environ['PROFILE_VALUE_DROPOUT'] = str(_PROFILE_VALUE_DROPOUT.value)
-
+  os.environ['ENV_NAME'] = _ENV_NAME.value
   if _DOMAIN.value == 'quadruped_locomotion':
     os.environ['DOMAIN'] = 'quadruped_locomotion'
     os.environ['MOTION_FILE_PATH'] = _MOTION_FILE_PATH.value
   elif _DOMAIN.value == 'web_navigation':
     os.environ['DOMAIN'] = 'web_navigation'
     os.environ['NUM_WEBSITES'] = str(_NUM_WEBSITES.value)
+    os.environ['MAX_VOCAB_SIZE'] = str(_MAX_VOCAB_SIZE.value)
     os.environ['DIFFICULTY_LEVEL'] = _DIFFICULTY_LEVEL.value
   elif _DOMAIN.value == 'circuit_training':
     os.environ['DOMAIN'] = 'circuit_training'

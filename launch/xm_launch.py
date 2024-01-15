@@ -130,16 +130,16 @@ DOCKER_INSTRUCTIONS = {
           ./a2perf/domains/quadruped_locomotion/requirements.txt
         ''',
         f'''
-        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt \
-          ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt
+        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
+          ./a2perf/a2perf_benchmark_submission/requirements.txt
         ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
-        'RUN pip install -r ./requirements.txt',
-        'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
-        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt',
+        'RUN /opt/conda/envs/py39/bin/pip install -r ./requirements.txt',
+        'RUN /opt/conda/envs/py39/bin/pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
+        'RUN /opt/conda/envs/py39/bin/pip install -r ./a2perf/a2perf_benchmark_submission/requirements.txt',
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
-        'RUN pip install /workdir',
+        'RUN /opt/conda/envs/py39/bin/pip install /workdir',
     ],
 
     'web_navigation': [
@@ -189,19 +189,21 @@ DOCKER_INSTRUCTIONS = {
       ./a2perf/metrics/system/codecarbon/
     ''',
         f'''
-    COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
-      ./a2perf/domains/quadruped_locomotion/requirements.txt
-    ''',
-        f'''COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt \
-      ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt
+    COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
+      ./a2perf/a2perf_benchmark_submission/requirements.txt
+      ''',
+        f'''
+    COPY {REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
+      ./a2perf/domains/web_navigation/requirements.txt
     ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
-        'RUN pip install -r ./requirements.txt',
-        'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
-        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt',
+        'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
+        'RUN /opt/conda/envs/py310/bin/pip install -r ./a2perf/domains/web_navigation/requirements.txt',
+        'RUN /opt/conda/envs/py310/bin/pip install -r ./a2perf/a2perf_benchmark_submission/requirements.txt',
         f'COPY {REPO_DIR} .',
+
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
-        'RUN pip install /workdir',
+        'RUN /opt/conda/envs/py310/bin/pip install /workdir',
     ],
 
     'circuit_training': []
@@ -209,14 +211,18 @@ DOCKER_INSTRUCTIONS = {
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        'python3.9 -u /workdir/launch/entrypoint.py',
+        'python /workdir/launch/entrypoint.py',
     ]),
     'web_navigation': xm.CommandList([
         'service dbus start',
-        'python3.10 -u /workdir/launch/entrypoint.py'
+        'python /workdir/launch/entrypoint.py'
     ]),
 
     'circuit_training': xm.CommandList([])
+}
+ENV_NAMES = {
+    'quadruped_locomotion': 'QuadrupedLocomotion-v0',
+    'web_navigation': 'WebNavigation-v0'
 }
 
 BASE_IMAGE = {
@@ -289,10 +295,10 @@ def get_hparam_sweeps(domain, algo, debug):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [44],
-          'total_env_steps': [200000000],
-          'train_checkpoint_interval': [1000000],
-          'policy_checkpoint_interval': [1000000],
+          'env_batch_size': [32],
+          'total_env_steps': [100000000],
+          'train_checkpoint_interval': [100000],
+          'policy_checkpoint_interval': [100000],
           'timesteps_per_actorbatch': [4096],
       })
 
@@ -437,6 +443,7 @@ def main(_):
                   algo=algo,
                   task=task,
                   domain=_DOMAIN.value,
+                  env_name=ENV_NAMES[_DOMAIN.value],
                   mode=_MODE.value,
                   dataset_id=dataset_id,
                   skill_level=skill_level,
@@ -446,7 +453,6 @@ def main(_):
                                           f'{_MODE.value}.gin'),
                   participant_module_path=os.path.join(
                       '/workdir/a2perf/a2perf_benchmark_submission',
-                      _DOMAIN.value,
                       algo,
                   ),
                   run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
@@ -488,7 +494,6 @@ def main(_):
                 for difficulty_level in _DIFFICULTY_LEVELS.value:
                   for num_websites in _NUM_WEBSITES.value:
                     hparam_config.update(dict(
-
                         difficulty_level=difficulty_level,
                         num_websites=num_websites, ))
 
