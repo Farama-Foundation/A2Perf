@@ -104,69 +104,20 @@ DOCKER_INSTRUCTIONS = {
         '''ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
           --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
+        'RUN echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+
+        # Set up custom conda environment
+        'RUN conda create -y --name py39 python=3.9',
+        'ENV CONDA_DEFAULT_ENV=py39',
+        'ENV PATH="/opt/conda/envs/py39/bin:${PATH}"',
+        'RUN /opt/conda/envs/py39/bin/pip install --upgrade pip setuptools',
         '''
-        RUN ${APT_COMMAND} update && \
-          ${APT_COMMAND} install software-properties-common && \
-          add-apt-repository ppa:deadsnakes/ppa && \
-          ${APT_COMMAND} update && \
-          ${APT_COMMAND} install \
-          python3.9 \
-          python3.9-dev \
-          python3.9-venv \
-          python3.9-distutils \
-          wget \
-          sudo \
-          build-essential \
-          libnss3 \
-          unzip \
-          x11-apps \
-          libopenmpi-dev \
-          x11-utils \
-          && rm -rf /var/lib/apt/lists/*
+        RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+          conda activate py39 && \
+          conda install cuda -c  nvidia -y"
         ''',
 
-        # Add TensorRT
-        '''
-        RUN ${APT_COMMAND} update && \
-            ${APT_COMMAND} remove --purge libcudnn8 libcudnn8-dev && \
-            ${APT_COMMAND} install python3-libnvinfer-dev \
-            python3-libnvinfer \
-            libcudnn8=8.7.*-1+cuda11.* \
-            libcudnn8-dev=8.7.*-1+cuda11.* \
-            tensorrt
-        ''',
-        '''
-        RUN wget https://bootstrap.pypa.io/get-pip.py && \
-          python3.9 get-pip.py && \
-          rm get-pip.py
-        ''',
-        '''
-        RUN update-alternatives --install /usr/bin/python \
-          python /usr/bin/python3.9 1 && update-alternatives --set python \
-          /usr/bin/python3.9 \
-          && rm -rf /var/lib/apt/lists/*
-        ''',
-        '''
-        RUN echo "clouduser:password" | chpasswd && \
-          echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-        ''',
-        'WORKDIR /home/clouduser',
-        '''
-        RUN python3.9 -m venv venv && \
-          . venv/bin/activate && \
-          pip install --upgrade pip setuptools
-        ''',
-        'ENV PATH="/home/clouduser/venv/bin:${PATH}"',
-        'RUN ln -s /home/clouduser/venv/bin/pip /usr/bin/pip',
-
-        # Set up CUDA environment variables so that they appear BEFORE the virtualenv
-        # This is necessary because we install tensorflow[and-cuda] in the virtualenv
-        'ENV PATH="/usr/local/cuda-11.8/bin:${PATH}"',
-        'ENV CUDA_HOME="/usr/local/cuda-11.8"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/local/cuda-11.8/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
-        'ENV CUDNN_VERSION="8.7"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
-
+        # Install Requirements for A2Perf
         'WORKDIR /workdir',
         f'''COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
           ./a2perf/metrics/reliability/requirements.txt''',
@@ -179,75 +130,23 @@ DOCKER_INSTRUCTIONS = {
           ./a2perf/domains/quadruped_locomotion/requirements.txt
         ''',
         f'''
-        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt \
-          ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt
+        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt \
+          ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt
         ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
         'RUN pip install -r ./requirements.txt',
         'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
-        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/ppo/requirements.txt',
+        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt',
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
         'RUN pip install /workdir',
     ],
+
     'web_navigation': [
         '''ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
           --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
-        '''
-        RUN ${APT_COMMAND} update && \
-          ${APT_COMMAND} install software-properties-common && \
-          add-apt-repository ppa:deadsnakes/ppa && \
-          ${APT_COMMAND} update && \
-          ${APT_COMMAND} install \
-          python3.10 \
-          python3.10-dev \
-          python3.10-venv \
-          python3.10-distutils \
-          wget \
-          sudo \
-          build-essential \
-          libnss3 \
-          unzip \
-          x11-apps \
-          x11-utils \
-          dbus  \
-          dbus-x11 \
-          libreadline-dev \
-          less \
-          && rm -rf /var/lib/apt/lists/*
-        ''',
-
-        # Add TensorRT
-        '''
-        RUN ${APT_COMMAND} update && \
-            ${APT_COMMAND} remove --purge libcudnn8 libcudnn8-dev --allow-change-held-packages
-        ''',
-        '''
-        RUN wget -O cudnn.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcudnn8_8.7.0.84-1+cuda11.8_amd64.deb && \
-            wget -O cudnn-dev.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcudnn8-dev_8.7.0.84-1+cuda11.8_amd64.deb && \
-            dpkg -i cudnn.deb && \
-            dpkg -i cudnn-dev.deb && \
-            ${APT_COMMAND} update && \
-            ${APT_COMMAND} install -y --no-install-recommends \
-            libcudnn8=8.7.0.84-1+cuda11.8 \
-            libcudnn8-dev=8.7.0.84-1+cuda11.8 \
-            tensorrt \
-            python3-libnvinfer-dev \
-            python3-libnvinfer \
-            && rm -rf /var/lib/apt/lists/* cudnn.deb cudnn-dev.deb
-        ''',
-        '''
-        RUN wget https://bootstrap.pypa.io/get-pip.py && \
-          python3.10 get-pip.py && \
-          rm get-pip.py
-        ''',
-        '''
-        RUN update-alternatives --install /usr/bin/python \
-          python /usr/bin/python3.10 1 && update-alternatives --set python \
-          /usr/bin/python3.10 \
-          && rm -rf /var/lib/apt/lists/*
-        ''',
+        'RUN echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
 
         # Chrome Installation
         'ARG CHROME_VERSION="114.0.5735.90-1"',
@@ -259,15 +158,6 @@ DOCKER_INSTRUCTIONS = {
           ${APT_COMMAND} install /tmp/chrome.deb xvfb && \
           rm /tmp/chrome.deb
         ''',
-        # [OPTIONAL] Some cloud images block internet access, so download chromedriver before experiment launch
-        # webdriver-manager package expects the drivers to be in /home/user/.wdm folder. ('/home/user/.wdm/drivers/chromedriver/linux64/120.0.6099.109/chromedriver-linux64/chromedriver')
-        # We also need to create a JSON entry for the driver like this
-        # {
-        #    "linux64_chromedriver_120.0.6099.109_for_120.0.6099": {
-        #        "timestamp": "29/12/2023",
-        #        "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/120.0.6099.109/chromedriver-linux64/chromedriver"
-        #    }
-        # }
         '''
         RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
             wget --no-verbose -O /tmp/chromedriver_linux64.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip && \
@@ -276,60 +166,44 @@ DOCKER_INSTRUCTIONS = {
             mv /tmp/chromedriver /home/clouduser/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
             rm /tmp/chromedriver_linux64.zip && \
             printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/clouduser/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/clouduser/.wdm/drivers.json && \
-            chmod -R 777 /home/clouduser/.wdm
+            chmod -R 777 /home/clouduser/.wdm && cp -r /home/clouduser/.wdm /root/
         ''',
 
-        # Also add it to /root/.wdm
-        '''RUN cp -r /home/clouduser/.wdm /root/''',
+        # Set up custom conda environment
+        'RUN conda create -y --name py310 python=3.10',
+        'ENV CONDA_DEFAULT_ENV=py310',
+        'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
+        'RUN /opt/conda/envs/py310/bin/pip install --upgrade pip setuptools',
         '''
-        RUN echo "clouduser:password" | chpasswd && \
-          echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+        RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+          conda activate py310 && \
+          conda install cuda -c  nvidia -y"
         ''',
-        'WORKDIR /home/clouduser',
-        '''
-        RUN python3.10 -m venv venv && \
-          . venv/bin/activate && \
-          pip install --upgrade pip setuptools
-        ''',
-        'ENV PATH="/home/clouduser/venv/bin:${PATH}"',
-        'RUN ln -s /home/clouduser/venv/bin/pip /usr/bin/pip',
 
-        # Set up CUDA environment variables so that they appear BEFORE the virtualenv
-        # This is necessary because we install tensorflow[and-cuda] in the virtualenv
-        'ENV PATH="/usr/local/cuda-11.8/bin:${PATH}"',
-        'ENV CUDA_HOME="/usr/local/cuda-11.8"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/local/cuda-11.8/extras/CUPTI/lib64:${LD_LIBRARY_PATH}"',
-        'ENV CUDNN_VERSION="8.7"',
-        'ENV LD_LIBRARY_PATH="/usr/local/cuda-11.8/lib64:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"',
-
+        # Install Requirements for A2Perf
         'WORKDIR /workdir',
         f'''COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
-          ./a2perf/metrics/reliability/requirements.txt''',
+      ./a2perf/metrics/reliability/requirements.txt''',
         f'''
-        COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
-          ./a2perf/metrics/system/codecarbon/
-        ''',
+    COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
+      ./a2perf/metrics/system/codecarbon/
+    ''',
         f'''
-        COPY {REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
-          ./a2perf/domains/web_navigation/requirements.txt
-        ''',
-        f'''
-        COPY {REPO_DIR}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
-          ./a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt 
-        ''',
-        f'''
-        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/web_navigation/ppo_lstm/requirements.txt \
-          ./a2perf/a2perf_benchmark_submission/web_navigation/ppo_lstm/requirements.txt
-        ''',
+    COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
+      ./a2perf/domains/quadruped_locomotion/requirements.txt
+    ''',
+        f'''COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt \
+      ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt
+    ''',
         f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
         'RUN pip install -r ./requirements.txt',
-        'RUN pip install -r ./a2perf/domains/web_navigation/requirements.txt',
-        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/web_navigation/ppo_lstm/requirements.txt',
+        'RUN pip install -r ./a2perf/domains/quadruped_locomotion/requirements.txt',
+        'RUN pip install -r ./a2perf/a2perf_benchmark_submission/quadruped_locomotion/requirements.txt',
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
         'RUN pip install /workdir',
-
     ],
+
     'circuit_training': []
 }
 
@@ -346,14 +220,10 @@ ENTRYPOINT = {
 }
 
 BASE_IMAGE = {
-    'quadruped_locomotion': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
-    'web_navigation': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
-    'circuit_training': 'nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04',
-}
-PYTHON_VERSION = {
-    'quadruped_locomotion': '3.9',
-    'web_navigation': '3.10',
-    'circuit_training': '3.9',
+    # use the base gpu image from google cloud
+    'quadruped_locomotion': 'gcr.io/deeplearning-platform-release/base-gpu:latest',
+    'web_navigation': 'gcr.io/deeplearning-platform-release/base-gpu:latest',
+    'circuit_training': 'gcr.io/deeplearning-platform-release/base-gpu:latest',
 }
 ENV_VARS = {
     'quadruped_locomotion': {'WRAPT_DISABLE_EXTENSIONS': 'true',
@@ -566,7 +436,6 @@ def main(_):
                   seed=seed,
                   algo=algo,
                   task=task,
-                  python_version=PYTHON_VERSION[_DOMAIN.value],
                   domain=_DOMAIN.value,
                   mode=_MODE.value,
                   dataset_id=dataset_id,
@@ -623,11 +492,11 @@ def main(_):
                         difficulty_level=difficulty_level,
                         num_websites=num_websites, ))
 
-                    experiment.add(xm.Job(
-                        args=hparam_config,
-                        executable=executable,
-                        executor=executor,
-                    ))
+              experiment.add(xm.Job(
+                  args=hparam_config,
+                  executable=executable,
+                  executor=executor,
+              ))
 
 
 if __name__ == '__main__':

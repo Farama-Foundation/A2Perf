@@ -4,9 +4,6 @@ import subprocess
 from absl import app
 from absl import flags
 
-_PYTHON_VERSION = flags.DEFINE_string(
-    'python_version', None, 'Python version to use.'
-)
 _MAX_VOCAB_SIZE = flags.DEFINE_integer(
     'max_vocab_size', None, 'Max vocab size for web navigation.'
 )
@@ -124,7 +121,6 @@ def main(_):
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
   os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
-  os.environ['PYTHON_VERSION'] = _PYTHON_VERSION.value
   os.environ['MAX_VOCAB_SIZE'] = str(_MAX_VOCAB_SIZE.value)
   os.environ['LATENT_DIM'] = str(_LATENT_DIM.value)
   os.environ['EMBEDDING_DIM'] = str(_EMBEDDING_DIM.value)
@@ -144,7 +140,7 @@ def main(_):
 
   command = (
       ('xvfb-run ' if _USE_XVFB.value else '') +
-      f'python{_PYTHON_VERSION.value} -u a2perf/submission/main_submission.py '
+      f'python a2perf/submission/main_submission.py '
       f'--gin_config={_GIN_CONFIG.value} '
       f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value} '
       f'--root_dir={_ROOT_DIR.value} '
@@ -152,7 +148,11 @@ def main(_):
   )
 
   process = subprocess.Popen(
-      command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+      command,
+      stdout=subprocess.PIPE,
+      stderr=subprocess.STDOUT,
+      shell=True,
+      env=os.environ.copy(),
   )
   while True:
     output = process.stdout.readline()
