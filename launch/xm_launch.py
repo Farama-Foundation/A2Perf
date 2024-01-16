@@ -80,9 +80,6 @@ _MODE = flags.DEFINE_enum(
 _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     'participant_module_path', None, 'Path to participant module'
 )
-_ROOT_DIR = flags.DEFINE_string(
-    'root_dir', '/tmp/xm_local', 'Base directory for logs and results'
-)
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run train or inference.'
 )
@@ -414,6 +411,16 @@ def get_hparam_sweeps(domain, **kwargs):
   else:
     raise ValueError(f'Unknown domain: {domain}')
 
+  general_hyperparameters.update(
+      dict(
+          debug=[debug],
+          mode=[mode],
+          domain=[domain],
+          seed=seeds,
+          skill_level=skill_levels,
+      )
+  )
+
   # Create a hyperparameter sweep using the dictionary of lists
   hyperparameters = {**general_hyperparameters, **algo_hyperparameters}
 
@@ -424,7 +431,6 @@ def get_hparam_sweeps(domain, **kwargs):
 
 
 def main(_):
-  launch_locally = _INTERACTIVE.value or _LOCAL.value
   create_experiment = xm_local.create_experiment
 
   with create_experiment(experiment_title=_EXPERIMENT_NAME.value) as experiment:
