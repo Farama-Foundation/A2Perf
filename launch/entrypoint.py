@@ -48,7 +48,7 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     ['novice', 'intermediate', 'expert'],
     'Skill level of the expert.',
 )
-_TASK = flags.DEFINE_string('task', None, 'Task to run.')
+# _TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
 _MODE = flags.DEFINE_string('mode', None, 'Mode of execution.')
 _LEARNING_RATE = flags.DEFINE_float('learning_rate', None, 'Learning rate.')
@@ -83,8 +83,9 @@ _ENTROPY_REGULARIZATION = flags.DEFINE_float(
 )
 _DATASET_ID = flags.DEFINE_string('dataset_id', None, 'Dataset ID.')
 
-_NUM_WEBSITES = flags.DEFINE_integer('num_websites', None,
-                                     'Number of websites for web navigation.')
+_NUM_WEBSITES = flags.DEFINE_integer(
+    'num_websites', None, 'Number of websites for web navigation.'
+)
 _DIFFICULTY_LEVEL = flags.DEFINE_enum(
     'difficulty_level',
     None,
@@ -100,7 +101,7 @@ def main(_):
   os.environ['TOTAL_ENV_STEPS'] = str(_TOTAL_ENV_STEPS.value)
   os.environ['ALGO'] = _ALGO.value
   os.environ['SKILL_LEVEL'] = _SKILL_LEVEL.value
-  os.environ['TASK'] = _TASK.value
+  # os.environ['TASK'] = _TASK.value
   os.environ['GIN_CONFIG'] = _GIN_CONFIG.value
   os.environ['MODE'] = _MODE.value
   os.environ['LEARNING_RATE'] = str(_LEARNING_RATE.value)
@@ -142,8 +143,8 @@ def main(_):
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
   command = (
-      ('xvfb-run ' if _USE_XVFB.value else '') +
-      f'python a2perf/submission/main_submission.py '
+      ('xvfb-run ' if _USE_XVFB.value else '')
+      + 'python a2perf/submission/main_submission.py '
       f'--gin_config={_GIN_CONFIG.value} '
       f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value} '
       f'--root_dir={_ROOT_DIR.value} '
@@ -167,8 +168,12 @@ def main(_):
 
 if __name__ == '__main__':
   # Mark the main flags as required
-  flags.mark_flags_as_required([_DOMAIN.name,
-                                _TASK.name,
-                                _ALGO.name,
-                                _SKILL_LEVEL.name], )
+  flags.mark_flags_as_required(
+      [
+          _DOMAIN.name,
+          # _TASK.name,
+          _ALGO.name,
+          _SKILL_LEVEL.name,
+      ],
+  )
   app.run(main)
