@@ -58,6 +58,18 @@ _DOMAIN = flags.DEFINE_enum(
 _DIFFICULTY_LEVELS = flags.DEFINE_list(
     'difficulty_levels', None, 'Difficulty levels to run'
 )
+_MAX_VOCAB_SIZE = flags.DEFINE_integer(
+    'max_vocab_size', 500, 'Max vocab size for web navigation.'
+)
+_LATENT_DIM = flags.DEFINE_integer(
+    'latent_dim', 50, 'Latent dimension for web navigation.'
+)
+_EMBEDDING_DIM = flags.DEFINE_integer(
+    'embedding_dim', 100, 'Embedding dimension for web navigation.'
+)
+_PROFILE_VALUE_DROPOUT = flags.DEFINE_float(
+    'profile_value_dropout', 1.0, 'Profile value dropout for web navigation.'
+)
 _NUM_WEBSITES = flags.DEFINE_list('num_websites', None, 'Number of websites')
 _MOTION_FILES = flags.DEFINE_list('motion_files', None, 'Motion files to run')
 
@@ -217,6 +229,7 @@ DOCKER_INSTRUCTIONS = {
         f'COPY {REPO_DIR} .',
         'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
         'RUN /opt/conda/envs/py310/bin/pip install /workdir',
+        'USER 1000',
     ],
     'circuit_training': [],
 }
@@ -231,7 +244,10 @@ ENTRYPOINT = {
         'python /workdir/launch/entrypoint.py',
     ]),
     'web_navigation': xm.CommandList(
-        ['sudo service dbus start', 'python /workdir/launch/entrypoint.py']
+        [
+            'sudo service dbus start',
+            'python /workdir/launch/entrypoint.py',
+        ]
     ),
     'circuit_training': xm.CommandList([]),
 }
@@ -343,12 +359,21 @@ def get_hparam_sweeps(domain, **kwargs):
   elif domain == 'web_navigation':
     num_websites = kwargs['num_websites']
     difficulty_levels = kwargs['difficulty_levels']
+    latent_dim = kwargs['latent_dim']
+    embedding_dim = kwargs['embedding_dim']
+    profile_value_dropout = kwargs['profile_value_dropout']
+    max_vocab_size = kwargs['max_vocab_size']
+
     general_hyperparameters = {
         'eval_interval': [100],
         'log_interval': [100],
         'env_name': ['WebNavigation-v0'],
         'num_websites': num_websites,
         'difficulty_level': difficulty_levels,
+        'max_vocab_size': [max_vocab_size],
+        'latent_dim': [latent_dim],
+        'embedding_dim': [embedding_dim],
+        'profile_value_dropout': [profile_value_dropout],
     }
 
     if debug:
@@ -468,14 +493,19 @@ def main(_):
 
       # Define Executable
       [executable] = experiment.package([
-          xm.python_container(
+          xm.dockerfile_container(
               executor_spec=executor.Spec(),
               path='../',
-              use_deep_module=True,
-              base_image=BASE_IMAGE[_DOMAIN.value],
-              docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
-              entrypoint=ENTRYPOINT[_DOMAIN.value],
+              dockerfile=f'{_DOMAIN.value}.Dockerfile',
               env_vars=ENV_VARS[_DOMAIN.value],
+              # xm.python_container(
+              #     executor_spec=executor.Spec(),
+              #     path='../',
+              #     use_deep_module=True,
+              #     base_image=BASE_IMAGE[_DOMAIN.value],
+              #     docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
+              #     entrypoint=ENTRYPOINT[_DOMAIN.value],
+              #     env_vars=ENV_VARS[_DOMAIN.value],
           )
       ])
 
@@ -498,6 +528,10 @@ def main(_):
         skill_levels=_SKILL_LEVELS.value,
         seeds=_SEEDS.value,
         mode=_MODE.value,
+        latent_dim=_LATENT_DIM.value,
+        embedding_dim=_EMBEDDING_DIM.value,
+        profile_value_dropout=_PROFILE_VALUE_DROPOUT.value,
+        max_vocab_size=_MAX_VOCAB_SIZE.value,
     )
 
     for hparams in hparam_sweeps:
