@@ -101,7 +101,6 @@ def main(_):
   os.environ['TOTAL_ENV_STEPS'] = str(_TOTAL_ENV_STEPS.value)
   os.environ['ALGO'] = _ALGO.value
   os.environ['SKILL_LEVEL'] = _SKILL_LEVEL.value
-  # os.environ['TASK'] = _TASK.value
   os.environ['GIN_CONFIG'] = _GIN_CONFIG.value
   os.environ['MODE'] = _MODE.value
   os.environ['LEARNING_RATE'] = str(_LEARNING_RATE.value)

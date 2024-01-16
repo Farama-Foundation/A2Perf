@@ -221,7 +221,6 @@ DOCKER_INSTRUCTIONS = {
     'circuit_training': [],
 }
 
-
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
         'mkdir -p /workdir/a2perf/datasets/data',
@@ -249,7 +248,6 @@ BASE_IMAGE = {
     'web_navigation': 'gcr.io/deeplearning-platform-release/base-gpu:latest',
     'circuit_training': 'gcr.io/deeplearning-platform-release/base-gpu:latest',
 }
-
 
 ENV_VARS = {
     'quadruped_locomotion': {
@@ -411,22 +409,33 @@ def get_hparam_sweeps(domain, **kwargs):
   else:
     raise ValueError(f'Unknown domain: {domain}')
 
-  general_hyperparameters.update(
-      dict(
-          debug=[debug],
-          mode=[mode],
-          domain=[domain],
-          seed=seeds,
-          skill_level=skill_levels,
-      )
-  )
+  algo_hparam_combinations = []
+  for algo in algos:
+    if algo in algo_hyperparameters:
+      keys, values = zip(*algo_hyperparameters[algo].items())
+      algo_hparam_combinations.extend(
+          [dict(zip(keys, v)) for v in itertools.product(*values)])
 
-  # Create a hyperparameter sweep using the dictionary of lists
-  hyperparameters = {**general_hyperparameters, **algo_hyperparameters}
+  general_hyperparameters.update({
+      'skill_level': skill_levels,
+      'seed': seeds,
+      'debug': [debug],
+      'mode': [mode],
+      'domain': [domain],
+  })
 
-  # Generate all combinations of hyperparameters
-  keys, values = zip(*hyperparameters.items())
-  hparam_sweeps = [dict(zip(keys, v)) for v in itertools.product(*values)]
+  # Generate combinations of general hyperparameters
+  general_keys, general_values = zip(*general_hyperparameters.items())
+  general_hparam_combinations = [dict(zip(general_keys, v)) for v in
+                                 itertools.product(*general_values)]
+
+  # Combine algorithm-specific hyperparameters with general hyperparameters
+  hparam_sweeps = []
+  for algo_hparam in algo_hparam_combinations:
+    for general_hparam in general_hparam_combinations:
+      combined_hparam = {**general_hparam, **algo_hparam}
+      hparam_sweeps.append(combined_hparam)
+
   return hparam_sweeps
 
 
