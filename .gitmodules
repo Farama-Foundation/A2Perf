@@ -6,7 +6,7 @@
 [submodule "a2perf/domains/quadruped_locomotion"]
 	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/harvard-edge/quadruped_locomotion.git
-    branch = main
+	branch = main
 
 [submodule "a2perf/domains/circuit_training"]
 	path = a2perf/domains/circuit_training
