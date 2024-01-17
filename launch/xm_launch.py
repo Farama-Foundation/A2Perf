@@ -315,7 +315,7 @@ def get_hparam_sweeps(domain, **kwargs):
   if domain == 'quadruped_locomotion':
     motion_files = kwargs['motion_files']
     general_hyperparameters = {
-        'batch_size': [32],
+        'batch_size': [512],
         'eval_interval': [100],
         'log_interval': [100],
         'env_name': ['QuadrupedLocomotion-v0'],
@@ -349,8 +349,8 @@ def get_hparam_sweeps(domain, **kwargs):
       general_hyperparameters.update({
           'env_batch_size': [44],
           'total_env_steps': [100000000],
-          'train_checkpoint_interval': [100000],
-          'policy_checkpoint_interval': [100000],
+          'train_checkpoint_interval': [1000000],
+          'policy_checkpoint_interval': [1000000],
           'timesteps_per_actorbatch': [4096],
       })
 
