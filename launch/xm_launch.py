@@ -123,8 +123,7 @@ DOCKER_INSTRUCTIONS = {
         RUN userdel $(getent passwd {os.getuid()} | cut -d: -f1) || true \
           && useradd -m -u {os.getuid()} user""",
         'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'USER user',
-        'RUN sudo mkdir -p /workdir',
+        'RUN mkdir -p /workdir',
         'WORKDIR /workdir',
         # Set up custom conda environment
         'RUN conda create -y --name py39 python=3.9',
@@ -179,8 +178,7 @@ DOCKER_INSTRUCTIONS = {
         # Set up user with same UID as host user
         f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
         'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'USER user',
-        'RUN sudo mkdir -p /workdir',
+        'RUN mkdir -p /workdir',
         'WORKDIR /workdir',
         # Set up custom conda environment
         'RUN conda create -y --name py310 python=3.10',
