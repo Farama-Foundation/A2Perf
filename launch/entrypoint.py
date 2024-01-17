@@ -124,28 +124,32 @@ def main(_):
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
   os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
-  os.environ['LATENT_DIM'] = str(_LATENT_DIM.value)
-  os.environ['EMBEDDING_DIM'] = str(_EMBEDDING_DIM.value)
-  os.environ['PROFILE_VALUE_DROPOUT'] = str(_PROFILE_VALUE_DROPOUT.value)
+
   os.environ['ENV_NAME'] = _ENV_NAME.value
   if _DOMAIN.value == 'quadruped_locomotion':
     os.environ['DOMAIN'] = 'quadruped_locomotion'
     os.environ['MOTION_FILE_PATH'] = _MOTION_FILE_PATH.value
   elif _DOMAIN.value == 'web_navigation':
-    os.environ['DOMAIN'] = 'web_navigation'
-    os.environ['NUM_WEBSITES'] = str(_NUM_WEBSITES.value)
-    os.environ['MAX_VOCAB_SIZE'] = str(_MAX_VOCAB_SIZE.value)
     os.environ['DIFFICULTY_LEVEL'] = _DIFFICULTY_LEVEL.value
+    os.environ['DOMAIN'] = 'web_navigation'
+    os.environ['EMBEDDING_DIM'] = str(_EMBEDDING_DIM.value)
+    os.environ['LATENT_DIM'] = str(_LATENT_DIM.value)
+    os.environ['MAX_VOCAB_SIZE'] = str(_MAX_VOCAB_SIZE.value)
+    os.environ['NUM_WEBSITES'] = str(_NUM_WEBSITES.value)
+    os.environ['PROFILE_VALUE_DROPOUT'] = str(_PROFILE_VALUE_DROPOUT.value)
   elif _DOMAIN.value == 'circuit_training':
     os.environ['DOMAIN'] = 'circuit_training'
   else:
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
-  command = ['python', 'a2perf/submission/main_submission.py',
-             f'--gin_config={_GIN_CONFIG.value}',
-             f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
-             f'--root_dir={_ROOT_DIR.value}',
-             f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}']
+  command = [
+      'python',
+      'a2perf/submission/main_submission.py',
+      f'--gin_config={_GIN_CONFIG.value}',
+      f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
+      f'--root_dir={_ROOT_DIR.value}',
+      f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
+  ]
 
   if _USE_XVFB.value:
     command = ['xvfb-run'] + command
