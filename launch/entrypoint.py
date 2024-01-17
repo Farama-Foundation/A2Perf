@@ -141,20 +141,18 @@ def main(_):
   else:
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
-  command = (
-      ('xvfb-run ' if _USE_XVFB.value else '')
-      + 'python a2perf/submission/main_submission.py '
-      f'--gin_config={_GIN_CONFIG.value} '
-      f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value} '
-      f'--root_dir={_ROOT_DIR.value} '
-      f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}'
-  )
+  command = ['python', 'a2perf/submission/main_submission.py',
+             f'--gin_config={_GIN_CONFIG.value}',
+             f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
+             f'--root_dir={_ROOT_DIR.value}',
+             f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}']
 
+  if _USE_XVFB.value:
+    command = ['xvfb-run'] + command
   process = subprocess.Popen(
       command,
       stdout=subprocess.PIPE,
       stderr=subprocess.STDOUT,
-      shell=True,
       env=os.environ.copy(),
   )
   while True:

@@ -44,8 +44,11 @@ RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
 
 # Install sudo and xvfb
 RUN ${APT_COMMAND} update && \
-    ${APT_COMMAND} install sudo xvfb -y \
+    ${APT_COMMAND} install sudo xvfb dbus dbus-x11 -y \
     && rm -rf /var/lib/apt/lists/*
+
+# Jupter user setup
+RUN echo "jupyter ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Set Working Directory
 WORKDIR /workdir
@@ -59,6 +62,8 @@ COPY ${REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
     ./a2perf/a2perf_benchmark_submission/requirements.txt
 COPY ${REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
     ./a2perf/domains/web/navigation/requirements.txt
+COPY ${REPO_DIR}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
+  ./a2perf/domains/web/navigation/gwob/miniwob_plusplus/python/requirements.txt
 
 
 # Installing Requirements
@@ -77,4 +82,5 @@ RUN /opt/conda/envs/py310/bin/pip install /workdir
 # Change to user 1000
 USER 1000
 
-ENTRYPOINT ["sudo service dbus start","sudo service xvfb start","/opt/conda/envs/py310/bin/python /workdir/launch/entrypoint.py"]
+# use bash to start dbus
+ENTRYPOINT ["/bin/bash", "-c", "sudo service dbus start && /opt/conda/envs/py310/bin/python /workdir/launch/entrypoint.py"]

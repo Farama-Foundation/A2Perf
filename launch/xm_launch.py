@@ -55,6 +55,7 @@ _DOMAIN = flags.DEFINE_enum(
     ['quadruped_locomotion', 'web_navigation', 'circuit_training'],
     'Domain to run',
 )
+_USE_XVFB = flags.DEFINE_bool('use_xvfb', False, 'Use xvfb')
 _DIFFICULTY_LEVELS = flags.DEFINE_list(
     'difficulty_levels', None, 'Difficulty levels to run'
 )
@@ -113,12 +114,18 @@ REPO_DIR = os.path.basename(
 
 DOCKER_INSTRUCTIONS = {
     'quadruped_locomotion': [
-        '''ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+        '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 \
           --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
-        # Set up clouduser
-        'RUN if ! id 1000; then useradd -m -u 1000 clouduser; fi',
-        'RUN echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+        'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
+
+        # Set up user with same UID as host user
+        f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
+        'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+        'USER user',
+        'RUN sudo mkdir -p /workdir',
+        'WORKDIR /workdir',
+
         # Set up custom conda environment
         'RUN conda create -y --name py39 python=3.9',
         'ENV CONDA_DEFAULT_ENV=py39',
@@ -127,11 +134,17 @@ DOCKER_INSTRUCTIONS = {
         """
         RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
           conda activate py39 && \
-          conda install cuda -c  nvidia -y"
+          conda install cuda -c  nvidia -y && \
+          pip install nvidia-pyindex && \
+          pip install nvidia-tensorrt"
         """,
+
         # Install Requirements for A2Perf
-        'WORKDIR /workdir',
-        f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+        '''RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+          conda activate py39 && \
+          conda install -c conda-forge -y \
+          fsspec"
+          ''',        f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
           ./a2perf/metrics/reliability/requirements.txt""",
         f"""
         COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
@@ -160,15 +173,34 @@ DOCKER_INSTRUCTIONS = {
         'RUN /opt/conda/envs/py39/bin/pip install /workdir',
     ],
     'web_navigation': [
-        '''ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+        '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 \
           --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
-        # Set up clouduser
-        'RUN if ! id 1000; then useradd -m -u 1000 clouduser; fi',
-        'RUN echo "clouduser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+        'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
+
+        # Set up user with same UID as host user
+        f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
+        'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+        'USER user',
+        'RUN sudo mkdir -p /workdir',
+        'WORKDIR /workdir',
+
+        # Set up custom conda environment
+        'RUN conda create -y --name py310 python=3.10',
+        'ENV CONDA_DEFAULT_ENV=py310',
+        'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
+        'RUN /opt/conda/envs/py310/bin/pip install --upgrade pip setuptools',
+        """
+        RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+          conda activate py310 && \
+          conda install cuda -c  nvidia -y && \
+          pip install nvidia-pyindex && \
+          pip install nvidia-tensorrt"
+        """,
+
         # Chrome Installation
-        'ARG CHROME_VERSION="114.0.5735.90-1"',
-        'ARG CHROMEDRIVER_VERSION="114.0.5735.90"',
+        'ARG CHROME_VERSION="120.0.6099.109-1"',
+        'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
         """
         RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}_amd64.deb && \
           ${APT_COMMAND} update && \
@@ -178,26 +210,17 @@ DOCKER_INSTRUCTIONS = {
         """,
         """
         RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
-            wget --no-verbose -O /tmp/chromedriver_linux64.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip && \
-            unzip -o /tmp/chromedriver_linux64.zip -d /tmp/ && \
-            mkdir -p /home/clouduser/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
-            mv /tmp/chromedriver /home/clouduser/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
-            rm /tmp/chromedriver_linux64.zip && \
-            printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/clouduser/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/clouduser/.wdm/drivers.json && \
-            chmod -R 777 /home/clouduser/.wdm && cp -r /home/clouduser/.wdm /root/
+            wget --no-verbose -O /tmp/chromedriver-linux64.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip && \
+            unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && \
+            mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && \
+            mkdir -p /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
+            mv /tmp/chromedriver /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
+            rm /tmp/chromedriver-linux64.zip && \
+            printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json && \
+            chmod -R 777 /home/user/.wdm
         """,
-        # Set up custom conda environment
-        'RUN conda create -y --name py310 python=3.10',
-        'ENV CONDA_DEFAULT_ENV=py310',
-        'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
-        'RUN /opt/conda/envs/py310/bin/pip install --upgrade pip setuptools',
-        """
-        RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-          conda activate py310 && \
-          conda install cuda -c  nvidia -y"
-        """,
+
         # Install Requirements for A2Perf
-        'WORKDIR /workdir',
         f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
       ./a2perf/metrics/reliability/requirements.txt""",
         f"""
@@ -227,28 +250,22 @@ DOCKER_INSTRUCTIONS = {
             ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
         ),
         f'COPY {REPO_DIR} .',
-        'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
+        'RUN sudo chmod -R 777 /workdir',
         'RUN /opt/conda/envs/py310/bin/pip install /workdir',
-        'USER 1000',
+
+        'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"',
+
     ],
     'circuit_training': [],
 }
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        'mkdir -p /workdir/a2perf/datasets/data',
-        (
-            'gsutil -m cp -r gs://xcloud-shared/ikechukwuu/a2perf/datasets/*'
-            ' /workdir/a2perf/datasets/data/'
-        ),
         'python /workdir/launch/entrypoint.py',
     ]),
-    'web_navigation': xm.CommandList(
-        [
-            'sudo service dbus start',
-            'python /workdir/launch/entrypoint.py',
-        ]
-    ),
+    'web_navigation': xm.CommandList(['sudo service dbus start',
+                                      'echo "$@"',
+                                      '/opt/conda/envs/py310/bin/python /workdir/launch/entrypoint.py']),
     'circuit_training': xm.CommandList([]),
 }
 
@@ -270,14 +287,14 @@ ENV_VARS = {
         'PYTHONBUFFERED': '1',
         'WRAPT_DISABLE_EXTENSIONS': 'true',
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-        'TF_GPU_THREAD_MODE': 'gpu_private',
         'TF_USE_LEGACY_KERAS': '1',
+        'TF_GPU_ALLOCATOR': 'cuda_malloc_async',
     },
     'web_navigation': {
         'PYTHONBUFFERED': '1',
         'WRAPT_DISABLE_EXTENSIONS': 'true',
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-        'TF_GPU_THREAD_MODE': 'gpu_private',
+        'TF_GPU_ALLOCATOR': 'cuda_malloc_async',
         'TF_USE_LEGACY_KERAS': '1',
     },
     'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
@@ -335,7 +352,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [32],
+          'env_batch_size': [44],
           'total_env_steps': [100000000],
           'train_checkpoint_interval': [100000],
           'policy_checkpoint_interval': [100000],
@@ -348,7 +365,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
-              'num_epochs': [10],
+              'num_epochs': [20],
           },
           'sac': {
               'algo': ['sac'],
@@ -363,7 +380,7 @@ def get_hparam_sweeps(domain, **kwargs):
     embedding_dim = kwargs['embedding_dim']
     profile_value_dropout = kwargs['profile_value_dropout']
     max_vocab_size = kwargs['max_vocab_size']
-
+    use_xvfb = kwargs['use_xvfb']
     general_hyperparameters = {
         'eval_interval': [100],
         'log_interval': [100],
@@ -374,6 +391,7 @@ def get_hparam_sweeps(domain, **kwargs):
         'latent_dim': [latent_dim],
         'embedding_dim': [embedding_dim],
         'profile_value_dropout': [profile_value_dropout],
+        'use_xvfb': [use_xvfb],
     }
 
     if debug:
@@ -493,19 +511,14 @@ def main(_):
 
       # Define Executable
       [executable] = experiment.package([
-          xm.dockerfile_container(
+          xm.python_container(
               executor_spec=executor.Spec(),
               path='../',
-              dockerfile=f'{_DOMAIN.value}.Dockerfile',
+              use_deep_module=True,
+              base_image=BASE_IMAGE[_DOMAIN.value],
+              docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
+              entrypoint=ENTRYPOINT[_DOMAIN.value],
               env_vars=ENV_VARS[_DOMAIN.value],
-              # xm.python_container(
-              #     executor_spec=executor.Spec(),
-              #     path='../',
-              #     use_deep_module=True,
-              #     base_image=BASE_IMAGE[_DOMAIN.value],
-              #     docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
-              #     entrypoint=ENTRYPOINT[_DOMAIN.value],
-              #     env_vars=ENV_VARS[_DOMAIN.value],
           )
       ])
 
@@ -527,6 +540,7 @@ def main(_):
         domain=_DOMAIN.value,
         skill_levels=_SKILL_LEVELS.value,
         seeds=_SEEDS.value,
+        use_xvfb=_USE_XVFB.value,
         mode=_MODE.value,
         latent_dim=_LATENT_DIM.value,
         embedding_dim=_EMBEDDING_DIM.value,

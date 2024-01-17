@@ -8,6 +8,7 @@ psutil
 regex
 scipy
 setuptools
+fsspec
 
 # reliabiility
 -r ./a2perf/metrics/reliability/requirements.txt
