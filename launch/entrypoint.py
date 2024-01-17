@@ -97,7 +97,6 @@ _DIFFICULTY_LEVEL = flags.DEFINE_enum(
 def main(_):
   os.environ['SEED'] = str(_SEED.value)
   os.environ['ENV_BATCH_SIZE'] = str(_ENV_BATCH_SIZE.value)
-  os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
   os.environ['TOTAL_ENV_STEPS'] = str(_TOTAL_ENV_STEPS.value)
   os.environ['ALGO'] = _ALGO.value
   os.environ['SKILL_LEVEL'] = _SKILL_LEVEL.value
@@ -115,15 +114,22 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       _POLICY_CHECKPOINT_INTERVAL.value
   )
-  os.environ['USE_GAE'] = str(_USE_GAE.value)
-  os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   os.environ['EVAL_INTERVAL'] = str(_EVAL_INTERVAL.value)
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
-  os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
-  os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
+
+  if _ALGO.value == 'sac':
+    os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
+  elif _ALGO.value == 'ddqn':
+    os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
+    os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
+
+  elif _ALGO.value == 'ppo':
+    os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
+    os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
+    os.environ['USE_GAE'] = str(_USE_GAE.value)
 
   os.environ['ENV_NAME'] = _ENV_NAME.value
   if _DOMAIN.value == 'quadruped_locomotion':
