@@ -118,14 +118,14 @@ DOCKER_INSTRUCTIONS = {
           --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
         'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
-
-        # Set up user with same UID as host user
-        f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
+        # Delete user with UID 1000 and then create a new user 'user' with UID 1000
+        f"""
+        RUN userdel $(getent passwd {os.getuid()} | cut -d: -f1) || true \
+          && useradd -m -u {os.getuid()} user""",
         'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
         'USER user',
         'RUN sudo mkdir -p /workdir',
         'WORKDIR /workdir',
-
         # Set up custom conda environment
         'RUN conda create -y --name py39 python=3.9',
         'ENV CONDA_DEFAULT_ENV=py39',
@@ -134,17 +134,16 @@ DOCKER_INSTRUCTIONS = {
         """
         RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
           conda activate py39 && \
-          conda install cuda -c  nvidia -y && \
-          pip install nvidia-pyindex && \
-          pip install nvidia-tensorrt"
+          conda install cuda -c  nvidia -y"
         """,
-
+        'RUN /opt/conda/envs/py39/bin/pip install nvidia-pyindex',
+        'RUN /opt/conda/envs/py39/bin/pip install nvidia-tensorrt',
         # Install Requirements for A2Perf
-        '''RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+        """RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
           conda activate py39 && \
-          conda install -c conda-forge -y \
-          fsspec"
-          ''',        f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          conda install -c conda-forge -y gcsfs"
+          """,
+        f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
           ./a2perf/metrics/reliability/requirements.txt""",
         f"""
         COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
@@ -177,14 +176,12 @@ DOCKER_INSTRUCTIONS = {
           --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
         'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
-
         # Set up user with same UID as host user
         f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
         'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
         'USER user',
         'RUN sudo mkdir -p /workdir',
         'WORKDIR /workdir',
-
         # Set up custom conda environment
         'RUN conda create -y --name py310 python=3.10',
         'ENV CONDA_DEFAULT_ENV=py310',
@@ -197,7 +194,6 @@ DOCKER_INSTRUCTIONS = {
           pip install nvidia-pyindex && \
           pip install nvidia-tensorrt"
         """,
-
         # Chrome Installation
         'ARG CHROME_VERSION="120.0.6099.109-1"',
         'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
@@ -219,7 +215,6 @@ DOCKER_INSTRUCTIONS = {
             printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json && \
             chmod -R 777 /home/user/.wdm
         """,
-
         # Install Requirements for A2Perf
         f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
       ./a2perf/metrics/reliability/requirements.txt""",
@@ -252,9 +247,9 @@ DOCKER_INSTRUCTIONS = {
         f'COPY {REPO_DIR} .',
         'RUN sudo chmod -R 777 /workdir',
         'RUN /opt/conda/envs/py310/bin/pip install /workdir',
-
-        'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"',
-
+        (
+            'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
+        ),
     ],
     'circuit_training': [],
 }
@@ -263,9 +258,11 @@ ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
         'python /workdir/launch/entrypoint.py',
     ]),
-    'web_navigation': xm.CommandList(['sudo service dbus start',
-                                      'echo "$@"',
-                                      '/opt/conda/envs/py310/bin/python /workdir/launch/entrypoint.py']),
+    'web_navigation': xm.CommandList([
+        'sudo service dbus start',
+        'echo "$@"',
+        '/opt/conda/envs/py310/bin/python /workdir/launch/entrypoint.py',
+    ]),
     'circuit_training': xm.CommandList([]),
 }
 
@@ -457,7 +454,8 @@ def get_hparam_sweeps(domain, **kwargs):
     if algo in algo_hyperparameters:
       keys, values = zip(*algo_hyperparameters[algo].items())
       algo_hparam_combinations.extend(
-          [dict(zip(keys, v)) for v in itertools.product(*values)])
+          [dict(zip(keys, v)) for v in itertools.product(*values)]
+      )
 
   general_hyperparameters.update({
       'skill_level': skill_levels,
@@ -469,8 +467,9 @@ def get_hparam_sweeps(domain, **kwargs):
 
   # Generate combinations of general hyperparameters
   general_keys, general_values = zip(*general_hyperparameters.items())
-  general_hparam_combinations = [dict(zip(general_keys, v)) for v in
-                                 itertools.product(*general_values)]
+  general_hparam_combinations = [
+      dict(zip(general_keys, v)) for v in itertools.product(*general_values)
+  ]
 
   # Combine algorithm-specific hyperparameters with general hyperparameters
   hparam_sweeps = []
