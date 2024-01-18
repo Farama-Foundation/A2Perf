@@ -123,7 +123,8 @@ DOCKER_INSTRUCTIONS = {
         RUN userdel $(getent passwd {os.getuid()} | cut -d: -f1) || true \
           && useradd -m -u {os.getuid()} user""",
         'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'RUN mkdir -p /workdir',
+        'USER user',
+        'RUN sudo mkdir -p /workdir',
         'WORKDIR /workdir',
         # Set up custom conda environment
         'RUN conda create -y --name py39 python=3.9',
@@ -135,8 +136,8 @@ DOCKER_INSTRUCTIONS = {
           conda activate py39 && \
           conda install cuda -c  nvidia -y"
         """,
-        'RUN /opt/conda/envs/py39/bin/pip install nvidia-pyindex',
-        'RUN /opt/conda/envs/py39/bin/pip install nvidia-tensorrt',
+        # 'RUN /opt/conda/envs/py39/bin/pip install nvidia-pyindex',
+        # 'RUN /opt/conda/envs/py39/bin/pip install nvidia-tensorrt',
         # Install Requirements for A2Perf
         """RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
           conda activate py39 && \
@@ -167,7 +168,7 @@ DOCKER_INSTRUCTIONS = {
             ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
         ),
         f'COPY {REPO_DIR} .',
-        'RUN chmod -R 777 /workdir/a2perf /workdir/setup.py',
+        'RUN sudo chmod -R 777 /workdir',
         'RUN /opt/conda/envs/py39/bin/pip install /workdir',
     ],
     'web_navigation': [
@@ -280,17 +281,17 @@ BASE_IMAGE = {
 ENV_VARS = {
     'quadruped_locomotion': {
         'PYTHONBUFFERED': '1',
-        'WRAPT_DISABLE_EXTENSIONS': 'true',
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+        'TF_GPU_THREAD_MODE': 'gpu_private',
         'TF_USE_LEGACY_KERAS': '1',
-        'TF_GPU_ALLOCATOR': 'cuda_malloc_async',
+        'WRAPT_DISABLE_EXTENSIONS': 'true',
     },
     'web_navigation': {
         'PYTHONBUFFERED': '1',
-        'WRAPT_DISABLE_EXTENSIONS': 'true',
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-        'TF_GPU_ALLOCATOR': 'cuda_malloc_async',
+        'TF_GPU_THREAD_MODE': 'gpu_private',
         'TF_USE_LEGACY_KERAS': '1',
+        'WRAPT_DISABLE_EXTENSIONS': 'true',
     },
     'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
 }
@@ -315,7 +316,7 @@ def get_hparam_sweeps(domain, **kwargs):
   if domain == 'quadruped_locomotion':
     motion_files = kwargs['motion_files']
     general_hyperparameters = {
-        'batch_size': [512],
+        'batch_size': [64],
         'eval_interval': [100],
         'log_interval': [100],
         'env_name': ['QuadrupedLocomotion-v0'],
@@ -358,9 +359,9 @@ def get_hparam_sweeps(domain, **kwargs):
           'ppo': {
               'algo': ['ppo'],
               'use_gae': [True],
-              'entropy_regularization': [1e-4],
+              'entropy_regularization': [1e-5],
               'learning_rate': [3e-4],
-              'num_epochs': [20],
+              'num_epochs': [10],
           },
           'sac': {
               'algo': ['sac'],
