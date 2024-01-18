@@ -108,6 +108,31 @@ _TRAIN_EXP_ID = flags.DEFINE_string(
     ' inference or running offline metrics',
 )
 
+_VARIABLE_CONTAINER_SERVER_ADDRESS = flags.DEFINE_string(
+    'variable_container_server_address',
+    '127.0.0.1',
+    'Address of the variable container server',
+)
+_VARIABLE_CONTAINER_SERVER_PORT = flags.DEFINE_integer(
+    'variable_container_server_port',
+    '8008',
+    'Port of the variable container server',
+)
+_REPLAY_BUFFER_SERVER_ADDRESS = flags.DEFINE_string(
+    'replay_buffer_server_address',
+    '127.0.0.1',
+    'Address of the replay buffer server',
+)
+_REPLAY_BUFFER_SERVER_PORT = flags.DEFINE_integer(
+    'replay_buffer_server_port', '8008', 'Port of the replay buffer server'
+)
+_VOCABULARY_SERVER_ADDRESS = flags.DEFINE_string(
+    'vocabulary_server_address', '127.0.0.1', 'Address of the vocabulary server'
+)
+_VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
+    'vocabulary_server_port', '50000', 'Port of the vocabulary server'
+)
+
 REPO_DIR = os.path.basename(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -587,6 +612,10 @@ def main(_):
 
       hparams.update(
           dict(
+              replay_buffer_server_address=_REPLAY_BUFFER_SERVER_ADDRESS.value,
+              replay_buffer_server_port=_REPLAY_BUFFER_SERVER_PORT.value,
+              variable_container_server_address=_VARIABLE_CONTAINER_SERVER_ADDRESS.value,
+              variable_container_server_port=_VARIABLE_CONTAINER_SERVER_PORT.value,
               run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
               dataset_id=dataset_id,
               gin_config=os.path.join(

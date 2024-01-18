@@ -50,7 +50,9 @@ _SKILL_LEVEL = flags.DEFINE_enum(
 )
 # _TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
-_MODE = flags.DEFINE_string('mode', None, 'Mode of execution.')
+_MODE = flags.DEFINE_enum('mode', None,
+                          ['train', 'collect', 'reverb', 'inference'],
+                          'Mode.')
 _LEARNING_RATE = flags.DEFINE_float('learning_rate', None, 'Learning rate.')
 _BATCH_SIZE = flags.DEFINE_integer(
     'batch_size', None, 'Batch size for training.'
@@ -120,6 +122,15 @@ def main(_):
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
 
+  # For collect/inference, change the root dir to a subdirectory to make sure
+  # That our system metrics are not overwritten
+  if _MODE.value in ['collect', 'inference']:
+    _ROOT_DIR.value = os.path.join(_ROOT_DIR.value, _MODE.value)
+    os.environ['ROOT_DIR'] = _ROOT_DIR.value
+    print(f"Root dir: {_ROOT_DIR.value}")
+  else:
+    print('Not changing root dir since mode is not collect/inference')
+  return
   if _ALGO.value == 'sac':
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   elif _ALGO.value == 'ddqn':
