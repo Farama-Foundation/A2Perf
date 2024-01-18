@@ -168,8 +168,9 @@ DOCKER_INSTRUCTIONS = {
             ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
         ),
         f'COPY {REPO_DIR} .',
-        'RUN sudo chmod -R 777 /workdir',
+        'RUN sudo chown -R 1000:root /workdir && sudo chmod -R 775 /workdir',
         'RUN /opt/conda/envs/py39/bin/pip install /workdir',
+        'USER root',
     ],
     'web_navigation': [
         '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 \
