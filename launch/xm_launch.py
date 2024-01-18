@@ -317,8 +317,8 @@ def get_hparam_sweeps(domain, **kwargs):
     motion_files = kwargs['motion_files']
     general_hyperparameters = {
         'batch_size': [64],
-        'eval_interval': [100],
-        'log_interval': [100],
+        'eval_interval': [10000],
+        'log_interval': [10000],
         'env_name': ['QuadrupedLocomotion-v0'],
         'motion_file': motion_files,
     }
