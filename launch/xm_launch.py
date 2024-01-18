@@ -136,8 +136,8 @@ DOCKER_INSTRUCTIONS = {
           conda activate py39 && \
           conda install cuda -c  nvidia -y"
         """,
-        # 'RUN /opt/conda/envs/py39/bin/pip install nvidia-pyindex',
-        # 'RUN /opt/conda/envs/py39/bin/pip install nvidia-tensorrt',
+        'RUN /opt/conda/envs/py39/bin/pip install nvidia-pyindex',
+        'RUN /opt/conda/envs/py39/bin/pip install nvidia-tensorrt',
         # Install Requirements for A2Perf
         """RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
           conda activate py39 && \
