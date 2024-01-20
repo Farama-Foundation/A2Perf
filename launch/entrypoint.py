@@ -134,7 +134,7 @@ def main(_):
   os.environ['SEED'] = str(_SEED.value)
   os.environ['ENV_BATCH_SIZE'] = str(_ENV_BATCH_SIZE.value)
   os.environ['TOTAL_ENV_STEPS'] = str(_TOTAL_ENV_STEPS.value)
-  os.environ['ALGO'] = _ALGO.value
+  os.environ['ALGORITHM'] = _ALGO.value
   os.environ['SKILL_LEVEL'] = _SKILL_LEVEL.value
   os.environ['GIN_CONFIG'] = _GIN_CONFIG.value
   os.environ['LEARNING_RATE'] = str(_LEARNING_RATE.value)
@@ -191,16 +191,17 @@ def main(_):
     print('Experiment ID: ', _EXPERIMENT_ID.value)
   os.environ['ROOT_DIR'] = root_dir
 
+  os.environ['ALGO'] = _ALGO.value
   if _ALGO.value == 'sac':
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   elif _ALGO.value == 'ddqn':
     os.environ['EPSILON_GREEDY'] = str(_EPSILON_GREEDY.value)
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
-
   elif _ALGO.value == 'ppo':
     os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
     os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
     os.environ['USE_GAE'] = str(_USE_GAE.value)
+    os.environ['RB_CAPACITY'] = '10000000'  # doesn't matter for PPO
 
   os.environ['ENV_NAME'] = _ENV_NAME.value
   if _DOMAIN.value == 'quadruped_locomotion':

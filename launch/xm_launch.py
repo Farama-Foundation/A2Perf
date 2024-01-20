@@ -93,9 +93,6 @@ _MODE = flags.DEFINE_enum(
 _JOB_TYPE = flags.DEFINE_enum(
     'job_type', None, ['train', 'collect', 'reverb'], 'Type of job'
 )
-_PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
-    'participant_module_path', None, 'Path to participant module'
-)
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run train or inference.'
 )
@@ -348,7 +345,6 @@ def get_hparam_sweeps(domain, **kwargs):
   if domain == 'quadruped_locomotion':
     motion_files = kwargs['motion_files']
     general_hyperparameters = {
-        'batch_size': [512],
         'eval_interval': [100],
         'log_interval': [100],
         'env_name': ['QuadrupedLocomotion-v0'],
@@ -389,13 +385,15 @@ def get_hparam_sweeps(domain, **kwargs):
 
       algo_hyperparameters = {
           'ppo': {
+              'batch_size': [32],
               'algo': ['ppo'],
               'use_gae': [True],
               'entropy_regularization': [0.0],
-              'learning_rate': [3e-4],
+              'learning_rate': [1e-4],
               'num_epochs': [10],
           },
           'sac': {
+              'batch_size': [32],
               'algo': ['sac'],
               'learning_rate': [3e-4],
               'rb_capacity': [10000000],
@@ -676,7 +674,6 @@ def main(_):
               ),
               participant_module_path=os.path.join(
                   '/workdir/a2perf/a2perf_benchmark_submission',
-                  algo,
               ),
           )
       )
