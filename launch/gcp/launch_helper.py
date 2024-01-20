@@ -6,9 +6,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('machine_name', None,
                     'Name of the machine to generate commands for')
 flags.DEFINE_string('task', None, 'Task to be specified in the commands')
+flags.DEFINE_string('algo', None, 'Algorithm to be used')
+flags.DEFINE_integer('seed', None, 'Seed for the algorithm')
 
 
-def generate_commands(machine_name, task):
+def generate_commands(machine_name, task, algo, seed):
   # Dictionary mapping machine names to addresses
   machine_addresses = {
       "web-nav-0": "10.128.15.228",
@@ -22,8 +24,8 @@ def generate_commands(machine_name, task):
     train_command = (
         f"xmanager launch launch/xm_launch.py -- \\\n"
         f"--domain=quadruped_locomotion \\\n"
-        f"--seeds=4 \\\n"
-        f"--algos=ppo \\\n"
+        f"--seeds={seed} \\\n"
+        f"--algos={algo} \\\n"
         f"--motion_files={task} \\\n"
         f"--mode=train \\\n"
         f"--job_type=train \\\n"
@@ -37,8 +39,8 @@ def generate_commands(machine_name, task):
     collect_command = (
         f"xmanager launch launch/xm_launch.py -- \\\n"
         f"--domain=quadruped_locomotion \\\n"
-        f"--seeds=4 \\\n"
-        f"--algos=ppo \\\n"
+        f"--seeds={seed} \\\n"
+        f"--algos={algo} \\\n"
         f"--motion_files={task} \\\n"
         f"--mode=train \\\n"
         f"--job_type=collect \\\n"
@@ -60,7 +62,7 @@ def generate_commands(machine_name, task):
 
 def main(argv):
   del argv  # Unused.
-  generate_commands(FLAGS.machine_name, FLAGS.task)
+  generate_commands(FLAGS.machine_name, FLAGS.task, FLAGS.algo, FLAGS.seed)
 
 
 if __name__ == "__main__":
