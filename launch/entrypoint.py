@@ -3,7 +3,12 @@ import subprocess
 
 from absl import app
 from absl import flags
+from termcolor import colored
+from pyfiglet import Figlet
 
+_EXPERIMENT_ID = flags.DEFINE_string(
+    'experiment_id', None, 'Experiment ID for web navigation.'
+)
 _MAX_VOCAB_SIZE = flags.DEFINE_integer(
     'max_vocab_size', None, 'Max vocab size for web navigation.'
 )
@@ -48,11 +53,12 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     ['novice', 'intermediate', 'expert'],
     'Skill level of the expert.',
 )
+
+_JOB_TYPE = flags.DEFINE_enum(
+    'job_type', None, ['train', 'collect', 'reverb'], 'Type of job'
+)
 # _TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
-_MODE = flags.DEFINE_enum('mode', None,
-                          ['train', 'collect', 'reverb', 'inference'],
-                          'Mode.')
 _LEARNING_RATE = flags.DEFINE_float('learning_rate', None, 'Learning rate.')
 _BATCH_SIZE = flags.DEFINE_integer(
     'batch_size', None, 'Batch size for training.'
@@ -95,18 +101,44 @@ _DIFFICULTY_LEVEL = flags.DEFINE_enum(
     'Difficulty level for web navigation.',
 )
 
+_REPLAY_BUFFER_SERVER_ADDRESS = flags.DEFINE_string(
+    'replay_buffer_server_address', None, 'Replay buffer server address.'
+)
+_REPLAY_BUFFER_SERVER_PORT = flags.DEFINE_integer(
+
+    'replay_buffer_server_port', None, 'Replay buffer server port.'
+)
+_VARIABLE_CONTAINER_SERVER_ADDRESS = flags.DEFINE_string(
+    'variable_container_server_address', None,
+    'Variable container server address.'
+)
+
+_VARIABLE_CONTAINER_SERVER_PORT = flags.DEFINE_integer(
+    'variable_container_server_port', None, 'Variable container server port.'
+)
+
+_VOCABULARY_SERVER_ADDRESS = flags.DEFINE_string(
+    'vocabulary_server_address', None, 'Vocabulary server address.'
+)
+_VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
+    'vocabulary_server_port', None, 'Vocabulary server port.'
+)
+
+_MODE = flags.DEFINE_enum('mode', None,
+                          ['train', 'collect', 'reverb', 'inference'],
+                          'Mode.')
+
 
 def main(_):
+  os.environ['EXPERIMENT_ID'] = _EXPERIMENT_ID.value
   os.environ['SEED'] = str(_SEED.value)
   os.environ['ENV_BATCH_SIZE'] = str(_ENV_BATCH_SIZE.value)
   os.environ['TOTAL_ENV_STEPS'] = str(_TOTAL_ENV_STEPS.value)
   os.environ['ALGO'] = _ALGO.value
   os.environ['SKILL_LEVEL'] = _SKILL_LEVEL.value
   os.environ['GIN_CONFIG'] = _GIN_CONFIG.value
-  os.environ['MODE'] = _MODE.value
   os.environ['LEARNING_RATE'] = str(_LEARNING_RATE.value)
   os.environ['BATCH_SIZE'] = str(_BATCH_SIZE.value)
-  os.environ['ROOT_DIR'] = _ROOT_DIR.value
   os.environ['PARTICIPANT_MODULE_PATH'] = _PARTICIPANT_MODULE_PATH.value
   os.environ['RUN_OFFLINE_METRICS_ONLY'] = str(_RUN_OFFLINE_METRICS_ONLY.value)
   os.environ['TIMESTEPS_PER_ACTOR_BATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
@@ -122,15 +154,43 @@ def main(_):
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
 
+  # Export distributed training variables
+  os.environ['MODE'] = _MODE.value
+  os.environ['JOB_TYPE'] = _JOB_TYPE.value
+  os.environ[
+    'REPLAY_BUFFER_SERVER_ADDRESS'] = _REPLAY_BUFFER_SERVER_ADDRESS.value
+  os.environ['REPLAY_BUFFER_SERVER_PORT'] = str(
+      _REPLAY_BUFFER_SERVER_PORT.value)
+  os.environ[
+    'VARIABLE_CONTAINER_SERVER_ADDRESS'] = _VARIABLE_CONTAINER_SERVER_ADDRESS.value
+  os.environ['VARIABLE_CONTAINER_SERVER_PORT'] = str(
+      _VARIABLE_CONTAINER_SERVER_PORT.value)
+  os.environ[
+    'VOCABULARY_SERVER_ADDRESS'] = _VOCABULARY_SERVER_ADDRESS.value
+  os.environ['VOCABULARY_SERVER_PORT'] = str(_VOCABULARY_SERVER_PORT.value)
+
+  # Assuming _MODE and _EXPERIMENT_ID are defined somewhere in your code
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
-  if _MODE.value in ['collect', 'inference']:
-    _ROOT_DIR.value = os.path.join(_ROOT_DIR.value, _MODE.value)
-    os.environ['ROOT_DIR'] = _ROOT_DIR.value
-    print(f"Root dir: {_ROOT_DIR.value}")
+  if _JOB_TYPE.value in ['collect', 'inference']:
+    root_dir = os.path.join(_ROOT_DIR.value, _JOB_TYPE.value, )
+    print(f'Changing root dir to {root_dir}')
+    f = Figlet(font='standard', width=300)
+    print(colored(f.renderText(_JOB_TYPE.value), 'red'))
+
   else:
-    print('Not changing root dir since mode is not collect/inference')
-  return
+    # Display the experiment number and a message for me to copy the experiment number
+    # to start the collect jobs. Make the message a big warning as flashy as possible
+    print(f"Experiment ID: {_EXPERIMENT_ID.value}")
+    root_dir = _ROOT_DIR.value
+    # Use ASCII art for emphasis. Make it clear that i Need to copy the experimet nunmber
+    # to start the collect jobs
+    f = Figlet(font='standard')
+    print(colored(f.renderText('Copy this'),
+                  'red'))
+    print('Experiment ID: ', _EXPERIMENT_ID.value)
+  os.environ['ROOT_DIR'] = root_dir
+
   if _ALGO.value == 'sac':
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   elif _ALGO.value == 'ddqn':
@@ -164,7 +224,8 @@ def main(_):
       'a2perf/submission/main_submission.py',
       f'--gin_config={_GIN_CONFIG.value}',
       f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
-      f'--root_dir={_ROOT_DIR.value}',
+      f'--root_dir={root_dir}',
+      f'--metric_values_dir={root_dir}/metrics',
       f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
   ]
 

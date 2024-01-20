@@ -9,7 +9,8 @@ regex
 scipy
 setuptools
 fsspec
-
+termcolor
+pyfiglet
 # reliabiility
 -r ./a2perf/metrics/reliability/requirements.txt
 

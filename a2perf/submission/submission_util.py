@@ -139,11 +139,11 @@ class Submission:
   def __init__(
       self,
       root_dir: str,
+      metric_values_dir: str,
       participant_module_path: str = None,
       profilers: typing.List[typing.Type[BaseProfiler]] = None,
       mode: BenchmarkMode = BenchmarkMode.TRAIN,
       domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
-      metric_values_dir: str = None,
       train_logs_dirs: typing.List[str] = None,
       num_inference_steps: int = 1000,
       num_inference_episodes: int = 1,
@@ -182,8 +182,6 @@ class Submission:
     self.metric_values_dir = metric_values_dir
     self.train_logs_dirs = train_logs_dirs
     os.makedirs(self.root_dir, exist_ok=True)
-    if self.metric_values_dir is None:
-      self.metric_values_dir = os.path.join(self.root_dir, 'metrics')
     os.makedirs(self.metric_values_dir, exist_ok=True)
     if self.train_logs_dirs is not None:
       self.train_logs_dirs = [

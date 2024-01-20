@@ -77,8 +77,8 @@ _MOTION_FILES = flags.DEFINE_list('motion_files', None, 'Motion files to run')
 _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'quadruped_locomotion', 'Name of experiment'
 )
-_EXPERIMENT_NUMBER = flags.DEFINE_string(
-    'experiment_number', None, 'Experiment number'
+_EXPERIMENT_ID = flags.DEFINE_string(
+    'experiment_id', None, 'Experiment number'
 )
 _INFERENCE = flags.DEFINE_bool(
     'inference', False, 'Whether to run train or inference.'
@@ -89,6 +89,9 @@ _INTERACTIVE = flags.DEFINE_bool(
 _LOCAL = flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 _MODE = flags.DEFINE_enum(
     'mode', 'train', ['train', 'inference'], 'Mode of execution'
+)
+_JOB_TYPE = flags.DEFINE_enum(
+    'job_type', None, ['train', 'collect', 'reverb'], 'Type of job'
 )
 _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     'participant_module_path', None, 'Path to participant module'
@@ -137,16 +140,32 @@ REPO_DIR = os.path.basename(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 
+_TENSOR_RT_INSTRUCTIONS_PY310 = [
+    """
+    RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+      conda activate py310 && \
+      conda install cuda -c  nvidia -y && \
+      pip install nvidia-pyindex && \
+      pip install nvidia-tensorrt"
+    """,
+]
+_TENSOR_RT_INSTRUCTIONS_PY39 = [
+    """
+    RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+      conda activate py39 && \
+      conda install cuda -c  nvidia -y && \
+      pip install nvidia-pyindex && \
+      pip install nvidia-tensorrt"
+    """,
+]
+
 DOCKER_INSTRUCTIONS = {
     'quadruped_locomotion': [
-        '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 \
-          --no-install-recommends -y"''',
+        '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 --no-install-recommends -y"''',
         'ENV DEBIAN_FRONTEND=noninteractive',
         'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
-        # Delete user with UID 1000 and then create a new user 'user' with UID 1000
         f"""
-        RUN userdel $(getent passwd {os.getuid()} | cut -d: -f1) || true \
-          && useradd -m -u {os.getuid()} user""",
+        RUN userdel $(getent passwd {os.getuid()} | cut -d: -f1) || true && useradd -m -u {os.getuid()} user""",
         'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
         'USER user',
         'RUN sudo mkdir -p /workdir',
@@ -156,13 +175,6 @@ DOCKER_INSTRUCTIONS = {
         'ENV CONDA_DEFAULT_ENV=py39',
         'ENV PATH="/opt/conda/envs/py39/bin:${PATH}"',
         'RUN /opt/conda/envs/py39/bin/pip install --upgrade pip setuptools',
-        """
-        RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-          conda activate py39 && \
-          conda install cuda -c  nvidia -y"
-        """,
-        'RUN /opt/conda/envs/py39/bin/pip install nvidia-pyindex',
-        'RUN /opt/conda/envs/py39/bin/pip install nvidia-tensorrt',
         # Install Requirements for A2Perf
         """RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
           conda activate py39 && \
@@ -212,13 +224,7 @@ DOCKER_INSTRUCTIONS = {
         'ENV CONDA_DEFAULT_ENV=py310',
         'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
         'RUN /opt/conda/envs/py310/bin/pip install --upgrade pip setuptools',
-        """
-        RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-          conda activate py310 && \
-          conda install cuda -c  nvidia -y && \
-          pip install nvidia-pyindex && \
-          pip install nvidia-tensorrt"
-        """,
+
         # Chrome Installation
         'ARG CHROME_VERSION="120.0.6099.109-1"',
         'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
@@ -342,9 +348,9 @@ def get_hparam_sweeps(domain, **kwargs):
   if domain == 'quadruped_locomotion':
     motion_files = kwargs['motion_files']
     general_hyperparameters = {
-        'batch_size': [64],
-        'eval_interval': [10000],
-        'log_interval': [10000],
+        'batch_size': [512],
+        'eval_interval': [100],
+        'log_interval': [100],
         'env_name': ['QuadrupedLocomotion-v0'],
         'motion_file': motion_files,
     }
@@ -374,8 +380,8 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [44],
-          'total_env_steps': [100000000],
+          'env_batch_size': [170],
+          'total_env_steps': [200000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
           'timesteps_per_actorbatch': [4096],
@@ -385,7 +391,7 @@ def get_hparam_sweeps(domain, **kwargs):
           'ppo': {
               'algo': ['ppo'],
               'use_gae': [True],
-              'entropy_regularization': [1e-5],
+              'entropy_regularization': [0.0],
               'learning_rate': [3e-4],
               'num_epochs': [10],
           },
@@ -510,11 +516,15 @@ def main(_):
   create_experiment = xm_local.create_experiment
 
   with create_experiment(experiment_title=_EXPERIMENT_NAME.value) as experiment:
+
+    experiment_id = experiment.experiment_id
+    experiment_id = _EXPERIMENT_ID.value or experiment_id
+
     base_root_dir = os.path.join(
         '/gcs',
         'a2perf',
         _DOMAIN.value,
-        str(experiment.experiment_id),
+        str(experiment_id),
     )
 
     async def make_job(work_unit: xm.WorkUnit, **hparams):
@@ -525,13 +535,32 @@ def main(_):
               },
           ),
           docker_options=xm_local.DockerOptions(
-              ports=None,
+              ports={
+                  _REPLAY_BUFFER_SERVER_PORT.value: _REPLAY_BUFFER_SERVER_PORT.value,
+                  _VARIABLE_CONTAINER_SERVER_PORT.value: _VARIABLE_CONTAINER_SERVER_PORT.value,
+                  _VOCABULARY_SERVER_PORT.value: _VOCABULARY_SERVER_PORT.value},
               volumes=None,
               mount_gcs_path=True,
               interactive=_INTERACTIVE.value,
           ),
           experimental_stream_output=True,
       )
+      docker_instructions = DOCKER_INSTRUCTIONS[_DOMAIN.value]
+      base_image = BASE_IMAGE[_DOMAIN.value]
+      if _NUM_GPUS.value > 0:
+        # find the index of command starting with "RUN conda create"
+        index = next(
+            i for i, s in enumerate(docker_instructions)
+            if 'RUN conda create' in s
+        )
+
+        # insert the entire list there
+        if _DOMAIN.value == 'web_navigation':
+          docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY310)
+        elif _DOMAIN.value == 'quadruped_locomotion':
+          docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY39)
+      else:
+        base_image = 'gcr.io/deeplearning-platform-release/base-cpu:latest'
 
       # Define Executable
       [executable] = experiment.package([
@@ -539,8 +568,8 @@ def main(_):
               executor_spec=executor.Spec(),
               path='../',
               use_deep_module=True,
-              base_image=BASE_IMAGE[_DOMAIN.value],
-              docker_instructions=DOCKER_INSTRUCTIONS[_DOMAIN.value],
+              base_image=base_image,
+              docker_instructions=docker_instructions,
               entrypoint=ENTRYPOINT[_DOMAIN.value],
               env_vars=ENV_VARS[_DOMAIN.value],
           )
@@ -553,6 +582,23 @@ def main(_):
 
       job = xm.Job(executable, args=hparams, executor=executor)
       work_unit.add(job)
+
+      # Also save the hparam config to the experiment directory
+      hparam_config_path = os.path.join(
+          '~/gcs',
+          'a2perf',
+          _DOMAIN.value,
+          str(experiment_id),
+          'hparam_config.json',
+      )
+
+      # Turn it into absolute path
+      hparam_config_path = os.path.expanduser(hparam_config_path)
+
+      # Make the dir and write the hparam config
+      os.makedirs(os.path.dirname(hparam_config_path), exist_ok=True)
+      with open(hparam_config_path, 'w') as f:
+        f.write(str(hparams))
 
     hparam_sweeps = get_hparam_sweeps(
         debug=_DEBUG.value,
@@ -612,10 +658,14 @@ def main(_):
 
       hparams.update(
           dict(
+              job_type=_JOB_TYPE.value,
+              experiment_id=experiment_id,
               replay_buffer_server_address=_REPLAY_BUFFER_SERVER_ADDRESS.value,
               replay_buffer_server_port=_REPLAY_BUFFER_SERVER_PORT.value,
               variable_container_server_address=_VARIABLE_CONTAINER_SERVER_ADDRESS.value,
               variable_container_server_port=_VARIABLE_CONTAINER_SERVER_PORT.value,
+              vocabulary_server_address=_VOCABULARY_SERVER_ADDRESS.value,
+              vocabulary_server_port=_VOCABULARY_SERVER_PORT.value,
               run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
               dataset_id=dataset_id,
               gin_config=os.path.join(
