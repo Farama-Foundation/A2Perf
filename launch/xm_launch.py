@@ -207,22 +207,19 @@ DOCKER_INSTRUCTIONS = {
         'USER root',
     ],
     'web_navigation': [
-        '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 \
-          --no-install-recommends -y"''',
-        'ENV DEBIAN_FRONTEND=noninteractive',
-        'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
-        # Set up user with same UID as host user
-        f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
-        'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'RUN mkdir -p /workdir',
-        'WORKDIR /workdir',
-        # Set up custom conda environment
-        'RUN conda create -y --name py310 python=3.10',
-        'ENV CONDA_DEFAULT_ENV=py310',
-        'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
-        'RUN /opt/conda/envs/py310/bin/pip install --upgrade pip setuptools',
-
-        # Chrome Installation
+        '''
+        ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+          --no-install-recommends -y"
+        ''',
+        '''
+        ENV DEBIAN_FRONTEND=noninteractive
+        ''',
+        '''
+        RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
+          ${APT_COMMAND} install sudo wget unzip && \
+          rm -rf /var/lib/apt/lists/*
+        ''',
+        # Install Google Chrome
         'ARG CHROME_VERSION="120.0.6099.109-1"',
         'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
         """
@@ -230,8 +227,26 @@ DOCKER_INSTRUCTIONS = {
           ${APT_COMMAND} update && \
           ${APT_COMMAND} --fix-broken install && \
           ${APT_COMMAND} install /tmp/chrome.deb xvfb && \
-          rm /tmp/chrome.deb
+          rm /tmp/chrome.deb && \
+          rm -rf /var/lib/apt/lists/*
         """,
+
+        # Set up user with same UID as host user
+        f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
+        'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
+        'RUN mkdir -p /workdir',
+        'WORKDIR /workdir',
+
+        # Set up custom conda environment
+        '''
+        RUN conda create -y --name py310 python=3.10 && \
+          /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+            conda activate py310 && \
+            conda install -c conda-forge -y gcsfs && \
+            pip install --upgrade pip setuptools"
+        ''',
+
+        # Set up chromedriver installation and caching
         """
         RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
             wget --no-verbose -O /tmp/chromedriver-linux64.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip && \
@@ -240,8 +255,7 @@ DOCKER_INSTRUCTIONS = {
             mkdir -p /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
             mv /tmp/chromedriver /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
             rm /tmp/chromedriver-linux64.zip && \
-            printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json && \
-            chmod -R 777 /home/user/.wdm
+            printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json
         """,
         # Install Requirements for A2Perf
         f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
@@ -273,11 +287,24 @@ DOCKER_INSTRUCTIONS = {
             ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
         ),
         f'COPY {REPO_DIR} .',
-        'RUN sudo chmod -R 777 /workdir',
-        'RUN /opt/conda/envs/py310/bin/pip install /workdir',
-        (
-            'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
-        ),
+        f'''
+        RUN chown -R {os.getuid()}:root /home/user/.wdm && \
+         chown -R {os.getuid()}:root /workdir && \
+         chown -R {os.getuid()}:root /home/user/.wdm && \
+         /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+            conda activate py310 && \
+            pip install /workdir"
+        ''',
+        '''
+        ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"
+        ''',
+        '''
+        ENV CONDA_DEFAULT_ENV=py310
+        ''',
+        '''
+        ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
+        ''',
+
     ],
     'circuit_training': [],
 }
@@ -658,6 +685,7 @@ def main(_):
           dict(
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
+
               replay_buffer_server_address=_REPLAY_BUFFER_SERVER_ADDRESS.value,
               replay_buffer_server_port=_REPLAY_BUFFER_SERVER_PORT.value,
               variable_container_server_address=_VARIABLE_CONTAINER_SERVER_ADDRESS.value,
