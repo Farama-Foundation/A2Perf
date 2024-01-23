@@ -530,10 +530,10 @@ class Submission:
           'std': np.std(all_rewards)
       }
 
-    print('Finished inference. Now saving')
-    with open(os.path.join(self.metric_values_dir,
-                           'inference_metrics_results.json'), 'w') as f:
-      json.dump(metric_results, f)
+      print('Finished inference. Now saving')
+      with open(os.path.join(self.metric_values_dir,
+                             'inference_metrics_results.json'), 'w') as f:
+        json.dump(metric_results, f)
 
   def run_benchmark(self):
     self.gin_config_str = (
