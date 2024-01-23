@@ -37,6 +37,7 @@ import os
 
 from absl import app
 from absl import flags
+from absl import logging
 from xmanager import xm
 from xmanager import xm_local
 
@@ -79,9 +80,6 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
 )
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment number'
-)
-_INFERENCE = flags.DEFINE_bool(
-    'inference', False, 'Whether to run train or inference.'
 )
 _INTERACTIVE = flags.DEFINE_bool(
     'interactive', False, 'Whether to run in interactive mode'
@@ -311,7 +309,7 @@ DOCKER_INSTRUCTIONS = {
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        'python /workdir/launch/entrypoint.py',
+        f'python /workdir/launch/entrypoint.py --verbosity={logging.get_verbosity()}',
     ]),
     'web_navigation': xm.CommandList([
         'sudo service dbus start',
@@ -673,7 +671,6 @@ def main(_):
           experiment_name,
       )
 
-      algo = hparams['algo']
       skill_level = hparams['skill_level']
       domain = hparams['domain']
       debug = hparams['debug']
@@ -685,7 +682,6 @@ def main(_):
           dict(
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
-
               replay_buffer_server_address=_REPLAY_BUFFER_SERVER_ADDRESS.value,
               replay_buffer_server_port=_REPLAY_BUFFER_SERVER_PORT.value,
               variable_container_server_address=_VARIABLE_CONTAINER_SERVER_ADDRESS.value,

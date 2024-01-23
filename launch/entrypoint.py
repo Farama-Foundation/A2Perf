@@ -156,7 +156,7 @@ def main(_):
 
   # Export distributed training variables
   os.environ['MODE'] = _MODE.value
-  os.environ['JOB_TYPE'] = _JOB_TYPE.value
+  os.environ['JOB_TYPE'] = str(_JOB_TYPE.value)
   os.environ[
     'REPLAY_BUFFER_SERVER_ADDRESS'] = _REPLAY_BUFFER_SERVER_ADDRESS.value
   os.environ['REPLAY_BUFFER_SERVER_PORT'] = str(

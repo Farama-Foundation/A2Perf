@@ -7,31 +7,31 @@ from absl import flags
 
 from a2perf.submission.submission_util import Submission
 
-flags.DEFINE_string('gin_config', None, 'Path to the gin-config file.')
-flags.DEFINE_string(
+_GIN_CONFIG = flags.DEFINE_string('gin_config', None,
+                                  'Path to the gin-config file.')
+_PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     'participant_module_path', None, 'Path to participant module.'
 )
-flags.DEFINE_string(
+_ROOT_DIR = flags.DEFINE_string(
     'root_dir', '/tmp/xm_local', 'Base directory for logs and results.'
 )
-flags.DEFINE_string(
+_METRIC_VALUES_DIR = flags.DEFINE_string(
     'metric_values_dir', None, 'Directory to save metrics values.'
 )
-flags.DEFINE_multi_string(
+_TRAIN_LOGS_DIRS = flags.DEFINE_multi_string(
     'train_logs_dirs',
     ['train_logs'],
     'Directories for train logs from all of the experiments that reliability'
     ' metrics will be calculated on',
 )
-flags.DEFINE_multi_string(
+_EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
     'extra_gin_bindings',
     [],
     'Extra gin bindings to add configurations on the fly.',
 )
-flags.DEFINE_bool(
+_RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run offline metrics only.'
 )
-FLAGS = flags.FLAGS
 
 
 def main(_):
@@ -39,22 +39,20 @@ def main(_):
   os.chdir(os.path.dirname(os.path.abspath(__file__)))
   multiprocessing.set_start_method('spawn', force=False)
 
-  # Need to use fork to avoid problems with gin and tf
-  # multiprocessing.set_start_method('fork', force=True)
-  print('FLAGS.gin_config', FLAGS.gin_config)
-  print('FLAGS.participant_module_path', FLAGS.participant_module_path)
+  print('gin_config:', _GIN_CONFIG.value)
+  print('participant_module_path:', _PARTICIPANT_MODULE_PATH.value)
 
-  gin.parse_config_file(FLAGS.gin_config)
-  for binding in FLAGS.extra_gin_bindings:
+  gin.parse_config_file(_GIN_CONFIG.value)
+  for binding in _EXTRA_GIN_BINDINGS.value:
     gin.parse_config(binding)
     print(binding)
 
   submission = Submission(
-      root_dir=FLAGS.root_dir,
-      metric_values_dir=FLAGS.metric_values_dir,
-      participant_module_path=FLAGS.participant_module_path,
-      train_logs_dirs=FLAGS.train_logs_dirs,
-      run_offline_metrics_only=FLAGS.run_offline_metrics_only,
+      root_dir=_ROOT_DIR.value,
+      metric_values_dir=_METRIC_VALUES_DIR.value,
+      participant_module_path=_PARTICIPANT_MODULE_PATH.value,
+      train_logs_dirs=_TRAIN_LOGS_DIRS.value,
+      run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
   )
   submission.run_benchmark()
 

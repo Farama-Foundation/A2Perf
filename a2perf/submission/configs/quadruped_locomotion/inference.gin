@@ -22,6 +22,7 @@ Submission.measure_emissions = True
 
 #Submission.domain_config_paths = '/rl-perf/a2perf/submission/configs/quadruped_locomotion/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
 Submission.create_domain.mode='test'
+Submission.create_domain.num_parallel_envs=1
 
 ####################################
 # Set up benchmark mode
@@ -34,10 +35,7 @@ Submission.time_participant_code = True
 # Reliability
 ####################################
 
-METRICS = [
-#    %ReliabilityMetrics.IqrAcrossRollouts, # Dispersion across rollouts
-#    %ReliabilityMetrics.LowerCVaRAcrossRollouts, # Risk Across Rollouts
-]
+METRICS = []
 Submission.reliability_metrics = %METRICS
 
 # ----------------------
