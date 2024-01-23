@@ -56,6 +56,7 @@ _DOMAIN = flags.DEFINE_enum(
     ['quadruped_locomotion', 'web_navigation', 'circuit_training'],
     'Domain to run',
 )
+_USER_ID = flags.DEFINE_integer('user_id', None, 'User ID')
 _USE_XVFB = flags.DEFINE_bool('use_xvfb', False, 'Use xvfb')
 _DIFFICULTY_LEVELS = flags.DEFINE_list(
     'difficulty_levels', None, 'Difficulty levels to run'
@@ -78,9 +79,7 @@ _MOTION_FILES = flags.DEFINE_list('motion_files', None, 'Motion files to run')
 _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'quadruped_locomotion', 'Name of experiment'
 )
-_EXPERIMENT_ID = flags.DEFINE_string(
-    'experiment_id', None, 'Experiment number'
-)
+_EXPERIMENT_ID = flags.DEFINE_string('experiment_id', None, 'Experiment number')
 _INTERACTIVE = flags.DEFINE_bool(
     'interactive', False, 'Whether to run in interactive mode'
 )
@@ -154,162 +153,199 @@ _TENSOR_RT_INSTRUCTIONS_PY39 = [
     """,
 ]
 
-DOCKER_INSTRUCTIONS = {
-    'quadruped_locomotion': [
-        '''ARG APT_COMMAND="sudo apt-get -o Acquire::Retries=3 --no-install-recommends -y"''',
-        'ENV DEBIAN_FRONTEND=noninteractive',
-        'RUN ${APT_COMMAND} update && ${APT_COMMAND} install sudo wget unzip',
-        f"""
-        RUN userdel $(getent passwd {os.getuid()} | cut -d: -f1) || true && useradd -m -u {os.getuid()} user""",
-        'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'USER user',
-        'RUN sudo mkdir -p /workdir',
-        'WORKDIR /workdir',
-        # Set up custom conda environment
-        'RUN conda create -y --name py39 python=3.9',
-        'ENV CONDA_DEFAULT_ENV=py39',
-        'ENV PATH="/opt/conda/envs/py39/bin:${PATH}"',
-        'RUN /opt/conda/envs/py39/bin/pip install --upgrade pip setuptools',
-        # Install Requirements for A2Perf
-        """RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-          conda activate py39 && \
-          conda install -c conda-forge -y gcsfs"
+
+def _get_docker_instructions(user_id, env_name):
+  _DOCKER_INSTRUCTIONS = {
+      'quadruped_locomotion': [
+          """
+          ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+            --no-install-recommends -y"
           """,
-        f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          """
+          ENV DEBIAN_FRONTEND=noninteractive
+          """,
+          """
+          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
+            ${APT_COMMAND} install sudo wget unzip && \
+            rm -rf /var/lib/apt/lists/*
+          """,
+          # Set up user with the specified ID
+          f"""
+        RUN if ! getent passwd {user_id}; then \
+              useradd -m -u {user_id} user; \
+            else \
+              USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
+              useradd -m -d /home/user -l -N -g $USER_NAME user; \
+            fi
+        """,
+          """
+          RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+          """,
+          'RUN mkdir -p /workdir',
+          'WORKDIR /workdir',
+          # Set up custom conda environment
+          """
+          RUN conda create -y --name py39 python=3.9 && \
+            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+              conda activate py39 && \
+              conda install -c conda-forge -y gcsfs && \
+              pip install --upgrade pip setuptools"
+          """,
+          # Install Requirements for A2Perf
+          f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
           ./a2perf/metrics/reliability/requirements.txt""",
-        f"""
+          f"""
         COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
           ./a2perf/metrics/system/codecarbon/
         """,
-        f"""
+          f"""
         COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
           ./a2perf/domains/quadruped_locomotion/requirements.txt
         """,
-        f"""
+          f"""
         COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
           ./a2perf/a2perf_benchmark_submission/requirements.txt
         """,
-        f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
-        'RUN /opt/conda/envs/py39/bin/pip install -r ./requirements.txt',
-        (
-            'RUN /opt/conda/envs/py39/bin/pip install -r'
-            ' ./a2perf/domains/quadruped_locomotion/requirements.txt'
-        ),
-        (
-            'RUN /opt/conda/envs/py39/bin/pip install -r'
-            ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
-        ),
-        f'COPY {REPO_DIR} .',
-        f'RUN sudo chown -R {os.getuid()}:root /workdir && sudo chmod -R 775 /workdir',
-        'RUN /opt/conda/envs/py39/bin/pip install /workdir',
-        'USER root',
-    ],
-    'web_navigation': [
-        '''
-        ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
-          --no-install-recommends -y"
-        ''',
-        '''
-        ENV DEBIAN_FRONTEND=noninteractive
-        ''',
-        '''
-        RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
-          ${APT_COMMAND} install sudo wget unzip && \
-          rm -rf /var/lib/apt/lists/*
-        ''',
-        # Install Google Chrome
-        'ARG CHROME_VERSION="120.0.6099.109-1"',
-        'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
-        """
-        RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}_amd64.deb && \
-          ${APT_COMMAND} update && \
-          ${APT_COMMAND} --fix-broken install && \
-          ${APT_COMMAND} install /tmp/chrome.deb xvfb && \
-          rm /tmp/chrome.deb && \
-          rm -rf /var/lib/apt/lists/*
+          f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
+          'RUN /opt/conda/envs/py39/bin/pip install -r ./requirements.txt',
+          (
+              'RUN /opt/conda/envs/py39/bin/pip install -r'
+              ' ./a2perf/domains/quadruped_locomotion/requirements.txt'
+          ),
+          (
+              'RUN /opt/conda/envs/py39/bin/pip install -r'
+              ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
+          ),
+          f'COPY {REPO_DIR} .',
+          f"""
+        RUN chown -R {user_id}:root /workdir && \
+         /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+            conda activate py39 && \
+            pip install /workdir"        
         """,
-
-        # Set up user with same UID as host user
-        f'RUN if ! id {os.getuid()}; then useradd -m -u {os.getuid()} user; fi',
-        'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-        'RUN mkdir -p /workdir',
-        'WORKDIR /workdir',
-
-        # Set up custom conda environment
-        '''
-        RUN conda create -y --name py310 python=3.10 && \
-          /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-            conda activate py310 && \
-            conda install -c conda-forge -y gcsfs && \
-            pip install --upgrade pip setuptools"
-        ''',
-
-        # Set up chromedriver installation and caching
-        """
-        RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
-            wget --no-verbose -O /tmp/chromedriver-linux64.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip && \
-            unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && \
-            mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && \
-            mkdir -p /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
-            mv /tmp/chromedriver /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
-            rm /tmp/chromedriver-linux64.zip && \
-            printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json
-        """,
-        # Install Requirements for A2Perf
-        f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          """
+          ENV CONDA_DEFAULT_ENV=py39
+          """,
+          """
+          ENV PATH="/opt/conda/envs/py39/bin:${PATH}"
+          """,
+      ],
+      'web_navigation': [
+          """
+          ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+            --no-install-recommends -y"
+          """,
+          """
+          ENV DEBIAN_FRONTEND=noninteractive
+          """,
+          """
+          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
+            ${APT_COMMAND} install sudo wget unzip && \
+            rm -rf /var/lib/apt/lists/*
+          """,
+          # Install Google Chrome
+          'ARG CHROME_VERSION="120.0.6099.109-1"',
+          'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
+          """
+          RUN wget --no-verbose -O /tmp/chrome.deb https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${CHROME_VERSION}_amd64.deb && \
+            ${APT_COMMAND} update && \
+            ${APT_COMMAND} --fix-broken install && \
+            ${APT_COMMAND} install /tmp/chrome.deb xvfb && \
+            rm /tmp/chrome.deb && \
+            rm -rf /var/lib/apt/lists/*
+          """,
+          f"""
+          RUN if ! getent passwd {user_id}; then \
+                useradd -m -u {user_id} user; \
+              else \
+                USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
+                useradd -m -d /home/user -l -N -g $USER_NAME user; \
+              fi
+          """,
+          """
+          RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+          """,
+          'RUN mkdir -p /workdir',
+          'WORKDIR /workdir',
+          # Set up custom conda environment
+          """
+          RUN conda create -y --name py310 python=3.10 && \
+            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+              conda activate py310 && \
+              conda install -c conda-forge -y gcsfs && \
+              pip install --upgrade pip setuptools"
+          """,
+          # Set up chromedriver installation and caching
+          """
+          RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
+              wget --no-verbose -O /tmp/chromedriver-linux64.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip && \
+              unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && \
+              mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && \
+              mkdir -p /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
+              mv /tmp/chromedriver /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
+              rm /tmp/chromedriver-linux64.zip && \
+              printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json
+          """,
+          # Install Requirements for A2Perf
+          f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
       ./a2perf/metrics/reliability/requirements.txt""",
-        f"""
+          f"""
     COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
       ./a2perf/metrics/system/codecarbon/
     """,
-        f"""
+          f"""
     COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
       ./a2perf/a2perf_benchmark_submission/requirements.txt
       """,
-        f"""
+          f"""
     COPY {REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
       ./a2perf/domains/web_navigation/requirements.txt
     """,
-        f"""
+          f"""
         COPY {REPO_DIR}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
           ./a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt
         """,
-        f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
-        'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
-        (
-            'RUN /opt/conda/envs/py310/bin/pip install -r'
-            ' ./a2perf/domains/web_navigation/requirements.txt'
-        ),
-        (
-            'RUN /opt/conda/envs/py310/bin/pip install -r'
-            ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
-        ),
-        f'COPY {REPO_DIR} .',
-        f'''
-        RUN chown -R {os.getuid()}:root /home/user/.wdm && \
-         chown -R {os.getuid()}:root /workdir && \
-         chown -R {os.getuid()}:root /home/user/.wdm && \
+          f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
+          'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
+          (
+              'RUN /opt/conda/envs/py310/bin/pip install -r'
+              ' ./a2perf/domains/web_navigation/requirements.txt'
+          ),
+          (
+              'RUN /opt/conda/envs/py310/bin/pip install -r'
+              ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
+          ),
+          f'COPY {REPO_DIR} .',
+          f"""
+        RUN chown -R {user_id}:root /home/user/.wdm && \
+         chown -R {user_id}:root /workdir && \
+         chown -R {user_id}:root /home/user/.wdm && \
          /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
             conda activate py310 && \
             pip install /workdir"
-        ''',
-        '''
-        ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"
-        ''',
-        '''
-        ENV CONDA_DEFAULT_ENV=py310
-        ''',
-        '''
-        ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
-        ''',
+        """,
+          """
+          ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"
+          """,
+          """
+          ENV CONDA_DEFAULT_ENV=py310
+          """,
+          """
+          ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
+          """,
+      ],
+      'circuit_training': [],
+  }
 
-    ],
-    'circuit_training': [],
-}
+  return _DOCKER_INSTRUCTIONS[env_name]
+
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        f'python /workdir/launch/entrypoint.py --verbosity={logging.get_verbosity()}',
+        (
+            'python /workdir/launch/entrypoint.py'
+            f' --verbosity={logging.get_verbosity()}'
+        ),
     ]),
     'web_navigation': xm.CommandList([
         'sudo service dbus start',
@@ -559,21 +595,28 @@ def main(_):
           ),
           docker_options=xm_local.DockerOptions(
               ports={
-                  _REPLAY_BUFFER_SERVER_PORT.value: _REPLAY_BUFFER_SERVER_PORT.value,
-                  _VARIABLE_CONTAINER_SERVER_PORT.value: _VARIABLE_CONTAINER_SERVER_PORT.value,
-                  _VOCABULARY_SERVER_PORT.value: _VOCABULARY_SERVER_PORT.value},
+                  _REPLAY_BUFFER_SERVER_PORT.value: (
+                      _REPLAY_BUFFER_SERVER_PORT.value
+                  ),
+                  _VARIABLE_CONTAINER_SERVER_PORT.value: (
+                      _VARIABLE_CONTAINER_SERVER_PORT.value
+                  ),
+                  _VOCABULARY_SERVER_PORT.value: _VOCABULARY_SERVER_PORT.value,
+              },
               volumes=None,
               mount_gcs_path=True,
               interactive=_INTERACTIVE.value,
           ),
           experimental_stream_output=True,
       )
-      docker_instructions = DOCKER_INSTRUCTIONS[_DOMAIN.value]
+      docker_instructions = _get_docker_instructions(_USER_ID.value,
+                                                     _DOMAIN.value)
       base_image = BASE_IMAGE[_DOMAIN.value]
       if _NUM_GPUS.value > 0:
         # find the index of command starting with "RUN conda create"
         index = next(
-            i for i, s in enumerate(docker_instructions)
+            i
+            for i, s in enumerate(docker_instructions)
             if 'RUN conda create' in s
         )
 
