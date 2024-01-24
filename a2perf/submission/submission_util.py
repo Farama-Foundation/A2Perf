@@ -1,4 +1,3 @@
-import csv
 import enum
 import importlib
 import json
@@ -16,28 +15,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from absl import logging
 
-from a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics import \
-  Evaluator
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  IqrAcrossRollouts
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  IqrAcrossRuns
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  IqrWithinRuns
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  LowerCVaRAcrossRollouts
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  LowerCVaROnAcross
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  LowerCVaROnDiffs
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  MadAcrossRollouts
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  MedianPerfDuringTraining
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  StddevAcrossRollouts
-from a2perf.metrics.reliability.rl_reliability_metrics.metrics import \
-  UpperCVaRAcrossRollouts
 from a2perf.metrics.system import codecarbon
 from a2perf.metrics.system.profiler.base_profiler import BaseProfiler
 
@@ -136,6 +113,20 @@ def perform_rollouts(
   return all_rewards
 
 
+def train(
+    module_path,
+    gin_config_str=None,
+):
+  """Trains the participant's policy."""
+  gin.parse_config(gin_config_str)
+  logging.info('Parsed gin config %s', gin_config_str)
+
+  with working_directory(module_path):
+    participant_module, participant_module_spec = _load_module(
+        module_path, 'train.py')
+    participant_module.train()
+
+
 @gin.constants_from_enum
 class BenchmarkMode(enum.Enum):
   TRAIN = 'train'
@@ -169,29 +160,6 @@ class ReliabilityMetrics(enum.Enum):
   StddevAcrossRollouts = 'StddevAcrossRollouts'
   UpperCVaRAcrossRollouts = 'UpperCVaRAcrossRollouts'
   LowerCVaRAcrossRollouts = 'LowerCVaRAcrossRollouts'
-
-
-def _start_profilers(
-    profilers: typing.List[typing.Type[BaseProfiler]],
-    profiler_events: typing.List[multiprocessing.Event],
-    participant_event: multiprocessing.Event,
-    participant_process: multiprocessing.Process,
-    log_dir: str,
-    mp_context,
-) -> typing.List[multiprocessing.Process]:
-  processes = []
-  for profiler_class, profiler_event in zip(profilers, profiler_events):
-    logging.info(f'Starting profiler: {profiler_class}')
-    profiler = profiler_class(
-        participant_process_event=participant_event,
-        profiler_event=profiler_event,
-        participant_process=participant_process,
-        base_log_dir=log_dir,
-    )
-    profiler_process = mp_context.Process(target=profiler.start)
-    profiler_process.start()
-    processes.append(profiler_process)
-  return processes
 
 
 @gin.configurable
@@ -317,51 +285,23 @@ class Submission:
 
   def _train(
       self,
-      participant_event: multiprocessing.Event,
-      profiler_events: typing.List[multiprocessing.Event],
   ):
-
     gin.parse_config(self.gin_config_str)
-    participant_event.set()
 
-    # Wait for all profilers to start up before continuing
-    for profiler_event in profiler_events:
-      profiler_event.wait()
+    @codecarbon.track_emissions(output_dir=self.metric_values_dir,
+                                output_file='train_emissions.csv')
+    def train_and_track_emissions():
+      train_process = self.mp_context.Process(
+          target=train,
+          args=(self.participant_module_path, self.gin_config_str)
+      )
+      train_process.start()
+      train_process.join()
 
-    logging.info('All profilers started')
-    with working_directory(self.participant_module_path):
-      participant_module, participant_module_spec = _load_module(
-          self.participant_module_path, 'train.py')
-      participant_module_spec.loader.exec_module(participant_module)
-
-      def run_train():
-        try:
-          participant_module.train()
-        except Exception as e:
-          logging.error(f"Error occurred during training: {e}")
-          logging.error(traceback.format_exc())
-          raise  # Re-raise the exception to handle it as per your application's needs
-
-      if self.measure_emissions:
-        @codecarbon.track_emissions(
-            output_dir=self.metric_values_dir, output_file='train_emissions.csv'
-        )
-        def train_with_emission_tracking():
-          run_train()
-
-        logging.info('Starting training and tracking emissions')
-        train_with_emission_tracking()
-      else:
-        logging.info('Starting training without tracking emissions')
-        run_train()
-
-    participant_event.clear()
-    logging.info('Participant event cleared')
-
-    logging.info(f'Attempting to clear profiler events:{profiler_events}')
-    for profiler_event in profiler_events:
-      profiler_event.clear()
-    logging.info('Profiler events cleared')
+    if self.measure_emissions:
+      return train_and_track_emissions()
+    else:
+      return train(self.participant_module_path, self.gin_config_str)
 
   def _perform_rollouts(self,
       num_episodes,
@@ -408,70 +348,29 @@ class Submission:
 
   def _run_training_benchmark(self):
     if not self.run_offline_metrics_only:
-      # Need a participant event to signal to profilers
-      participant_started_event = multiprocessing.Event()
-      profilers_started_events = [
-          multiprocessing.Event() for _ in self.profilers
-      ]
-
-      participant_process = self.mp_context.Process(
+      participant_training_process = self.mp_context.Process(
           target=self._train,
-          args=(participant_started_event, profilers_started_events),
       )
-      participant_process.start()
-      profilers = _start_profilers(
-          profilers=self.profilers,
-          participant_event=participant_started_event,
-          profiler_events=profilers_started_events,
-          participant_process=participant_process,
-          log_dir=self.root_dir,
-          mp_context=self.mp_context,
-      )
-      logging.info(f'Participant module process ID: {participant_process.pid}')
-      participant_process.join()
+
+      participant_training_process.start()
       logging.info(
-          f'Participant module process {participant_process.pid} finished'
+          f'Participant training process ID: {participant_training_process.pid}')
+
+      participant_training_process.join()
+      logging.info(
+          f'Participant module process {participant_training_process.pid} finished'
       )
-      if participant_process.is_alive():
+
+      if participant_training_process.is_alive():
         logging.error('Participant process is still running')
-      elif participant_process.exitcode != 0:
+      elif participant_training_process.exitcode != 0:
         logging.error(
             'Participant process exited with code'
-            f' {participant_process.exitcode}'
+            f' {participant_training_process.exitcode}'
         )
       else:
-        logging.info(f'Participant process {participant_process.pid} finished')
-
-      for profiler in profilers:
-        profiler.join()
-        if profiler.is_alive():
-          logging.error(f'Profiler process {profiler.pid} is still running')
-        elif profiler.exitcode != 0:
-          logging.error(
-              f'Profiler process {profiler.pid} exited with code'
-              f' {profiler.exitcode}'
-          )
-        else:
-          logging.info(f'Profiler process {profiler.pid} finished')
-
-    if self.reliability_metrics:
-      self._run_train_reliability_metrics()
-
-      ##################################################
-      # Save raw metrics to disk, and plot results
-      ##################################################
-
-      with open(
-          os.path.join(self.metric_values_dir, 'metric_results.json'), 'w'
-      ) as f:
-        json.dump(self.metrics_results, f)
-
-      # Plot metrics and save to file
-      if self.plot_metrics:
-        for profiler_object in self.profilers:
-          title, fig = profiler_object.plot_results()
-          plt.savefig(os.path.join(self.metric_values_dir, f'{title}.png'))
-        self._plot_metrics()
+        logging.info(
+            f'Participant process {participant_training_process.pid} finished')
 
   def _run_inference_benchmark(self):
     if not self.run_offline_metrics_only:

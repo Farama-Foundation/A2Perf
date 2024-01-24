@@ -13,6 +13,9 @@ setup(
     ],
     package_data={
         'a2perf': [
+            # Include the default gin config files for running the becnhmark
+            'submission/**/*.gin',
+
             # Include default gin config files for each domain
             'domains/web_navigation/configs/web_navigation_env_config.gin',
             'domains/quadruped_locomotion/motion_imitation/configs/envdesign.gin',

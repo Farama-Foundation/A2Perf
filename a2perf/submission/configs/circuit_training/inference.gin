@@ -56,4 +56,4 @@ track_emissions.baseline_measure_sec=2
 # track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
-OfflineEmissionsTracker.on_csv_write='append'
+OfflineEmissionsTracker.on_csv_write='update'
