@@ -167,7 +167,6 @@ class Submission:
       root_dir: str,
       metric_values_dir: str,
       participant_module_path: str = None,
-      profilers: typing.List[typing.Type[BaseProfiler]] = None,
       mode: BenchmarkMode = BenchmarkMode.TRAIN,
       domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
       train_logs_dirs: typing.List[str] = None,
@@ -186,7 +185,6 @@ class Submission:
     Args:
         participant_module_path: Path to the module that contains the
           participant's code.
-        profilers: List of profilers to use.
         mode: Benchmark mode (train or inference).
         domain: Benchmark domain (web navigation, circuit training or quadruped
           locomotion).
@@ -225,9 +223,6 @@ class Submission:
     self.num_inference_steps = num_inference_steps
     self.num_inference_episodes = num_inference_episodes
     self.time_inference_steps = time_participant_code
-    self.profilers = profilers if profilers is not None else []
-    for profiler in self.profilers:
-      profiler.base_log_dir = self.root_dir
     self.participant_module_path = os.path.abspath(participant_module_path)
     self.domain = domain
     self.mode = mode
