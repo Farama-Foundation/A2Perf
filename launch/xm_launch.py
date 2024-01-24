@@ -155,7 +155,7 @@ _TENSOR_RT_INSTRUCTIONS_PY39 = [
 
 
 def _get_docker_instructions(user_id, env_name):
-  _DOCKER_INSTRUCTIONS = {
+  docker_instructions = {
       'quadruped_locomotion': [
           """
           ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
@@ -337,7 +337,7 @@ def _get_docker_instructions(user_id, env_name):
       'circuit_training': [],
   }
 
-  return _DOCKER_INSTRUCTIONS[env_name]
+  return docker_instructions[env_name]
 
 
 ENTRYPOINT = {
@@ -609,8 +609,9 @@ def main(_):
           ),
           experimental_stream_output=True,
       )
-      docker_instructions = _get_docker_instructions(_USER_ID.value,
-                                                     _DOMAIN.value)
+      docker_instructions = _get_docker_instructions(
+          _USER_ID.value, _DOMAIN.value
+      )
       base_image = BASE_IMAGE[_DOMAIN.value]
       if _NUM_GPUS.value > 0:
         # find the index of command starting with "RUN conda create"
