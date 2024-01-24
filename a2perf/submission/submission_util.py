@@ -5,18 +5,15 @@ import multiprocessing
 import os
 import sys
 import timeit
-import traceback
 import typing
 from contextlib import contextmanager
 
 import gin
 import gymnasium as gym
-import matplotlib.pyplot as plt
 import numpy as np
 from absl import logging
 
 from a2perf.metrics.system import codecarbon
-from a2perf.metrics.system.profiler.base_profiler import BaseProfiler
 
 
 @contextmanager
