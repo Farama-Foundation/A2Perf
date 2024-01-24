@@ -3,8 +3,8 @@ import subprocess
 
 from absl import app
 from absl import flags
-from termcolor import colored
 from pyfiglet import Figlet
+from termcolor import colored
 
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment ID for web navigation.'
@@ -105,12 +105,12 @@ _REPLAY_BUFFER_SERVER_ADDRESS = flags.DEFINE_string(
     'replay_buffer_server_address', None, 'Replay buffer server address.'
 )
 _REPLAY_BUFFER_SERVER_PORT = flags.DEFINE_integer(
-
     'replay_buffer_server_port', None, 'Replay buffer server port.'
 )
 _VARIABLE_CONTAINER_SERVER_ADDRESS = flags.DEFINE_string(
-    'variable_container_server_address', None,
-    'Variable container server address.'
+    'variable_container_server_address',
+    None,
+    'Variable container server address.',
 )
 
 _VARIABLE_CONTAINER_SERVER_PORT = flags.DEFINE_integer(
@@ -124,9 +124,9 @@ _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
     'vocabulary_server_port', None, 'Vocabulary server port.'
 )
 
-_MODE = flags.DEFINE_enum('mode', None,
-                          ['train', 'collect', 'reverb', 'inference'],
-                          'Mode.')
+_MODE = flags.DEFINE_enum(
+    'mode', None, ['train', 'collect', 'reverb', 'inference'], 'Mode.'
+)
 
 
 def main(_):
@@ -157,37 +157,37 @@ def main(_):
   # Export distributed training variables
   os.environ['MODE'] = _MODE.value
   os.environ['JOB_TYPE'] = str(_JOB_TYPE.value)
-  os.environ[
-    'REPLAY_BUFFER_SERVER_ADDRESS'] = _REPLAY_BUFFER_SERVER_ADDRESS.value
+  os.environ['REPLAY_BUFFER_SERVER_ADDRESS'] = (
+      _REPLAY_BUFFER_SERVER_ADDRESS.value
+  )
   os.environ['REPLAY_BUFFER_SERVER_PORT'] = str(
-      _REPLAY_BUFFER_SERVER_PORT.value)
-  os.environ[
-    'VARIABLE_CONTAINER_SERVER_ADDRESS'] = _VARIABLE_CONTAINER_SERVER_ADDRESS.value
+      _REPLAY_BUFFER_SERVER_PORT.value
+  )
+  os.environ['VARIABLE_CONTAINER_SERVER_ADDRESS'] = (
+      _VARIABLE_CONTAINER_SERVER_ADDRESS.value
+  )
   os.environ['VARIABLE_CONTAINER_SERVER_PORT'] = str(
-      _VARIABLE_CONTAINER_SERVER_PORT.value)
-  os.environ[
-    'VOCABULARY_SERVER_ADDRESS'] = _VOCABULARY_SERVER_ADDRESS.value
+      _VARIABLE_CONTAINER_SERVER_PORT.value
+  )
+  os.environ['VOCABULARY_SERVER_ADDRESS'] = _VOCABULARY_SERVER_ADDRESS.value
   os.environ['VOCABULARY_SERVER_PORT'] = str(_VOCABULARY_SERVER_PORT.value)
 
-  # Assuming _MODE and _EXPERIMENT_ID are defined somewhere in your code
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
   if _JOB_TYPE.value in ['collect', 'inference']:
-    root_dir = os.path.join(_ROOT_DIR.value, _JOB_TYPE.value, )
+    # Change the root dir to the machine's hostname
+    root_dir = os.path.join(
+        _ROOT_DIR.value, _JOB_TYPE.value, os.environ['HOSTNAME']
+    )
     print(f'Changing root dir to {root_dir}')
     f = Figlet(font='standard', width=300)
     print(colored(f.renderText(_JOB_TYPE.value), 'red'))
 
   else:
-    # Display the experiment number and a message for me to copy the experiment number
-    # to start the collect jobs. Make the message a big warning as flashy as possible
-    print(f"Experiment ID: {_EXPERIMENT_ID.value}")
+    print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value
-    # Use ASCII art for emphasis. Make it clear that i Need to copy the experimet nunmber
-    # to start the collect jobs
     f = Figlet(font='standard')
-    print(colored(f.renderText('Copy this'),
-                  'red'))
+    print(colored(f.renderText('Copy this'), 'red'))
     print('Experiment ID: ', _EXPERIMENT_ID.value)
   os.environ['ROOT_DIR'] = root_dir
 
@@ -247,11 +247,9 @@ def main(_):
 
 
 if __name__ == '__main__':
-  # Mark the main flags as required
   flags.mark_flags_as_required(
       [
           _DOMAIN.name,
-          # _TASK.name,
           _ALGO.name,
           _SKILL_LEVEL.name,
       ],
