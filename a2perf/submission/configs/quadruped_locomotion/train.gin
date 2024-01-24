@@ -79,4 +79,4 @@ track_emissions.region = 'Massachusetts'
 track_emissions.baseline_measure_sec=30
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
-OfflineEmissionsTracker.on_csv_write='update'
+OfflineEmissionsTracker.on_csv_write='append'
