@@ -57,6 +57,9 @@ _DOMAIN = flags.DEFINE_enum(
     'Domain to run',
 )
 _USER_ID = flags.DEFINE_integer('user_id', None, 'User ID')
+_NUM_COLLECT_MACHINES = flags.DEFINE_integer(
+    'num_collect_machines', 1, 'Number of machines to use for collection'
+)
 _USE_XVFB = flags.DEFINE_bool('use_xvfb', False, 'Use xvfb')
 _DIFFICULTY_LEVELS = flags.DEFINE_list(
     'difficulty_levels', None, 'Difficulty levels to run'
@@ -229,6 +232,12 @@ def _get_docker_instructions(user_id, env_name):
           """
           ENV PATH="/opt/conda/envs/py39/bin:${PATH}"
           """,
+          # Install some networking tools for debugging reverb
+          """
+          RUN ${APT_COMMAND} update && \
+            ${APT_COMMAND} install -y telnet netcat curl wget && \
+            rm -rf /var/lib/apt/lists/*
+          """,
       ],
       'web_navigation': [
           """
@@ -333,6 +342,12 @@ def _get_docker_instructions(user_id, env_name):
           """
           ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
           """,
+          # Install some networking tools for debugging reverb
+          """
+          RUN ${APT_COMMAND} update && \
+            ${APT_COMMAND} install -y telnet netcat curl wget && \
+            rm -rf /var/lib/apt/lists/*
+          """,
       ],
       'circuit_training': [],
   }
@@ -349,8 +364,10 @@ ENTRYPOINT = {
     ]),
     'web_navigation': xm.CommandList([
         'sudo service dbus start',
-        'echo "$@"',
-        '/opt/conda/envs/py310/bin/python /workdir/launch/entrypoint.py',
+        (
+            'python /workdir/launch/entrypoint.py'
+            f' --verbosity={logging.get_verbosity()}'
+        ),
     ]),
     'circuit_training': xm.CommandList([]),
 }
