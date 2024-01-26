@@ -133,10 +133,6 @@ _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
     'vocabulary_server_port', '50000', 'Port of the vocabulary server'
 )
 
-REPO_DIR = os.path.basename(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
-
 _TENSOR_RT_INSTRUCTIONS_PY310 = [
     """
     RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
@@ -158,6 +154,7 @@ _TENSOR_RT_INSTRUCTIONS_PY39 = [
 
 
 def _get_docker_instructions(user_id, env_name):
+  repo_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
   docker_instructions = {
       'quadruped_locomotion': [
           """
@@ -195,21 +192,21 @@ def _get_docker_instructions(user_id, env_name):
               pip install --upgrade pip setuptools"
           """,
           # Install Requirements for A2Perf
-          f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          f"""COPY {repo_dir}/a2perf/metrics/reliability/requirements.txt \
           ./a2perf/metrics/reliability/requirements.txt""",
           f"""
-        COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
+        COPY {repo_dir}/a2perf/metrics/system/codecarbon/requirements*.txt \
           ./a2perf/metrics/system/codecarbon/
         """,
           f"""
-        COPY {REPO_DIR}/a2perf/domains/quadruped_locomotion/requirements.txt \
+        COPY {repo_dir}/a2perf/domains/quadruped_locomotion/requirements.txt \
           ./a2perf/domains/quadruped_locomotion/requirements.txt
         """,
           f"""
-        COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
+        COPY {repo_dir}/a2perf/a2perf_benchmark_submission/requirements.txt \
           ./a2perf/a2perf_benchmark_submission/requirements.txt
         """,
-          f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
+          f'COPY {repo_dir}/requirements.txt ./requirements.txt',
           'RUN /opt/conda/envs/py39/bin/pip install -r ./requirements.txt',
           (
               'RUN /opt/conda/envs/py39/bin/pip install -r'
@@ -219,7 +216,7 @@ def _get_docker_instructions(user_id, env_name):
               'RUN /opt/conda/envs/py39/bin/pip install -r'
               ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
           ),
-          f'COPY {REPO_DIR} .',
+          f'COPY {repo_dir} .',
           f"""
         RUN chown -R {user_id}:root /workdir && \
          /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
@@ -231,12 +228,6 @@ def _get_docker_instructions(user_id, env_name):
           """,
           """
           ENV PATH="/opt/conda/envs/py39/bin:${PATH}"
-          """,
-          # Install some networking tools for debugging reverb
-          """
-          RUN ${APT_COMMAND} update && \
-            ${APT_COMMAND} install -y telnet netcat curl wget && \
-            rm -rf /var/lib/apt/lists/*
           """,
       ],
       'web_navigation': [
@@ -296,25 +287,25 @@ def _get_docker_instructions(user_id, env_name):
               printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json
           """,
           # Install Requirements for A2Perf
-          f"""COPY {REPO_DIR}/a2perf/metrics/reliability/requirements.txt \
+          f"""COPY {repo_dir}/a2perf/metrics/reliability/requirements.txt \
       ./a2perf/metrics/reliability/requirements.txt""",
           f"""
-    COPY {REPO_DIR}/a2perf/metrics/system/codecarbon/requirements*.txt \
+    COPY {repo_dir}/a2perf/metrics/system/codecarbon/requirements*.txt \
       ./a2perf/metrics/system/codecarbon/
     """,
           f"""
-    COPY {REPO_DIR}/a2perf/a2perf_benchmark_submission/requirements.txt \
+    COPY {repo_dir}/a2perf/a2perf_benchmark_submission/requirements.txt \
       ./a2perf/a2perf_benchmark_submission/requirements.txt
       """,
           f"""
-    COPY {REPO_DIR}/a2perf/domains/web_navigation/requirements.txt \
+    COPY {repo_dir}/a2perf/domains/web_navigation/requirements.txt \
       ./a2perf/domains/web_navigation/requirements.txt
     """,
           f"""
-        COPY {REPO_DIR}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
+        COPY {repo_dir}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
           ./a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt
         """,
-          f'COPY {REPO_DIR}/requirements.txt ./requirements.txt',
+          f'COPY {repo_dir}/requirements.txt ./requirements.txt',
           'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
           (
               'RUN /opt/conda/envs/py310/bin/pip install -r'
@@ -324,7 +315,7 @@ def _get_docker_instructions(user_id, env_name):
               'RUN /opt/conda/envs/py310/bin/pip install -r'
               ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
           ),
-          f'COPY {REPO_DIR} .',
+          f'COPY {repo_dir} .',
           f"""
         RUN chown -R {user_id}:root /home/user/.wdm && \
          chown -R {user_id}:root /workdir && \
@@ -341,12 +332,6 @@ def _get_docker_instructions(user_id, env_name):
           """,
           """
           ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
-          """,
-          # Install some networking tools for debugging reverb
-          """
-          RUN ${APT_COMMAND} update && \
-            ${APT_COMMAND} install -y telnet netcat curl wget && \
-            rm -rf /var/lib/apt/lists/*
           """,
       ],
       'circuit_training': [],
@@ -431,22 +416,24 @@ def get_hparam_sweeps(domain, **kwargs):
 
     if debug:
       general_hyperparameters.update({
-          'env_batch_size': [8],
-          'total_env_steps': [1000000],
+          'env_batch_size': [380],
+          'total_env_steps': [500000],
           'train_checkpoint_interval': [10000],
           'policy_checkpoint_interval': [10000],
-          'timesteps_per_actorbatch': [256],
+          'timesteps_per_actorbatch': [4096],
       })
 
       algo_hyperparameters = {
           'ppo': {
+              'batch_size': [32],
               'algo': ['ppo'],
               'use_gae': [True],
-              'num_epochs': [1],
-              'learning_rate': [3e-4],
-              'entropy_regularization': [1e-4],
+              'entropy_regularization': [1e-3],
+              'learning_rate': [1e-4],
+              'num_epochs': [10],
           },
           'sac': {
+              'batch_size': [32],
               'algo': ['sac'],
               'learning_rate': [3e-4],
               'rb_capacity': [100000],
@@ -650,7 +637,7 @@ def main(_):
       [executable] = experiment.package([
           xm.python_container(
               executor_spec=executor.Spec(),
-              path='../',
+              path='.',
               use_deep_module=True,
               base_image=base_image,
               docker_instructions=docker_instructions,
@@ -724,7 +711,6 @@ def main(_):
           base_root_dir,
           task,
           hparams['algo'],
-          'debug' if _DEBUG.value else '',
       )
 
       hparams['root_dir'] = os.path.join(
@@ -741,6 +727,7 @@ def main(_):
 
       hparams.update(
           dict(
+              num_collect_machines=_NUM_COLLECT_MACHINES.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
               replay_buffer_server_address=_REPLAY_BUFFER_SERVER_ADDRESS.value,
@@ -754,7 +741,6 @@ def main(_):
               gin_config=os.path.join(
                   '/workdir/a2perf/submission/configs',
                   domain,
-                  'debug' if debug else '',
                   f'{mode}.gin',
               ),
               participant_module_path=os.path.join(
