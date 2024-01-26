@@ -32,6 +32,9 @@ _DOMAIN = flags.DEFINE_enum(
     ['quadruped_locomotion', 'web_navigation', 'circuit_training'],
     'Domain to run.',
 )
+_NUM_REPLICAS = flags.DEFINE_integer(
+    'num_replicas', None, 'Number of replicas for distributed training.'
+)
 _SEED = flags.DEFINE_integer('seed', None, 'Global seed.')
 _ENV_BATCH_SIZE = flags.DEFINE_integer(
     'env_batch_size', None, 'Number of environments to run in parallel.'
@@ -160,6 +163,7 @@ def main(_):
 
   # Export distributed training variables
   os.environ['MODE'] = _MODE.value
+  os.environ['NUM_REPLICAS'] = str(_NUM_REPLICAS.value)
   os.environ['JOB_TYPE'] = str(_JOB_TYPE.value)
   os.environ['REPLAY_BUFFER_SERVER_ADDRESS'] = (
       _REPLAY_BUFFER_SERVER_ADDRESS.value
