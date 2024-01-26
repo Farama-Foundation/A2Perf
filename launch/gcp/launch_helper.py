@@ -51,7 +51,6 @@ def generate_commands():
         f"--seeds={_SEED.value} \\\n"
         f"--algos={_ALGO.value} \\\n"
         f"{domain_options}"
-        f"--num_gpus={_NUM_GPUS.value if _MODE.value != 'collect' else 0} \\\n"
         f"--replay_buffer_server_address={address} \\\n"
         f"--replay_buffer_server_port=8000 \\\n"
         f"--variable_container_server_address={address} \\\n"
@@ -62,17 +61,21 @@ def generate_commands():
 
     train_command = common_command + (
         f"--mode=train \\\n"
+        f"--num_gpus={_NUM_GPUS.value} \\\n"
         f"--job_type=train "
     )
 
     inference_command = common_command + (
         f"--mode=inference \\\n"
-        f"--experiment_id={_EXPERIMENT_ID.value}"
+        f"--num_gpus={_NUM_GPUS.value} \\\n"
+        f"--experiment_id={_EXPERIMENT_ID.value} \\\n"
+        f"--job_type=inference"
     )
 
     collect_command = common_command + (
         f"--mode=train \\\n"
         f"--job_type=collect \\\n"
+        f"--num_gpus={0} \\\n"
         f"--experiment_id=..."
     )
 
