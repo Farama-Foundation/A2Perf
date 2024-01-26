@@ -17,6 +17,8 @@ _MOTION_FILE = flags.DEFINE_string('motion_file', None,
                                    'Motion file to be used')
 _EXPERIMENT_ID = flags.DEFINE_string('experiment_id', None,
                                      'Experiment ID to be used')
+_USER_ID = flags.DEFINE_string('user_id', '1000', 'User ID to be used')
+_DEBUG = flags.DEFINE_boolean('debug', False, 'Debug mode')
 
 
 def generate_commands():
@@ -44,7 +46,7 @@ def generate_commands():
 
     # Common part of the command
     common_command = (
-        f"xmanager launch launch/xm_launch.py -- \\\n"
+        f"xmanager launch xm_launch.py -- \\\n"
         f"--domain={_DOMAIN.value} \\\n"
         f"--seeds={_SEED.value} \\\n"
         f"--algos={_ALGO.value} \\\n"
@@ -54,6 +56,8 @@ def generate_commands():
         f"--replay_buffer_server_port=8000 \\\n"
         f"--variable_container_server_address={address} \\\n"
         f"--variable_container_server_port=8000 \\\n"
+        f"--user_id={_USER_ID.value} \\\n"
+        f"--debug={_DEBUG.value} \\\n"
     )
 
     train_command = common_command + (
@@ -67,7 +71,7 @@ def generate_commands():
     )
 
     collect_command = common_command + (
-        f"--mode=collect \\\n"
+        f"--mode=train \\\n"
         f"--job_type=collect \\\n"
         f"--experiment_id=..."
     )
