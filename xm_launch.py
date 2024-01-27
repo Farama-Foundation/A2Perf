@@ -720,7 +720,6 @@ def main(_):
 
       skill_level = hparams['skill_level']
       domain = hparams['domain']
-      debug = hparams['debug']
       mode = hparams['mode']
 
       dataset_id = f'{domain[0].upper() + domain[1:]}-{task}-{skill_level}-v0'
