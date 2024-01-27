@@ -473,8 +473,8 @@ def get_hparam_sweeps(domain, **kwargs):
     max_vocab_size = kwargs['max_vocab_size']
     use_xvfb = kwargs['use_xvfb']
     general_hyperparameters = {
-        'eval_interval': [100],
-        'log_interval': [100],
+        'eval_interval': [1000],
+        'log_interval': [1000],
         'env_name': ['WebNavigation-v0'],
         'num_websites': num_websites,
         'difficulty_level': difficulty_levels,
@@ -498,8 +498,8 @@ def get_hparam_sweeps(domain, **kwargs):
           'ppo': {
               'use_gae': [True],
               'algo': ['ppo'],
-              'batch_size': [32],
-              'num_epochs': [5],
+              'batch_size': [64],
+              'num_epochs': [10],
               'learning_rate': [3e-4],
               'entropy_regularization': [1e-4],
           },
@@ -508,15 +508,15 @@ def get_hparam_sweeps(domain, **kwargs):
               'batch_size': [32],
               'epsilon_greedy': [0.1],
               'learning_rate': [3e-4],
-              'rb_capacity': [10000],
+              'rb_capacity': [100000],
           },
       }
     else:
       general_hyperparameters.update({
           'env_batch_size': [8],
-          'total_env_steps': [10000000],
-          'train_checkpoint_interval': [100000],
-          'policy_checkpoint_interval': [100000],
+          'total_env_steps': [100000000],
+          'train_checkpoint_interval': [1000000],
+          'policy_checkpoint_interval': [1000000],
           'timesteps_per_actorbatch': [4096],
       })
 
@@ -524,17 +524,17 @@ def get_hparam_sweeps(domain, **kwargs):
           'ppo': {
               'use_gae': [True],
               'algo': ['ppo'],
-              'batch_size': [32],
+              'batch_size': [64],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
               'num_epochs': [10],
           },
           'ddqn': {
               'algo': ['ddqn'],
-              'batch_size': [32],
+              'batch_size': [64],
               'learning_rate': [3e-4],
               'epsilon_greedy': [0.1],
-              'rb_capacity': [1000000],
+              'rb_capacity': [10000000],
           },
       }
   elif domain == 'circuit_training':
