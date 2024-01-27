@@ -60,9 +60,6 @@ _USER_ID = flags.DEFINE_integer('user_id', None, 'User ID')
 _NUM_COLLECT_MACHINES = flags.DEFINE_integer(
     'num_collect_machines', 1, 'Number of machines to use for collection'
 )
-_NUM_REPLICAS = flags.DEFINE_integer(
-    'num_replicas', None, 'Number of replicas to use for training'
-)
 _USE_XVFB = flags.DEFINE_bool('use_xvfb', False, 'Use xvfb')
 _DIFFICULTY_LEVELS = flags.DEFINE_list(
     'difficulty_levels', None, 'Difficulty levels to run'
@@ -730,7 +727,6 @@ def main(_):
 
       hparams.update(
           dict(
-              num_replicas=_NUM_REPLICAS.value,
               num_collect_machines=_NUM_COLLECT_MACHINES.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
