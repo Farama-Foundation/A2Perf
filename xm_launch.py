@@ -419,24 +419,24 @@ def get_hparam_sweeps(domain, **kwargs):
 
     if debug:
       general_hyperparameters.update({
-          'env_batch_size': [128],
+          'env_batch_size': [8],
           'total_env_steps': [100000],
           'train_checkpoint_interval': [10000],
           'policy_checkpoint_interval': [10000],
-          'timesteps_per_actorbatch': [4096],
+          'timesteps_per_actorbatch': [256],
       })
 
       algo_hyperparameters = {
           'ppo': {
-              'batch_size': [32],
+              'batch_size': [64],
               'algo': ['ppo'],
               'use_gae': [True],
-              'entropy_regularization': [1e-3],
-              'learning_rate': [1e-4],
-              'num_epochs': [1],
+              'entropy_regularization': [1e-4],
+              'learning_rate': [3e-4],
+              'num_epochs': [10],
           },
           'sac': {
-              'batch_size': [32],
+              'batch_size': [64],
               'algo': ['sac'],
               'learning_rate': [3e-4],
               'rb_capacity': [100000],
@@ -444,24 +444,24 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [170],
-          'total_env_steps': [200000000],
+          'env_batch_size': [512],
+          'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
-          'timesteps_per_actorbatch': [4096],
+          'timesteps_per_actorbatch': [8192],
       })
 
       algo_hyperparameters = {
           'ppo': {
-              'batch_size': [32],
+              'batch_size': [64],
               'algo': ['ppo'],
               'use_gae': [True],
-              'entropy_regularization': [1e-3],
-              'learning_rate': [1e-4],
+              'entropy_regularization': [1e-4],
+              'learning_rate': [3e-4],
               'num_epochs': [10],
           },
           'sac': {
-              'batch_size': [32],
+              'batch_size': [64],
               'algo': ['sac'],
               'learning_rate': [3e-4],
               'rb_capacity': [10000000],
