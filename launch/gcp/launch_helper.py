@@ -62,14 +62,12 @@ def generate_commands():
     train_command = common_command + (
         f"--mode=train \\\n"
         f"--num_gpus={_NUM_GPUS.value} \\\n"
-        f"--num_replicas={_NUM_GPUS.value} \\\n"
         f"--job_type=train "
     )
 
     inference_command = common_command + (
         f"--mode=inference \\\n"
         f"--num_gpus={_NUM_GPUS.value} \\\n"
-        f"--num_replicas={_NUM_GPUS.value} \\\n"
         f"--experiment_id={_EXPERIMENT_ID.value} \\\n"
         f"--job_type=inference"
     )
@@ -78,7 +76,6 @@ def generate_commands():
         f"--mode=train \\\n"
         f"--job_type=collect \\\n"
         f"--num_gpus={0} \\\n"
-        f"--num_replicas={_NUM_GPUS.value} \\\n"
         f"--experiment_id=..."
     )
 
