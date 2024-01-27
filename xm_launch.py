@@ -433,7 +433,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'entropy_regularization': [1e-3],
               'learning_rate': [1e-4],
-              'num_epochs': [10],
+              'num_epochs': [1],
           },
           'sac': {
               'batch_size': [32],
