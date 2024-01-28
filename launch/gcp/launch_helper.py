@@ -36,7 +36,6 @@ def generate_commands():
 
   address = machine_addresses.get(_MACHINE_NAME.value.lower())
   if address:
-    domain_options = ""
     if _DOMAIN.value == 'web_navigation':
       domain_options = f"--num_websites={_NUM_WEBSITES.value} \\\n--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
     elif _DOMAIN.value == 'quadruped_locomotion':
