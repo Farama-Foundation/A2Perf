@@ -377,15 +377,11 @@ ENV_VARS = {
     'quadruped_locomotion': {
         'PYTHONBUFFERED': '1',
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-        'TF_GPU_THREAD_MODE': 'gpu_private',
-        'TF_USE_LEGACY_KERAS': '1',
         'WRAPT_DISABLE_EXTENSIONS': 'true',
     },
     'web_navigation': {
         'PYTHONBUFFERED': '1',
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-        'TF_GPU_THREAD_MODE': 'gpu_private',
-        'TF_USE_LEGACY_KERAS': '1',
         'WRAPT_DISABLE_EXTENSIONS': 'true',
     },
     'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
