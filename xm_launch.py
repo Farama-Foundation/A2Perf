@@ -47,6 +47,9 @@ _ALGOS = flags.DEFINE_list(
     'Algorithms to run. If multiple are specified, they will be run in'
     ' sequence',
 )
+_AUTH_KEY = flags.DEFINE_string(
+    'auth_key', 'secretkey', 'Authentication key for the manager server.'
+)
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
 
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
@@ -487,7 +490,7 @@ def get_hparam_sweeps(domain, **kwargs):
 
     if debug:
       general_hyperparameters.update({
-          'env_batch_size': [4],
+          'env_batch_size': [2],
           'total_env_steps': [100000],
           'train_checkpoint_interval': [10000],
           'policy_checkpoint_interval': [10000],
@@ -726,6 +729,7 @@ def main(_):
 
       hparams.update(
           dict(
+              auth_key=_AUTH_KEY.value,
               num_collect_machines=_NUM_COLLECT_MACHINES.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,

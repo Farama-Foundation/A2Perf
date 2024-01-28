@@ -56,6 +56,9 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     ['novice', 'intermediate', 'expert'],
     'Skill level of the expert.',
 )
+_AUTH_KEY = flags.DEFINE_string(
+    'auth_key', 'secretkey', 'Authentication key for the manager server.'
+)
 
 _JOB_TYPE = flags.DEFINE_enum(
     'job_type', None, ['train', 'collect', 'reverb'], 'Type of job'
@@ -175,13 +178,13 @@ def main(_):
   )
   os.environ['VOCABULARY_SERVER_ADDRESS'] = _VOCABULARY_SERVER_ADDRESS.value
   os.environ['VOCABULARY_SERVER_PORT'] = str(_VOCABULARY_SERVER_PORT.value)
-
+  os.environ['AUTH_KEY'] = _AUTH_KEY.value
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
   if _JOB_TYPE.value in ['collect', 'inference']:
     # Change the root dir to the machine's hostname
     root_dir = os.path.join(
-        _ROOT_DIR.value, _JOB_TYPE.value, os.environ['HOSTNAME']
+        _ROOT_DIR.value, _JOB_TYPE.value, os.environ.get('HOSTNAME', 'unknown')
     )
     print(f'Changing root dir to {root_dir}')
     f = Figlet(font='standard', width=300)
