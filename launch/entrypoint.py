@@ -95,6 +95,9 @@ _LOG_INTERVAL = flags.DEFINE_integer('log_interval', None, 'Log interval.')
 _ENTROPY_REGULARIZATION = flags.DEFINE_float(
     'entropy_regularization', None, 'Entropy regularization.'
 )
+_EXPLORATION_NOISE_STD = flags.DEFINE_float(
+    'exploration_noise_std', None, 'Exploration noise std.'
+)
 _DATASET_ID = flags.DEFINE_string('dataset_id', None, 'Dataset ID.')
 
 _NUM_WEBSITES = flags.DEFINE_integer(
@@ -209,7 +212,9 @@ def main(_):
     os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
     os.environ['USE_GAE'] = str(_USE_GAE.value)
     os.environ['RB_CAPACITY'] = '10000000'  # doesn't matter for PPO
-
+  elif _ALGO.value == 'td3':
+    os.environ['EXPLORATION_NOISE_STD'] = str(_EXPLORATION_NOISE_STD.value)
+    os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   os.environ['ENV_NAME'] = _ENV_NAME.value
   if _DOMAIN.value == 'quadruped_locomotion':
     os.environ['DOMAIN'] = 'quadruped_locomotion'
