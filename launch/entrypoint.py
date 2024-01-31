@@ -1,4 +1,5 @@
 import os
+import select
 import subprocess
 
 from absl import app
@@ -252,12 +253,16 @@ def main(_):
       stderr=subprocess.STDOUT,
       env=os.environ.copy(),
   )
+
   while True:
-    output = process.stdout.readline()
     if process.poll() is not None:
       break
-    if output:
-      print(output.strip().decode('utf-8', 'ignore'))
+    # Check if there's data to read
+    readable, _, _ = select.select([process.stdout], [], [], 0.1)
+    if readable:
+      output = process.stdout.readline()
+      if output:
+        print(output.strip().decode('utf-8', 'ignore'))
 
 
 if __name__ == '__main__':
