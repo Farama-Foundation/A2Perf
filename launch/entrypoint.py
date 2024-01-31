@@ -215,6 +215,8 @@ def main(_):
   elif _ALGO.value == 'td3':
     os.environ['EXPLORATION_NOISE_STD'] = str(_EXPLORATION_NOISE_STD.value)
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
+  elif _ALGO.value == 'ddpg':
+    os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   os.environ['ENV_NAME'] = _ENV_NAME.value
   if _DOMAIN.value == 'quadruped_locomotion':
     os.environ['DOMAIN'] = 'quadruped_locomotion'

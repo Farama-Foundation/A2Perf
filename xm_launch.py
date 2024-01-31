@@ -415,7 +415,7 @@ def get_hparam_sweeps(domain, **kwargs):
 
     if debug:
       general_hyperparameters.update({
-          'env_batch_size': [8],
+          'env_batch_size': [2],
           'total_env_steps': [100000],
           'train_checkpoint_interval': [10000],
           'policy_checkpoint_interval': [10000],
@@ -434,6 +434,19 @@ def get_hparam_sweeps(domain, **kwargs):
           'sac': {
               'batch_size': [64],
               'algo': ['sac'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [100000],
+          },
+          'td3': {
+              'batch_size': [64],
+              'algo': ['td3'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [100000],
+              'exploration_noise_std': [0.1],
+          },
+          'ddpg': {
+              'batch_size': [64],
+              'algo': ['ddpg'],
               'learning_rate': [3e-4],
               'rb_capacity': [100000],
           },
@@ -459,6 +472,19 @@ def get_hparam_sweeps(domain, **kwargs):
           'sac': {
               'batch_size': [64],
               'algo': ['sac'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+          },
+          'td3': {
+              'batch_size': [64],
+              'algo': ['td3'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+              'exploration_noise_std': [0.1],
+          },
+          'ddpg': {
+              'batch_size': [64],
+              'algo': ['ddpg'],
               'learning_rate': [3e-4],
               'rb_capacity': [10000000],
           },
