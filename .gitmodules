@@ -11,7 +11,7 @@
 [submodule "a2perf/domains/circuit_training"]
 	path = a2perf/domains/circuit_training
     url = https://github.com/harvard-edge/circuit_training.git
-    branch = main
+	branch = main
 
 [submodule "a2perf/a2perf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission

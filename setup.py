@@ -1,4 +1,5 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages
+from setuptools import setup
 
 setup(
     name='a2perf',
@@ -8,6 +9,7 @@ setup(
         'psutil',
         'gin-config',
         'gymnasium',
+        'gym',
         'minari',
         'absl-py'
     ],
@@ -32,6 +34,10 @@ setup(
 
             # Include all the motion files for the quadruped locomotion domain
             'domains/quadruped_locomotion/motion_imitation/data/motions/*.txt',
+
+            # Include the netlist and initial placement files for the circuit training domain
+            'domains/circuit_training/**/*.pb.txt',
+            'domains/circuit_training/**/*.plc',
 
             # Include package data from codecarbon's setup.py
             "metrics/system/codecarbon/codecarbon/data/cloud/impact.csv",

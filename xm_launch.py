@@ -257,6 +257,7 @@ def _get_docker_instructions(user_id, env_name):
             rm /tmp/chrome.deb && \
             rm -rf /var/lib/apt/lists/*
           """,
+          # Set up user with the specified ID
           f"""
           RUN if ! getent passwd {user_id}; then \
                 useradd -m -u {user_id} user; \
@@ -337,7 +338,106 @@ def _get_docker_instructions(user_id, env_name):
           ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
           """,
       ],
-      'circuit_training': [],
+      'circuit_training': [
+          """
+          ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+            --no-install-recommends -y"
+          """,
+          'ARG dreamplace_version="dreamplace_python3.10.tar.gz"',
+          'ARG placement_cost_binary="plc_wrapper_main"',
+          'ENV DEBIAN_FRONTEND=noninteractive',
+          'ENV TZ=America/New_York',
+          # Set up user with the specified ID
+          f"""
+          RUN if ! getent passwd {user_id}; then \
+                useradd -m -u {user_id} user; \
+              else \
+                USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
+                useradd -m -d /home/user -l -N -g $USER_NAME user; \
+              fi
+          """,
+          """
+          RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+          """,
+          'RUN mkdir -p /workdir',
+          'WORKDIR /workdir',
+          # Install basic system dependencies
+          """
+          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
+            ${APT_COMMAND} install sudo \
+            wget \
+            software-properties-common \
+            curl \
+            tmux \
+            vim \
+            less \
+            unzip && \
+            rm -rf /var/lib/apt/lists/*
+          """,
+          # Install dreamplace dependencies
+          """
+          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
+            ${APT_COMMAND} install flex \
+            libcairo2-dev \
+            libboost-all-dev && \
+            rm -rf /var/lib/apt/lists/*
+          """,
+          'RUN mkdir -p /dreamplace',
+          """
+          RUN curl https://storage.googleapis.com/rl-infra-public/circuit-training/dreamplace/${dreamplace_version} \
+            -o /dreamplace/dreamplace.tar.gz
+          """,
+          'RUN tar xzf /dreamplace/dreamplace.tar.gz -C /dreamplace/',
+          'ENV PYTHONPATH "${PYTHONPATH}:/dreamplace:/dreamplace/dreamplace"',
+          # Download the placement cost utility binary
+          """
+          RUN curl https://storage.googleapis.com/rl-infra-public/circuit-training/placement_cost/${placement_cost_binary} \
+            -o  /usr/local/bin/plc_wrapper_main
+          """,
+          'RUN chmod 555 /usr/local/bin/plc_wrapper_main',
+          # Set up python3.10
+          """
+          RUN conda create -y --name py310 python=3.10 && \
+            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+              conda activate py310 && \
+              conda install -c conda-forge -y gcsfs && \
+              pip install --upgrade pip setuptools"
+          """,
+          # Install Requirements for A2Perf
+          f"""
+          COPY {repo_dir}/a2perf/metrics/reliability/requirements.txt \
+            ./a2perf/metrics/reliability/requirements.txt""",
+          f"""
+          COPY {repo_dir}/a2perf/metrics/system/codecarbon/requirements*.txt \
+            ./a2perf/metrics/system/codecarbon/
+          """,
+          f"""
+          COPY {repo_dir}/a2perf/domains/circuit_training/requirements.txt \
+            ./a2perf/domains/circuit_training/requirements.txt
+          """,
+          f"""
+          COPY {repo_dir}/a2perf/a2perf_benchmark_submission/requirements.txt \
+            ./a2perf/a2perf_benchmark_submission/requirements.txt
+          """,
+          f'COPY {repo_dir}/requirements.txt ./requirements.txt',
+          'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
+          (
+              'RUN /opt/conda/envs/py310/bin/pip install -r'
+              ' ./a2perf/domains/circuit_training/requirements.txt'
+          ),
+          (
+              'RUN /opt/conda/envs/py310/bin/pip install -r'
+              ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
+          ),
+          f'COPY {repo_dir} .',
+          f"""
+          RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+              conda activate py310 && \
+              pip install /workdir"
+          """,
+          'ENV CONDA_DEFAULT_ENV=py310',
+          'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
+      ],
   }
 
   return docker_instructions[env_name]
@@ -357,7 +457,8 @@ ENTRYPOINT = {
             f' --verbosity={logging.get_verbosity()}'
         ),
     ]),
-    'circuit_training': xm.CommandList([]),
+    # TODO: Add full entrypoint for circuit_training
+    'circuit_training': xm.CommandList(['echo $@']),
 }
 
 ENV_NAMES = {
@@ -384,7 +485,10 @@ ENV_VARS = {
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
         'WRAPT_DISABLE_EXTENSIONS': 'true',
     },
-    'circuit_training': {'WRAPT_DISABLE_EXTENSIONS': 'true'},
+    'circuit_training': {'PYTHONBUFFERED': '1',
+                         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+                         'WRAPT_DISABLE_EXTENSIONS': 'true',
+                         },
 }
 
 
@@ -563,8 +667,89 @@ def get_hparam_sweeps(domain, **kwargs):
           },
       }
   elif domain == 'circuit_training':
-    pass
+    # TODO: Add correct hyperparameters for circuit_training
+    general_hyperparameters = {
+        'eval_interval': [1000],
+        'log_interval': [1000],
+        'env_name': ['CircuitTraining-v0'],
+    }
 
+    if debug:
+      general_hyperparameters.update({
+          'env_batch_size': [2],
+          'total_env_steps': [100000],
+          'train_checkpoint_interval': [10000],
+          'policy_checkpoint_interval': [10000],
+          'timesteps_per_actorbatch': [256],
+      })
+
+      algo_hyperparameters = {
+          'ppo': {
+              'batch_size': [64],
+              'algo': ['ppo'],
+              'use_gae': [True],
+              'entropy_regularization': [1e-4],
+              'learning_rate': [3e-4],
+              'num_epochs': [10],
+          },
+          'sac': {
+              'batch_size': [64],
+              'algo': ['sac'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [100000],
+          },
+          'td3': {
+              'batch_size': [64],
+              'algo': ['td3'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [100000],
+              'exploration_noise_std': [0.1],
+          },
+          'ddpg': {
+              'batch_size': [64],
+              'algo': ['ddpg'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [100000],
+          },
+      }
+    else:
+      general_hyperparameters.update({
+          'env_batch_size': [512],
+          'total_env_steps': [10000000],
+          'train_checkpoint_interval': [1000000],
+          'policy_checkpoint_interval': [1000000],
+          'timesteps_per_actorbatch': [8192],
+      })
+
+      algo_hyperparameters = {
+          'ppo': {
+              'batch_size': [64],
+              'algo': ['ppo'],
+              'use_gae': [True],
+              'entropy_regularization': [1e-4],
+              'learning_rate': [3e-4],
+              'num_epochs': [10],
+          },
+          'sac': {
+              'batch_size': [64],
+              'algo': ['sac'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+          },
+          'td3': {
+              'batch_size': [64],
+              'algo': ['td3'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+              'exploration_noise_std': [0.1],
+          },
+          'ddpg': {
+              'batch_size': [64],
+              'algo': ['ddpg'],
+              'learning_rate': [3e-4],
+              'rb_capacity': [10000000],
+          },
+      }
   else:
     raise ValueError(f'Unknown domain: {domain}')
 
@@ -653,6 +838,8 @@ def main(_):
         # insert the entire list there
         if _DOMAIN.value == 'web_navigation':
           docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY310)
+        elif _DOMAIN.value == 'circuit_training':
+          docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY310)
         elif _DOMAIN.value == 'quadruped_locomotion':
           docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY39)
       else:
@@ -728,6 +915,9 @@ def main(_):
         task = (
             f'difficulty_level_{difficulty_level}_num_websites_{num_websites}'
         )
+      elif _DOMAIN.value == 'circuit_training':
+        # TODO: Add task-specific hparams
+        task = 'circuit_training'
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
 
