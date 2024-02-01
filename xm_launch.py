@@ -81,7 +81,7 @@ _PROFILE_VALUE_DROPOUT = flags.DEFINE_float(
 )
 _NUM_WEBSITES = flags.DEFINE_list('num_websites', None, 'Number of websites')
 _MOTION_FILES = flags.DEFINE_list('motion_files', None, 'Motion files to run')
-
+_NETLISTS = flags.DEFINE_list('netlists', None, 'Netlists to run')
 _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'quadruped_locomotion', 'Name of experiment'
 )
@@ -457,8 +457,13 @@ ENTRYPOINT = {
             f' --verbosity={logging.get_verbosity()}'
         ),
     ]),
-    # TODO: Add full entrypoint for circuit_training
-    'circuit_training': xm.CommandList(['echo $@']),
+    'circuit_training': xm.CommandList([
+
+        (
+            'python /workdir/launch/entrypoint.py'
+            f' --verbosity={logging.get_verbosity()}'
+        ),
+    ]),
 }
 
 ENV_NAMES = {
@@ -667,11 +672,12 @@ def get_hparam_sweeps(domain, **kwargs):
           },
       }
   elif domain == 'circuit_training':
-    # TODO: Add correct hyperparameters for circuit_training
+    netlists = kwargs['netlists']
     general_hyperparameters = {
         'eval_interval': [1000],
         'log_interval': [1000],
         'env_name': ['CircuitTraining-v0'],
+        'netlist': netlists,
     }
 
     if debug:
@@ -890,6 +896,7 @@ def main(_):
         motion_files=_MOTION_FILES.value,
         num_websites=_NUM_WEBSITES.value,
         difficulty_levels=_DIFFICULTY_LEVELS.value,
+        netlists=_NETLISTS.value,
         domain=_DOMAIN.value,
         skill_levels=_SKILL_LEVELS.value,
         seeds=_SEEDS.value,
@@ -916,8 +923,16 @@ def main(_):
             f'difficulty_level_{difficulty_level}_num_websites_{num_websites}'
         )
       elif _DOMAIN.value == 'circuit_training':
-        # TODO: Add task-specific hparams
-        task = 'circuit_training'
+        netlist = hparams['netlist']
+        del hparams['netlist']
+        hparams['netlist_path'] = os.path.join(
+            '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
+            netlist, 'netlist.pb.txt', )
+        hparams['init_placement_path'] = os.path.join(
+            os.path.dirname(hparams['netlist_path']),
+            'initial.plc',
+        )
+        task = netlist
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
 

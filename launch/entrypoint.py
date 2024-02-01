@@ -123,6 +123,13 @@ _VARIABLE_CONTAINER_SERVER_ADDRESS = flags.DEFINE_string(
     'Variable container server address.',
 )
 
+_NETLIST_PATH = flags.DEFINE_string(
+    'netlist_path', None, 'Path to the netlist file.'
+)
+_INIT_PLACEMENT_PATH = flags.DEFINE_string(
+    'init_placement_path', None, 'Path to the initial placement file.'
+)
+
 _VARIABLE_CONTAINER_SERVER_PORT = flags.DEFINE_integer(
     'variable_container_server_port', None, 'Variable container server port.'
 )
@@ -232,6 +239,8 @@ def main(_):
     os.environ['PROFILE_VALUE_DROPOUT'] = str(_PROFILE_VALUE_DROPOUT.value)
   elif _DOMAIN.value == 'circuit_training':
     os.environ['DOMAIN'] = 'circuit_training'
+    os.environ['NETLIST_PATH'] = _NETLIST_PATH.value
+    os.environ['INIT_PLACEMENT_PATH'] = _INIT_PLACEMENT_PATH.value
   else:
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
