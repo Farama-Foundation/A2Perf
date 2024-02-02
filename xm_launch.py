@@ -458,11 +458,12 @@ ENTRYPOINT = {
         ),
     ]),
     'circuit_training': xm.CommandList([
+        # (
+        #     'python /workdir/launch/entrypoint.py'
+        #     f' --verbosity={logging.get_verbosity()}'
+        # ),
 
-        (
-            'python /workdir/launch/entrypoint.py'
-            f' --verbosity={logging.get_verbosity()}'
-        ),
+        'echo $@',
     ]),
 }
 

@@ -19,8 +19,7 @@ Submission.measure_emissions = True
 # Set up domain
 ####################################
 
-#Submission.domain_config_paths = '/rl-perf/a2perf/submission/configs/web_navigation/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
-Submission.domain_config_paths = '/rl-perf/a2perf/submission/configs/web_navigation/debug/domain_configs/difficulty_01.gin'
+Submission.domain_config_paths = '/a2perf/a2perf/submission/configs/web_navigation/debug/domain_configs/difficulty_01.gin'
 
 ####################################
 # Set up benchmark mode
@@ -29,40 +28,12 @@ Submission.num_inference_steps = 10000
 Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
 
-####################################
-# Reliability
-####################################
-
-METRICS = [
-    %ReliabilityMetrics.IqrAcrossRollouts, # Dispersion across rollouts
-    %ReliabilityMetrics.LowerCVaRAcrossRollouts, # Risk Across Rollouts
-]
-Submission.reliability_metrics = %METRICS
-
-
-# ----------------------
-# RELIABILITY PARAMETERS
-# ----------------------
-
-# ----------------------
-# RELIABILITY METRICS CONFIGURATION
-# ----------------------
-metrics_offline.IqrAcrossRollouts.baseline = None
-
-
-# ----------------------
-# EVALUATION CONFIGURATION
-# ----------------------
-eval_metrics.Evaluator.metrics = %METRICS
-eval_metrics.Evaluator.timepoint_variable = 'episode_num'
-eval_metrics.Evaluator.dependent_variable = 'reward'
-eval_metrics.Evaluator.align_on_global_step = True
 
 # ----------------------
 # SYSTEM METRICS SETUP
 # ----------------------
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'rlperf_web_nav_inference'
+track_emissions.project_name = 'a2perf_web_nav_inference'
 track_emissions.measure_power_secs = 1
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
