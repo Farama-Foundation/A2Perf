@@ -82,6 +82,12 @@ _PROFILE_VALUE_DROPOUT = flags.DEFINE_float(
 _NUM_WEBSITES = flags.DEFINE_list('num_websites', None, 'Number of websites')
 _MOTION_FILES = flags.DEFINE_list('motion_files', None, 'Motion files to run')
 _NETLISTS = flags.DEFINE_list('netlists', None, 'Netlists to run')
+_STD_CELL_PLACER_MODE = flags.DEFINE_enum(
+    'std_cell_placer_mode',
+    'dreamplace',
+    ['dreamplace', 'plc'],
+    'Mode for std cell placer',
+)
 _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'quadruped_locomotion', 'Name of experiment'
 )
@@ -496,6 +502,11 @@ ENV_VARS = {
                          'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
                          'WRAPT_DISABLE_EXTENSIONS': 'true',
                          },
+}
+
+NETLIST_MAX_SEQUENCE_LENGTH = {
+    'ariane': 134,
+    'toy_macro_stdcell': 3,
 }
 
 
@@ -934,6 +945,9 @@ def main(_):
             os.path.dirname(hparams['netlist_path']),
             'initial.plc',
         )
+        hparams['max_sequence_length'] = NETLIST_MAX_SEQUENCE_LENGTH[netlist
+        ]
+        hparams['std_cell_placer_mode'] = _STD_CELL_PLACER_MODE.value
         task = netlist
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
