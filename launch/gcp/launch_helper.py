@@ -19,6 +19,16 @@ _EXPERIMENT_ID = flags.DEFINE_string('experiment_id', None,
                                      'Experiment ID to be used')
 _USER_ID = flags.DEFINE_string('user_id', '1000', 'User ID to be used')
 _DEBUG = flags.DEFINE_boolean('debug', False, 'Debug mode')
+_NETLISTS = flags.DEFINE_enum('netlists', None,
+                              ['toy_macro_stdcell', 'ariane',
+                               'macro_tiles_10x10', 'sample_clustered',
+                               'simple_grouped_with_coords',
+                               'simple_grouped_with_coords_with_blockage',
+                               'simple_with_coords', ],
+                              'Netlists for the circuit_training domain')
+_STD_CELL_PLACER_MODE = flags.DEFINE_enum('std_cell_placer_mode', None,
+                                          ['dreamplace', 'plc'],
+                                          'Standard cell placer mode for the circuit_training domain')
 
 
 def generate_commands():
@@ -40,6 +50,12 @@ def generate_commands():
       domain_options = f"--num_websites={_NUM_WEBSITES.value} \\\n--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
     elif _DOMAIN.value == 'quadruped_locomotion':
       domain_options = f"--motion_files={_MOTION_FILE.value} \\\n"
+    if _DOMAIN.value == 'circuit_training':
+      if not _NETLISTS.value or not _STD_CELL_PLACER_MODE.value:
+        raise ValueError(
+            "Netlists and std_cell_placer_mode must be specified for the circuit_training domain")
+
+      domain_options = f"--netlists={_NETLISTS.value} \\\n--std_cell_placer_mode={_STD_CELL_PLACER_MODE.value} \\\n"
     else:
       raise ValueError(f"Domain {_DOMAIN.value} not supported")
 

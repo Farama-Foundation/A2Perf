@@ -811,7 +811,7 @@ def main(_):
         hparams['max_sequence_length'] = NETLIST_MAX_SEQUENCE_LENGTH[netlist
         ]
         hparams['std_cell_placer_mode'] = _STD_CELL_PLACER_MODE.value
-        task = netlist
+        task = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
 
