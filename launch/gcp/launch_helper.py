@@ -50,7 +50,7 @@ def generate_commands():
       domain_options = f"--num_websites={_NUM_WEBSITES.value} \\\n--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
     elif _DOMAIN.value == 'quadruped_locomotion':
       domain_options = f"--motion_files={_MOTION_FILE.value} \\\n"
-    if _DOMAIN.value == 'circuit_training':
+    elif _DOMAIN.value == 'circuit_training':
       if not _NETLISTS.value or not _STD_CELL_PLACER_MODE.value:
         raise ValueError(
             "Netlists and std_cell_placer_mode must be specified for the circuit_training domain")
