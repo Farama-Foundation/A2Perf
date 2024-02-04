@@ -400,8 +400,9 @@ def _get_docker_instructions(user_id, env_name):
           RUN conda create -y --name py310 python=3.10 && \
             /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
-              conda install -c conda-forge -y gcsfs && \
-              pip install --upgrade pip setuptools"
+              conda update -n base -c defaults conda -y -q && \
+              conda install -c conda-forge -y -q gcsfs && \
+              conda install -c pytorch -y -q pytorch==1.13.1"
           """,
           # Install Requirements for A2Perf
           f"""
