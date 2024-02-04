@@ -551,7 +551,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
-              'num_epochs': [10],
+              'num_epochs': [4],
           },
           'sac': {
               'batch_size': [64],
@@ -575,7 +575,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [512],
+          'env_batch_size': [500, 1000],
           'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -589,7 +589,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
-              'num_epochs': [10],
+              'num_epochs': [4],
           },
           'sac': {
               'batch_size': [64],
@@ -646,7 +646,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'algo': ['ppo'],
               'batch_size': [64],
-              'num_epochs': [10],
+              'num_epochs': [4],
               'learning_rate': [3e-4],
               'entropy_regularization': [1e-4],
           },
@@ -660,7 +660,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [8],
+          'env_batch_size': [500, 1000],
           'total_env_steps': [100000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -674,7 +674,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'batch_size': [64],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
-              'num_epochs': [10],
+              'num_epochs': [4],
           },
           'ddqn': {
               'algo': ['ddqn'],
@@ -709,7 +709,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
-              'num_epochs': [10],
+              'num_epochs': [4],
           },
           'sac': {
               'batch_size': [64],
@@ -733,7 +733,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [512],
+          'env_batch_size': [500, 1000],
           'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -747,7 +747,7 @@ def get_hparam_sweeps(domain, **kwargs):
               'use_gae': [True],
               'entropy_regularization': [1e-4],
               'learning_rate': [3e-4],
-              'num_epochs': [10],
+              'num_epochs': [4],
           },
           'sac': {
               'batch_size': [64],
