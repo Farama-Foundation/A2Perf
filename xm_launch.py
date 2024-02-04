@@ -143,8 +143,6 @@ _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
 )
 
 
-
-
 def _get_docker_instructions(user_id, env_name):
   repo_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
   docker_instructions = {
@@ -153,9 +151,7 @@ def _get_docker_instructions(user_id, env_name):
           ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
             --no-install-recommends -y"
           """,
-          """
-          ENV DEBIAN_FRONTEND=noninteractive
-          """,
+          'ENV DEBIAN_FRONTEND=noninteractive',
           """
           RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
             ${APT_COMMAND} install sudo wget unzip && \
@@ -163,73 +159,40 @@ def _get_docker_instructions(user_id, env_name):
           """,
           # Set up user with the specified ID
           f"""
-        RUN if ! getent passwd {user_id}; then \
-              useradd -m -u {user_id} user; \
-            else \
-              USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
-              useradd -m -d /home/user -l -N -g $USER_NAME user; \
-            fi
-        """,
+          RUN if ! getent passwd {user_id}; then \
+                useradd -m -u {user_id} user; \
+              else \
+                USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
+                useradd -m -d /home/user -l -N -g $USER_NAME user; \
+              fi
+          """,
           """
           RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
           """,
+          # Set up python3.9 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
-          # Set up custom conda environment
+          f'COPY {repo_dir}/quadruped_locomotion_environment.yml .',
           """
-          RUN conda create -y --name py39 python=3.9 && \
-            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-              conda activate py39 && \
-              conda install -c conda-forge -y gcsfs && \
-              pip install --upgrade pip setuptools"
+          RUN conda update -n base -c conda-forge conda -y && \
+            conda env create -f /workdir/quadruped_locomotion_environment.yml --name py39 -y
           """,
-          # Install Requirements for A2Perf
-          f"""COPY {repo_dir}/a2perf/metrics/reliability/requirements.txt \
-          ./a2perf/metrics/reliability/requirements.txt""",
-          f"""
-        COPY {repo_dir}/a2perf/metrics/system/codecarbon/requirements*.txt \
-          ./a2perf/metrics/system/codecarbon/
-        """,
-          f"""
-        COPY {repo_dir}/a2perf/domains/quadruped_locomotion/requirements.txt \
-          ./a2perf/domains/quadruped_locomotion/requirements.txt
-        """,
-          f"""
-        COPY {repo_dir}/a2perf/a2perf_benchmark_submission/requirements.txt \
-          ./a2perf/a2perf_benchmark_submission/requirements.txt
-        """,
-          f'COPY {repo_dir}/requirements.txt ./requirements.txt',
-          'RUN /opt/conda/envs/py39/bin/pip install -r ./requirements.txt',
-          (
-              'RUN /opt/conda/envs/py39/bin/pip install -r'
-              ' ./a2perf/domains/quadruped_locomotion/requirements.txt'
-          ),
-          (
-              'RUN /opt/conda/envs/py39/bin/pip install -r'
-              ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
-          ),
           f'COPY {repo_dir} .',
           f"""
-        RUN chown -R {user_id}:root /workdir && \
-         /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-            conda activate py39 && \
-            pip install /workdir"        
+          RUN chown -R {user_id}:root /workdir && \
+           /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+              conda activate py39 && \
+              pip install /workdir"        
         """,
-          """
-          ENV CONDA_DEFAULT_ENV=py39
-          """,
-          """
-          ENV PATH="/opt/conda/envs/py39/bin:${PATH}"
-          """,
+          'ENV CONDA_DEFAULT_ENV=py39',
+          'ENV PATH="/opt/conda/envs/py39/bin:${PATH}"'
       ],
       'web_navigation': [
           """
           ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
             --no-install-recommends -y"
           """,
-          """
-          ENV DEBIAN_FRONTEND=noninteractive
-          """,
+          'ENV DEBIAN_FRONTEND=noninteractive',
           """
           RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
             ${APT_COMMAND} install sudo wget unzip && \
@@ -255,19 +218,7 @@ def _get_docker_instructions(user_id, env_name):
                 useradd -m -d /home/user -l -N -g $USER_NAME user; \
               fi
           """,
-          """
-          RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-          """,
-          'RUN mkdir -p /workdir',
-          'WORKDIR /workdir',
-          # Set up custom conda environment
-          """
-          RUN conda create -y --name py310 python=3.10 && \
-            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-              conda activate py310 && \
-              conda install -c conda-forge -y gcsfs && \
-              pip install --upgrade pip setuptools"
-          """,
+          'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
           # Set up chromedriver installation and caching
           """
           RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
@@ -279,53 +230,26 @@ def _get_docker_instructions(user_id, env_name):
               rm /tmp/chromedriver-linux64.zip && \
               printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json
           """,
-          # Install Requirements for A2Perf
-          f"""COPY {repo_dir}/a2perf/metrics/reliability/requirements.txt \
-      ./a2perf/metrics/reliability/requirements.txt""",
-          f"""
-    COPY {repo_dir}/a2perf/metrics/system/codecarbon/requirements*.txt \
-      ./a2perf/metrics/system/codecarbon/
-    """,
-          f"""
-    COPY {repo_dir}/a2perf/a2perf_benchmark_submission/requirements.txt \
-      ./a2perf/a2perf_benchmark_submission/requirements.txt
-      """,
-          f"""
-    COPY {repo_dir}/a2perf/domains/web_navigation/requirements.txt \
-      ./a2perf/domains/web_navigation/requirements.txt
-    """,
-          f"""
-        COPY {repo_dir}/a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt \
-          ./a2perf/domains/web_navigation/gwob/miniwob_plusplus/python/requirements.txt
-        """,
-          f'COPY {repo_dir}/requirements.txt ./requirements.txt',
-          'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
-          (
-              'RUN /opt/conda/envs/py310/bin/pip install -r'
-              ' ./a2perf/domains/web_navigation/requirements.txt'
-          ),
-          (
-              'RUN /opt/conda/envs/py310/bin/pip install -r'
-              ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
-          ),
+          # Set up python3.10 and install requirements for A2perf
+          'RUN mkdir -p /workdir',
+          'WORKDIR /workdir',
+          f'COPY {repo_dir}/web_navigation_environment.yml .',
+          """
+          RUN conda update -n base -c conda-forge conda -y && \
+            conda env create -f /workdir/web_navigation_environment.yml --name py310 -y
+          """,
           f'COPY {repo_dir} .',
           f"""
-        RUN chown -R {user_id}:root /home/user/.wdm && \
-         chown -R {user_id}:root /workdir && \
-         chown -R {user_id}:root /home/user/.wdm && \
-         /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-            conda activate py310 && \
-            pip install /workdir"
-        """,
-          """
-          ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"
+          RUN chown -R {user_id}:root /home/user/.wdm && \
+           chown -R {user_id}:root /workdir && \
+           chown -R {user_id}:root /home/user/.wdm && \
+           /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+              conda activate py310 && \
+              pip install /workdir"
           """,
-          """
-          ENV CONDA_DEFAULT_ENV=py310
-          """,
-          """
-          ENV PATH="/opt/conda/envs/py310/bin:${PATH}"
-          """,
+          'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
+          'ENV CONDA_DEFAULT_ENV=py310',
+          'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"'
       ],
       'circuit_training': [
           """
@@ -348,8 +272,6 @@ def _get_docker_instructions(user_id, env_name):
           """
           RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
           """,
-          'RUN mkdir -p /workdir',
-          'WORKDIR /workdir',
           # Install basic system dependencies
           """
           RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
@@ -384,41 +306,14 @@ def _get_docker_instructions(user_id, env_name):
             -o  /usr/local/bin/plc_wrapper_main
           """,
           'RUN chmod 555 /usr/local/bin/plc_wrapper_main',
-          # Set up python3.10
+          # Set up python3.10 and install requirements for A2perf
+          'RUN mkdir -p /workdir',
+          'WORKDIR /workdir',
+          f'COPY {repo_dir}/circuit_training_environment.yml .',
           """
-          RUN conda create -y --name py310 python=3.10 && \
-            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-              conda activate py310 && \
-              conda update -n base -c defaults conda -y -q && \
-              conda install -c conda-forge -y -q gcsfs && \
-              conda install -c pytorch -y -q pytorch==1.13.1"
+          RUN conda update -n base -c conda-forge conda -y && \
+            conda env create -f /workdir/circuit_training_environment.yml --name py310 -y
           """,
-          # Install Requirements for A2Perf
-          f"""
-          COPY {repo_dir}/a2perf/metrics/reliability/requirements.txt \
-            ./a2perf/metrics/reliability/requirements.txt""",
-          f"""
-          COPY {repo_dir}/a2perf/metrics/system/codecarbon/requirements*.txt \
-            ./a2perf/metrics/system/codecarbon/
-          """,
-          f"""
-          COPY {repo_dir}/a2perf/domains/circuit_training/requirements.txt \
-            ./a2perf/domains/circuit_training/requirements.txt
-          """,
-          f"""
-          COPY {repo_dir}/a2perf/a2perf_benchmark_submission/requirements.txt \
-            ./a2perf/a2perf_benchmark_submission/requirements.txt
-          """,
-          f'COPY {repo_dir}/requirements.txt ./requirements.txt',
-          'RUN /opt/conda/envs/py310/bin/pip install -r ./requirements.txt',
-          (
-              'RUN /opt/conda/envs/py310/bin/pip install -r'
-              ' ./a2perf/domains/circuit_training/requirements.txt'
-          ),
-          (
-              'RUN /opt/conda/envs/py310/bin/pip install -r'
-              ' ./a2perf/a2perf_benchmark_submission/requirements.txt'
-          ),
           f'COPY {repo_dir} .',
           f"""
           RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
@@ -558,7 +453,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [500, 1000],
+          'env_batch_size': [500],
           'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -643,7 +538,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [500, 1000],
+          'env_batch_size': [500],
           'total_env_steps': [100000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -716,7 +611,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [500, 1000],
+          'env_batch_size': [500],
           'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
