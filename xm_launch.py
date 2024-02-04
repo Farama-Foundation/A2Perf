@@ -142,24 +142,7 @@ _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
     'vocabulary_server_port', '50000', 'Port of the vocabulary server'
 )
 
-_TENSOR_RT_INSTRUCTIONS_PY310 = [
-    """
-    RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-      conda activate py310 && \
-      conda install cuda -c  nvidia -y && \
-      pip install nvidia-pyindex && \
-      pip install nvidia-tensorrt"
-    """,
-]
-_TENSOR_RT_INSTRUCTIONS_PY39 = [
-    """
-    RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-      conda activate py39 && \
-      conda install cuda -c  nvidia -y && \
-      pip install nvidia-pyindex && \
-      pip install nvidia-tensorrt"
-    """,
-]
+
 
 
 def _get_docker_instructions(user_id, env_name):
@@ -846,22 +829,7 @@ def main(_):
           _USER_ID.value, _DOMAIN.value
       )
       base_image = BASE_IMAGE[_DOMAIN.value]
-      if _NUM_GPUS.value > 0:
-        # find the index of command starting with "RUN conda create"
-        index = next(
-            i
-            for i, s in enumerate(docker_instructions)
-            if 'RUN conda create' in s
-        )
-
-        # insert the entire list there
-        if _DOMAIN.value == 'web_navigation':
-          docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY310)
-        elif _DOMAIN.value == 'circuit_training':
-          docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY310)
-        elif _DOMAIN.value == 'quadruped_locomotion':
-          docker_instructions.insert(index + 1, *_TENSOR_RT_INSTRUCTIONS_PY39)
-      else:
+      if _NUM_GPUS.value == 0:
         base_image = 'gcr.io/deeplearning-platform-release/base-cpu:latest'
 
       # Define Executable
