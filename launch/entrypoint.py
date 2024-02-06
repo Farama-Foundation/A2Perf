@@ -84,10 +84,6 @@ _RB_CAPACITY = flags.DEFINE_integer(
 _TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
     'timesteps_per_actorbatch', None, 'Timesteps per actor batch.'
 )
-_MAX_SEQUENCE_LENGTH = flags.DEFINE_integer(
-    'max_sequence_length', None,
-    'Max sequence length. Used for agents that pass full episodes to the replay buffer.'
-)
 _TRAIN_CHECKPOINT_INTERVAL = flags.DEFINE_integer(
     'train_checkpoint_interval', None, 'Train checkpoint interval.'
 )
@@ -169,7 +165,6 @@ def main(_):
   os.environ['PARTICIPANT_MODULE_PATH'] = _PARTICIPANT_MODULE_PATH.value
   os.environ['RUN_OFFLINE_METRICS_ONLY'] = str(_RUN_OFFLINE_METRICS_ONLY.value)
   os.environ['TIMESTEPS_PER_ACTOR_BATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
-  os.environ['MAX_SEQUENCE_LENGTH'] = str(_MAX_SEQUENCE_LENGTH.value)
   os.environ['TRAIN_CHECKPOINT_INTERVAL'] = str(
       _TRAIN_CHECKPOINT_INTERVAL.value
   )

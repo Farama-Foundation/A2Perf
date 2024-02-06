@@ -586,7 +586,7 @@ def get_hparam_sweeps(domain, **kwargs):
           'total_env_steps': [100000],
           'train_checkpoint_interval': [10000],
           'policy_checkpoint_interval': [10000],
-          'timesteps_per_actorbatch': [256],
+          'timesteps_per_actorbatch': [6],
       })
 
       algo_hyperparameters = {
@@ -817,10 +817,21 @@ def main(_):
             os.path.dirname(hparams['netlist_path']),
             'initial.plc',
         )
-        hparams['max_sequence_length'] = NETLIST_MAX_SEQUENCE_LENGTH[netlist
-        ]
         hparams['std_cell_placer_mode'] = _STD_CELL_PLACER_MODE.value
         task = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
+
+        # Circuit training needs process sequences that are equivalent to the
+        # episode length, since the reward is computed at the end of the episode.
+        adjusted_timesteps_per_actorbatch = int(
+            hparams['timesteps_per_actorbatch'] / hparams['env_batch_size']
+        )
+        if adjusted_timesteps_per_actorbatch != NETLIST_MAX_SEQUENCE_LENGTH[
+          netlist]:
+          raise ValueError(
+              f'Netlist {netlist} requires a sequence length of '
+              f'{NETLIST_MAX_SEQUENCE_LENGTH[netlist]}, but got '
+              f'{adjusted_timesteps_per_actorbatch}'
+          )
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
 
