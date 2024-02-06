@@ -136,7 +136,7 @@ _INIT_PLACEMENT_PATH = flags.DEFINE_string(
 _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
     'std_cell_placer_mode',
     None,
-    ['dreamplace', 'plc'],
+    ['dreamplace', 'fd'],
     'Mode for the standard cell placer.',
 )
 

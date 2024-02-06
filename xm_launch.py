@@ -85,7 +85,7 @@ _NETLISTS = flags.DEFINE_list('netlists', None, 'Netlists to run')
 _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
     'std_cell_placer_mode',
     'dreamplace',
-    ['dreamplace', 'plc'],
+    ['dreamplace', 'fd'],
     'Mode for std cell placer',
 )
 _EXPERIMENT_NAME = flags.DEFINE_string(
@@ -185,7 +185,6 @@ def _get_docker_instructions(user_id, env_name):
               pip install /workdir"        
         """,
           'ENV CONDA_DEFAULT_ENV=py39',
-          'ENV PATH="/opt/conda/envs/py39/bin:${PATH}"'
       ],
       'web_navigation': [
           """
@@ -249,7 +248,6 @@ def _get_docker_instructions(user_id, env_name):
           """,
           'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
           'ENV CONDA_DEFAULT_ENV=py310',
-          'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"'
       ],
       'circuit_training': [
           """
@@ -284,7 +282,7 @@ def _get_docker_instructions(user_id, env_name):
             less \
             unzip && \
             rm -rf /var/lib/apt/lists/*
-          """,
+            """,
           # Install dreamplace dependencies
           """
           RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
@@ -321,7 +319,6 @@ def _get_docker_instructions(user_id, env_name):
               pip install /workdir"
           """,
           'ENV CONDA_DEFAULT_ENV=py310',
-          'ENV PATH="/opt/conda/envs/py310/bin:${PATH}"',
       ],
   }
 
@@ -330,29 +327,43 @@ def _get_docker_instructions(user_id, env_name):
 
 ENTRYPOINT = {
     'quadruped_locomotion': xm.CommandList([
-        (
-            'python /workdir/launch/entrypoint.py'
-            f' --verbosity={logging.get_verbosity()}'
-        ),
+        f"""
+/bin/bash <<EOF
+source /opt/conda/etc/profile.d/conda.sh &&
+conda activate py39 &&
+python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+EOF
+        """,
+        # Waste the trailing "$@" argument
+        'echo'
     ]),
     'web_navigation': xm.CommandList([
         'sudo service dbus start',
-        (
-            'python /workdir/launch/entrypoint.py'
-            f' --verbosity={logging.get_verbosity()}'
-        ),
+        f"""
+/bin/bash <<EOF
+source /opt/conda/etc/profile.d/conda.sh &&
+conda activate py310 &&
+python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+EOF
+        """,
+        'echo'
     ]),
     'circuit_training': xm.CommandList([
-        (
-            'python /workdir/launch/entrypoint.py'
-            f' --verbosity={logging.get_verbosity()}'
-        ),
+        f"""
+/bin/bash <<EOF
+source /opt/conda/etc/profile.d/conda.sh &&
+conda activate py310 &&
+python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+EOF
+""",
+        'echo'
     ]),
 }
 
 ENV_NAMES = {
     'quadruped_locomotion': 'QuadrupedLocomotion-v0',
     'web_navigation': 'WebNavigation-v0',
+    'circuit_training': 'CircuitTraining-v0',
 }
 
 BASE_IMAGE = {
@@ -451,7 +462,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [500],
+          'env_batch_size': [100],
           'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -536,7 +547,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [500],
+          'env_batch_size': [100],
           'total_env_steps': [100000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],
@@ -609,7 +620,7 @@ def get_hparam_sweeps(domain, **kwargs):
       }
     else:
       general_hyperparameters.update({
-          'env_batch_size': [500],
+          'env_batch_size': [100],
           'total_env_steps': [10000000],
           'train_checkpoint_interval': [1000000],
           'policy_checkpoint_interval': [1000000],

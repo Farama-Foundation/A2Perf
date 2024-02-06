@@ -4,7 +4,6 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- _libgcc_mutex=0.1=conda_forge
 - _openmp_mutex=4.5=2_gnu
 - abseil-cpp=20230802.0=h6a678d5_2
 - aiohttp=3.9.1=py310h2372a71_0
