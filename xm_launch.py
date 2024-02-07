@@ -246,8 +246,10 @@ def _get_docker_instructions(user_id, env_name):
               conda activate py310 && \
               pip install /workdir"
           """,
-          'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
-          'ENV CONDA_DEFAULT_ENV=py310',
+          (
+              'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"ENV'
+              ' CONDA_DEFAULT_ENV=py310'
+          ),
       ],
       'circuit_training': [
           """
@@ -335,7 +337,7 @@ python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
 EOF
         """,
         # Waste the trailing "$@" argument
-        'echo'
+        'echo',
     ]),
     'web_navigation': xm.CommandList([
         'sudo service dbus start',
@@ -346,7 +348,7 @@ conda activate py310 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
 EOF
         """,
-        'echo'
+        'echo',
     ]),
     'circuit_training': xm.CommandList([
         f"""
@@ -356,7 +358,7 @@ conda activate py310 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
 EOF
 """,
-        'echo'
+        'echo',
     ]),
 }
 
@@ -385,11 +387,32 @@ ENV_VARS = {
         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
         'WRAPT_DISABLE_EXTENSIONS': 'true',
     },
-    'circuit_training': {'PYTHONBUFFERED': '1',
-                         'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
-                         'WRAPT_DISABLE_EXTENSIONS': 'true',
-                         },
+    'circuit_training': {
+        'PYTHONBUFFERED': '1',
+        'TF_FORCE_GPU_ALLOW_GROWTH': 'true',
+        'WRAPT_DISABLE_EXTENSIONS': 'true',
+    },
 }
+
+TASK_TO_MAX_SEQUENCE_LENGTH = dict(
+    circuit_training=dict(
+        netlist_toy_macro_stdcell_std_cell_placer_mode_dreamplace=3,
+        netlist_toy_macro_stdcell_std_cell_placer_mode_fd=3,
+        netlist_ariane_std_cell_placer_mode_dreamplace=134,
+        netlist_ariane_std_cell_placer_mode_fd=134,
+    ),
+    quadruped_locomotion=dict(
+        dog_pace=600,
+        dog_trot=600,
+        dog_spin=600,
+    ),
+    web_navigation=dict(
+        difficulty_level_1_num_websites_1=25,
+        difficulty_level_1_num_websites_10=25,
+        difficulty_level_1_num_websites_100=25,
+    ),
+)
+
 
 NETLIST_MAX_SEQUENCE_LENGTH = {
     'ariane': 134,
@@ -812,29 +835,26 @@ def main(_):
         del hparams['netlist']
         hparams['netlist_path'] = os.path.join(
             '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
-            netlist, 'netlist.pb.txt', )
+            netlist,
+            'netlist.pb.txt',
+        )
         hparams['init_placement_path'] = os.path.join(
             os.path.dirname(hparams['netlist_path']),
             'initial.plc',
         )
         hparams['std_cell_placer_mode'] = _STD_CELL_PLACER_MODE.value
         task = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
-
-        # Circuit training needs process sequences that are equivalent to the
-        # episode length, since the reward is computed at the end of the episode.
-        adjusted_timesteps_per_actorbatch = int(
-            hparams['timesteps_per_actorbatch'] / hparams['env_batch_size']
-        )
-        if adjusted_timesteps_per_actorbatch != NETLIST_MAX_SEQUENCE_LENGTH[
-          netlist]:
-          raise ValueError(
-              f'Netlist {netlist} requires a sequence length of '
-              f'{NETLIST_MAX_SEQUENCE_LENGTH[netlist]}, but got '
-              f'{adjusted_timesteps_per_actorbatch}'
-          )
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
 
+      # Use the maximum sequence length to determine timesteps_per_actorbatch
+      max_sequenece_length = TASK_TO_MAX_SEQUENCE_LENGTH[_DOMAIN.value][task]
+      timesteps_per_actorbatch = (
+          max_sequenece_length * _EPISODES_PER_ACTORBATCH.value
+      )
+      hparams['timesteps_per_actorbatch'] = timesteps_per_actorbatch
+
+      # Set up the root directory for the experiment
       experiment_name = create_experiment_name(hparams)
       experiment_dir = os.path.join(
           base_root_dir,

@@ -4,6 +4,11 @@ channels:
 - conda-forge
 - defaults
 dependencies:
+- gcc
+- gxx
+- gxx_linux-64
+- gcc_linux-64
+- selenium
 - _openmp_mutex=4.5=2_gnu
 - abseil-cpp=20230802.0=h6a678d5_2
 - aiohttp=3.9.1=py310h2372a71_0
