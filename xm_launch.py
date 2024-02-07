@@ -142,6 +142,12 @@ _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
     'vocabulary_server_port', '50000', 'Port of the vocabulary server'
 )
 
+_EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
+    'episodes_per_actorbatch',
+    256,
+    'Total number of episodes to collect per iteration',
+)
+
 
 def _get_docker_instructions(user_id, env_name):
   repo_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
@@ -217,6 +223,7 @@ def _get_docker_instructions(user_id, env_name):
                 useradd -m -d /home/user -l -N -g $USER_NAME user; \
               fi
           """,
+          f'RUN mkdir -p /var/run/dbus && chown -R {user_id}:root /var/run/dbus',
           'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
           # Set up chromedriver installation and caching
           """
@@ -340,7 +347,7 @@ EOF
         'echo',
     ]),
     'web_navigation': xm.CommandList([
-        'sudo service dbus start',
+        'service dbus start',
         f"""
 /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
@@ -412,7 +419,6 @@ TASK_TO_MAX_SEQUENCE_LENGTH = dict(
         difficulty_level_1_num_websites_100=25,
     ),
 )
-
 
 NETLIST_MAX_SEQUENCE_LENGTH = {
     'ariane': 134,
