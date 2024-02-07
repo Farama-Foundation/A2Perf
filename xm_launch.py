@@ -443,84 +443,41 @@ def get_hparam_sweeps(domain, **kwargs):
         'log_interval': [1000],
         'env_name': ['QuadrupedLocomotion-v0'],
         'motion_file': motion_files,
+        'env_batch_size': [1000, 1500, 2000],
+        'total_env_steps': [200000000],
+        'train_checkpoint_interval': [1000000],
+        'policy_checkpoint_interval': [1000000],
     }
 
-    if debug:
-      general_hyperparameters.update({
-          'env_batch_size': [2],
-          'total_env_steps': [100000],
-          'train_checkpoint_interval': [10000],
-          'policy_checkpoint_interval': [10000],
-          'timesteps_per_actorbatch': [256],
-      })
-
-      algo_hyperparameters = {
-          'ppo': {
-              'batch_size': [64],
-              'algo': ['ppo'],
-              'use_gae': [True],
-              'entropy_regularization': [1e-4],
-              'learning_rate': [3e-4],
-              'num_epochs': [4],
-          },
-          'sac': {
-              'batch_size': [64],
-              'algo': ['sac'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-          },
-          'td3': {
-              'batch_size': [64],
-              'algo': ['td3'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-              'exploration_noise_std': [0.1],
-          },
-          'ddpg': {
-              'batch_size': [64],
-              'algo': ['ddpg'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-          },
-      }
-    else:
-      general_hyperparameters.update({
-          'env_batch_size': [100],
-          'total_env_steps': [10000000],
-          'train_checkpoint_interval': [1000000],
-          'policy_checkpoint_interval': [1000000],
-          'timesteps_per_actorbatch': [8192],
-      })
-
-      algo_hyperparameters = {
-          'ppo': {
-              'batch_size': [64],
-              'algo': ['ppo'],
-              'use_gae': [True],
-              'entropy_regularization': [1e-4],
-              'learning_rate': [3e-4],
-              'num_epochs': [4],
-          },
-          'sac': {
-              'batch_size': [64],
-              'algo': ['sac'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [10000000],
-          },
-          'td3': {
-              'batch_size': [64],
-              'algo': ['td3'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [10000000],
-              'exploration_noise_std': [0.1],
-          },
-          'ddpg': {
-              'batch_size': [64],
-              'algo': ['ddpg'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [10000000],
-          },
-      }
+    algo_hyperparameters = {
+        'ppo': {
+            'batch_size': [64],
+            'algo': ['ppo'],
+            'use_gae': [True],
+            'entropy_regularization': [1e-4],
+            'learning_rate': [3e-4],
+            'num_epochs': [4],
+        },
+        'sac': {
+            'batch_size': [64],
+            'algo': ['sac'],
+            'learning_rate': [3e-4],
+            'rb_capacity': [10000000],
+        },
+        'td3': {
+            'batch_size': [64],
+            'algo': ['td3'],
+            'learning_rate': [3e-4],
+            'rb_capacity': [10000000],
+            'exploration_noise_std': [0.1],
+        },
+        'ddpg': {
+            'batch_size': [64],
+            'algo': ['ddpg'],
+            'learning_rate': [3e-4],
+            'rb_capacity': [10000000],
+        },
+    }
   elif domain == 'web_navigation':
     num_websites = kwargs['num_websites']
     difficulty_levels = kwargs['difficulty_levels']
@@ -540,60 +497,29 @@ def get_hparam_sweeps(domain, **kwargs):
         'embedding_dim': [embedding_dim],
         'profile_value_dropout': [profile_value_dropout],
         'use_xvfb': [use_xvfb],
+        'env_batch_size': [1000, 1500, 2000],
+        'total_env_steps': [100000000],
+        'train_checkpoint_interval': [1000000],
+        'policy_checkpoint_interval': [1000000],
     }
 
-    if debug:
-      general_hyperparameters.update({
-          'env_batch_size': [2],
-          'total_env_steps': [100000],
-          'train_checkpoint_interval': [10000],
-          'policy_checkpoint_interval': [10000],
-          'timesteps_per_actorbatch': [256],
-      })
-
-      algo_hyperparameters = {
-          'ppo': {
-              'use_gae': [True],
-              'algo': ['ppo'],
-              'batch_size': [64],
-              'num_epochs': [4],
-              'learning_rate': [3e-4],
-              'entropy_regularization': [1e-4],
-          },
-          'ddqn': {
-              'algo': ['ddqn'],
-              'batch_size': [32],
-              'epsilon_greedy': [0.1],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-          },
-      }
-    else:
-      general_hyperparameters.update({
-          'env_batch_size': [100],
-          'total_env_steps': [100000000],
-          'train_checkpoint_interval': [1000000],
-          'policy_checkpoint_interval': [1000000],
-          'timesteps_per_actorbatch': [4096],
-      })
-
-      algo_hyperparameters = {
-          'ppo': {
-              'use_gae': [True],
-              'algo': ['ppo'],
-              'batch_size': [64],
-              'entropy_regularization': [1e-4],
-              'learning_rate': [3e-4],
-              'num_epochs': [4],
-          },
-          'ddqn': {
-              'algo': ['ddqn'],
-              'batch_size': [64],
-              'learning_rate': [3e-4],
-              'epsilon_greedy': [0.1],
-              'rb_capacity': [10000000],
-          },
-      }
+    algo_hyperparameters = {
+        'ppo': {
+            'use_gae': [True],
+            'algo': ['ppo'],
+            'batch_size': [64],
+            'entropy_regularization': [1e-4],
+            'learning_rate': [3e-4],
+            'num_epochs': [4],
+        },
+        'ddqn': {
+            'algo': ['ddqn'],
+            'batch_size': [64],
+            'learning_rate': [3e-4],
+            'epsilon_greedy': [0.1],
+            'rb_capacity': [10000000],
+        },
+    }
   elif domain == 'circuit_training':
     netlists = kwargs['netlists']
     general_hyperparameters = {
@@ -601,84 +527,41 @@ def get_hparam_sweeps(domain, **kwargs):
         'log_interval': [1000],
         'env_name': ['CircuitTraining-v0'],
         'netlist': netlists,
+        'env_batch_size': [1000, 1500, 2000],
+        'total_env_steps': [10000000],
+        'train_checkpoint_interval': [1000000],
+        'policy_checkpoint_interval': [1000000],
     }
 
-    if debug:
-      general_hyperparameters.update({
-          'env_batch_size': [2],
-          'total_env_steps': [100000],
-          'train_checkpoint_interval': [10000],
-          'policy_checkpoint_interval': [10000],
-          'timesteps_per_actorbatch': [6],
-      })
-
-      algo_hyperparameters = {
-          'ppo': {
-              'batch_size': [64],
-              'algo': ['ppo'],
-              'use_gae': [True],
-              'entropy_regularization': [1e-4],
-              'learning_rate': [3e-4],
-              'num_epochs': [4],
-          },
-          'sac': {
-              'batch_size': [64],
-              'algo': ['sac'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-          },
-          'td3': {
-              'batch_size': [64],
-              'algo': ['td3'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-              'exploration_noise_std': [0.1],
-          },
-          'ddpg': {
-              'batch_size': [64],
-              'algo': ['ddpg'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [100000],
-          },
-      }
-    else:
-      general_hyperparameters.update({
-          'env_batch_size': [100],
-          'total_env_steps': [10000000],
-          'train_checkpoint_interval': [1000000],
-          'policy_checkpoint_interval': [1000000],
-          'timesteps_per_actorbatch': [8192],
-      })
-
-      algo_hyperparameters = {
-          'ppo': {
-              'batch_size': [64],
-              'algo': ['ppo'],
-              'use_gae': [True],
-              'entropy_regularization': [1e-4],
-              'learning_rate': [3e-4],
-              'num_epochs': [4],
-          },
-          'sac': {
-              'batch_size': [64],
-              'algo': ['sac'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [10000000],
-          },
-          'td3': {
-              'batch_size': [64],
-              'algo': ['td3'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [10000000],
-              'exploration_noise_std': [0.1],
-          },
-          'ddpg': {
-              'batch_size': [64],
-              'algo': ['ddpg'],
-              'learning_rate': [3e-4],
-              'rb_capacity': [10000000],
-          },
-      }
+    algo_hyperparameters = {
+        'ppo': {
+            'batch_size': [64],
+            'algo': ['ppo'],
+            'use_gae': [True],
+            'entropy_regularization': [1e-4],
+            'learning_rate': [3e-4],
+            'num_epochs': [4],
+        },
+        'sac': {
+            'batch_size': [64],
+            'algo': ['sac'],
+            'learning_rate': [3e-4],
+            'rb_capacity': [10000000],
+        },
+        'td3': {
+            'batch_size': [64],
+            'algo': ['td3'],
+            'learning_rate': [3e-4],
+            'rb_capacity': [10000000],
+            'exploration_noise_std': [0.1],
+        },
+        'ddpg': {
+            'batch_size': [64],
+            'algo': ['ddpg'],
+            'learning_rate': [3e-4],
+            'rb_capacity': [10000000],
+        },
+    }
   else:
     raise ValueError(f'Unknown domain: {domain}')
 
