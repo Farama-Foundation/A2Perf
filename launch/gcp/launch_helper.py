@@ -47,7 +47,10 @@ def generate_commands():
   address = machine_addresses.get(_MACHINE_NAME.value.lower())
   if address:
     if _DOMAIN.value == 'web_navigation':
-      domain_options = f"--num_websites={_NUM_WEBSITES.value} \\\n--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
+      domain_options = (f"--num_websites={_NUM_WEBSITES.value} \\\n"
+                        f"--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
+                        f"--vocabulary_server_address={address} \\\n"
+                        f"--vocabulary_server_port=50000 \\\n")
     elif _DOMAIN.value == 'quadruped_locomotion':
       domain_options = f"--motion_files={_MOTION_FILE.value} \\\n"
     elif _DOMAIN.value == 'circuit_training':

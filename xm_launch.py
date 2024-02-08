@@ -349,7 +349,7 @@ EOF
     'web_navigation': xm.CommandList([
         'service dbus start',
         f"""
-/bin/bash <<EOF
+        su user -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
@@ -449,7 +449,7 @@ def get_hparam_sweeps(domain, **kwargs):
         'log_interval': [1000],
         'env_name': ['QuadrupedLocomotion-v0'],
         'motion_file': motion_files,
-        'env_batch_size': [1000, 1500, 2000],
+        'env_batch_size': [200],
         'total_env_steps': [200000000],
         'train_checkpoint_interval': [1000000],
         'policy_checkpoint_interval': [1000000],
@@ -503,7 +503,7 @@ def get_hparam_sweeps(domain, **kwargs):
         'embedding_dim': [embedding_dim],
         'profile_value_dropout': [profile_value_dropout],
         'use_xvfb': [use_xvfb],
-        'env_batch_size': [1000, 1500, 2000],
+        'env_batch_size': [4],
         'total_env_steps': [100000000],
         'train_checkpoint_interval': [1000000],
         'policy_checkpoint_interval': [1000000],
@@ -533,7 +533,7 @@ def get_hparam_sweeps(domain, **kwargs):
         'log_interval': [1000],
         'env_name': ['CircuitTraining-v0'],
         'netlist': netlists,
-        'env_batch_size': [1000, 1500, 2000],
+        'env_batch_size': [100],
         'total_env_steps': [10000000],
         'train_checkpoint_interval': [1000000],
         'policy_checkpoint_interval': [1000000],
