@@ -58,7 +58,8 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     'Skill level of the expert.',
 )
 _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
-    'vocabulary_manager_auth_key', 'secretkey', 'Authentication key for the manager server.'
+    'vocabulary_manager_auth_key', 'secretkey',
+    'Authentication key for the manager server.'
 )
 
 _JOB_TYPE = flags.DEFINE_enum(
@@ -122,7 +123,16 @@ _VARIABLE_CONTAINER_SERVER_ADDRESS = flags.DEFINE_string(
     None,
     'Variable container server address.',
 )
+_VARIABLE_CONTAINER_SERVER_PORT = flags.DEFINE_integer(
+    'variable_container_server_port', None, 'Variable container server port.'
+)
 
+_VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
+    'vocabulary_server_port', None, 'Vocabulary server port.'
+)
+_VOCABULARY_SERVER_ADDRESS = flags.DEFINE_string(
+    'vocabulary_server_address', None, 'Address for the vocabulary manager.'
+)
 _NETLIST_PATH = flags.DEFINE_string(
     'netlist_path', None, 'Path to the netlist file.'
 )
@@ -134,17 +144,6 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
     None,
     ['dreamplace', 'fd'],
     'Mode for the standard cell placer.',
-)
-
-_VARIABLE_CONTAINER_SERVER_PORT = flags.DEFINE_integer(
-    'variable_container_server_port', None, 'Variable container server port.'
-)
-
-_VOCABULARY_SERVER_ADDRESS = flags.DEFINE_string(
-    'vocabulary_server_address', None, 'Vocabulary server address.'
-)
-_VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
-    'vocabulary_server_port', None, 'Vocabulary server port.'
 )
 
 _MODE = flags.DEFINE_enum(

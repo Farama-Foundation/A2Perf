@@ -49,8 +49,8 @@ def generate_commands():
     if _DOMAIN.value == 'web_navigation':
       domain_options = (f"--num_websites={_NUM_WEBSITES.value} \\\n"
                         f"--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
-                        f"--vocabulary_server_address={address} \\\n"
-                        f"--vocabulary_server_port=50000 \\\n")
+                        f"--vocabulary_server_port=50000 \\\n"
+                        )
     elif _DOMAIN.value == 'quadruped_locomotion':
       domain_options = f"--motion_files={_MOTION_FILE.value} \\\n"
     elif _DOMAIN.value == 'circuit_training':
@@ -69,9 +69,7 @@ def generate_commands():
         f"--seeds={_SEED.value} \\\n"
         f"--algos={_ALGO.value} \\\n"
         f"{domain_options}"
-        f"--replay_buffer_server_address={address} \\\n"
         f"--replay_buffer_server_port=8000 \\\n"
-        f"--variable_container_server_address={address} \\\n"
         f"--variable_container_server_port=8000 \\\n"
         f"--user_id={_USER_ID.value} \\\n"
         f"--debug={_DEBUG.value} \\\n"
@@ -80,6 +78,9 @@ def generate_commands():
     train_command = common_command + (
         f"--mode=train \\\n"
         f"--num_gpus={_NUM_GPUS.value} \\\n"
+        f"--variable_container_server_address=127.0.0.1 \\\n"
+        f"--replay_buffer_server_address=127.0.0.1 \\\n"
+        f"--vocabulary_server_address=127.0.0.1 \\\n"
         f"--job_type=train "
     )
 
@@ -93,6 +94,9 @@ def generate_commands():
     collect_command = common_command + (
         f"--mode=train \\\n"
         f"--job_type=collect \\\n"
+        f"--vocabulary_server_address={address} \\\n"
+        f"--replay_buffer_server_address={address} \\\n"
+        f"--variable_container_server_address={address} \\\n"
         f"--num_gpus={0} \\\n"
         f"--experiment_id=..."
     )
