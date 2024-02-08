@@ -267,17 +267,19 @@ def main(_):
       stdout=subprocess.PIPE,
       stderr=subprocess.STDOUT,
       env=os.environ.copy(),
+      bufsize=1,  # Line buffering
+      universal_newlines=True,  # Treats all data as text and decodes it
   )
 
   while True:
     if process.poll() is not None:
       break
-    # Check if there's data to read
-    readable, _, _ = select.select([process.stdout], [], [], 0.1)
-    if readable:
-      output = process.stdout.readline()
-      if output:
-        print(output.strip().decode('utf-8', 'ignore'))
+
+    readable, _, _ = select.select([process.stdout], [], [], 1.0)
+    for output in readable:
+      line = output.readline()
+      if line:
+        print(line.strip())
 
 
 if __name__ == '__main__':
