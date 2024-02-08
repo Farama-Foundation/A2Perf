@@ -57,8 +57,8 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     ['novice', 'intermediate', 'expert'],
     'Skill level of the expert.',
 )
-_AUTH_KEY = flags.DEFINE_string(
-    'auth_key', 'secretkey', 'Authentication key for the manager server.'
+_VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
+    'vocabulary_manager_auth_key', 'secretkey', 'Authentication key for the manager server.'
 )
 
 _JOB_TYPE = flags.DEFINE_enum(
@@ -195,7 +195,7 @@ def main(_):
   )
   os.environ['VOCABULARY_SERVER_ADDRESS'] = _VOCABULARY_SERVER_ADDRESS.value
   os.environ['VOCABULARY_SERVER_PORT'] = str(_VOCABULARY_SERVER_PORT.value)
-  os.environ['AUTH_KEY'] = _AUTH_KEY.value
+  os.environ['VOCABULARY_MANAGER_AUTH_KEY'] = _VOCABULARY_MANAGER_AUTH_KEY.value
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
   if _JOB_TYPE.value in ['collect', 'inference']:

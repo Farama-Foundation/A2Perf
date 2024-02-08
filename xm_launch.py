@@ -47,8 +47,8 @@ _ALGOS = flags.DEFINE_list(
     'Algorithms to run. If multiple are specified, they will be run in'
     ' sequence',
 )
-_AUTH_KEY = flags.DEFINE_string(
-    'auth_key', 'secretkey', 'Authentication key for the manager server.'
+_VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
+    'vocabulary_manager_auth_key', 'secretkey', 'Authentication key for the manager server.'
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
 
@@ -764,7 +764,7 @@ def main(_):
 
       hparams.update(
           dict(
-              auth_key=_AUTH_KEY.value,
+              vocabulary_manager_auth_key=_VOCABULARY_MANAGER_AUTH_KEY.value,
               num_collect_machines=_NUM_COLLECT_MACHINES.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
