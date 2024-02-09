@@ -1,5 +1,4 @@
 import os
-import select
 import subprocess
 
 from absl import app
@@ -197,20 +196,19 @@ def main(_):
   os.environ['VOCABULARY_MANAGER_AUTH_KEY'] = _VOCABULARY_MANAGER_AUTH_KEY.value
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
+  figlet_obj = Figlet(font='standard', width=300)
   if _JOB_TYPE.value in ['collect', 'inference']:
     # Change the root dir to the machine's hostname
     root_dir = os.path.join(
         _ROOT_DIR.value, _JOB_TYPE.value, os.environ.get('HOSTNAME', 'unknown')
     )
     print(f'Changing root dir to {root_dir}')
-    f = Figlet(font='standard', width=300)
-    print(colored(f.renderText(_JOB_TYPE.value), 'red'))
+    print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
 
   else:
     print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value
-    f = Figlet(font='standard')
-    print(colored(f.renderText('Copy this'), 'red'))
+    print(colored(figlet_obj.renderText('Copy this'), 'red'))
     print('Experiment ID: ', _EXPERIMENT_ID.value)
   os.environ['ROOT_DIR'] = root_dir
 
@@ -262,24 +260,20 @@ def main(_):
 
   if _USE_XVFB.value:
     command = ['xvfb-run'] + command
+
   process = subprocess.Popen(
       command,
-      stdout=subprocess.PIPE,
-      stderr=subprocess.STDOUT,
       env=os.environ.copy(),
-      bufsize=1,  # Line buffering
-      universal_newlines=True,  # Treats all data as text and decodes it
+      text=True
   )
 
-  while True:
-    if process.poll() is not None:
-      break
+  process.wait()
+  if process.returncode != 0:
+    raise ValueError(f'Error running the command: {command}')
+  else:
+    print('Finished running the command successfully.')
 
-    readable, _, _ = select.select([process.stdout], [], [], 1.0)
-    for output in readable:
-      line = output.readline()
-      if line:
-        print(line.strip())
+  del figlet_obj
 
 
 if __name__ == '__main__':
