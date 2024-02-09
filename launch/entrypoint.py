@@ -6,6 +6,8 @@ from absl import flags
 from pyfiglet import Figlet
 from termcolor import colored
 
+from absl import logging
+
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment ID for web navigation.'
 )
@@ -57,7 +59,7 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     'Skill level of the expert.',
 )
 _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
-    'vocabulary_manager_auth_key', 'secretkey',
+    'vocabulary_manager_auth_key',None,
     'Authentication key for the manager server.'
 )
 
@@ -256,6 +258,7 @@ def main(_):
       f'--root_dir={root_dir}',
       f'--metric_values_dir={root_dir}/metrics',
       f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
+      f'--verbosity={logging.get_verbosity()}'
   ]
 
   if _USE_XVFB.value:

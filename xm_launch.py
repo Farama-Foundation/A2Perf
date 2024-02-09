@@ -48,7 +48,8 @@ _ALGOS = flags.DEFINE_list(
     ' sequence',
 )
 _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
-    'vocabulary_manager_auth_key', 'secretkey', 'Authentication key for the manager server.'
+    'vocabulary_manager_auth_key', None,
+    'Authentication key for the manager server.'
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
 
@@ -334,40 +335,43 @@ def _get_docker_instructions(user_id, env_name):
   return docker_instructions[env_name]
 
 
-ENTRYPOINT = {
-    'quadruped_locomotion': xm.CommandList([
-        f"""
+def _get_entrypoint(domain):
+  entrypoints = {
+      'quadruped_locomotion': xm.CommandList([
+          f"""
 /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py39 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
 EOF
         """,
-        # Waste the trailing "$@" argument
-        'echo',
-    ]),
-    'web_navigation': xm.CommandList([
-        'service dbus start',
-        f"""
+          # Waste the trailing "$@" argument
+          'echo',
+      ]),
+      'web_navigation': xm.CommandList([
+          'service dbus start',
+          f"""
         su user -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
 EOF
         """,
-        'echo',
-    ]),
-    'circuit_training': xm.CommandList([
-        f"""
+          'echo',
+      ]),
+      'circuit_training': xm.CommandList([
+          f"""
 /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
 EOF
 """,
-        'echo',
-    ]),
-}
+          'echo',
+      ]),
+  }
+  return entrypoints[domain]
+
 
 ENV_NAMES = {
     'quadruped_locomotion': 'QuadrupedLocomotion-v0',
@@ -656,7 +660,7 @@ def main(_):
               use_deep_module=True,
               base_image=base_image,
               docker_instructions=docker_instructions,
-              entrypoint=ENTRYPOINT[_DOMAIN.value],
+              entrypoint=_get_entrypoint(_DOMAIN.value),
               env_vars=ENV_VARS[_DOMAIN.value],
           )
       ])

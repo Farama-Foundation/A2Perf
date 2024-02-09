@@ -11,6 +11,7 @@ from contextlib import contextmanager
 import gin
 import gymnasium as gym
 import numpy as np
+from absl import flags
 from absl import logging
 
 from a2perf.metrics.system import codecarbon
@@ -27,6 +28,20 @@ def working_directory(path):
   finally:
     os.chdir(prev_cwd)
     sys.path.remove(path)
+
+
+def setup_subprocess_env(gin_config_str, absl_flags):
+  # Parse the gin config
+  gin.parse_config(gin_config_str)
+  logging.info('Gin config parsed')
+
+  # Register absl flags from the dictionary
+  for flag_name, flag_value in absl_flags.items():
+    if flag_name in flags.FLAGS:
+      flags.FLAGS[flag_name].value = flag_value
+      logging.info('Flag %s set to %s', flag_name, flag_value)
+    else:
+      logging.warning('Flag %s not found', flag_name)
 
 
 def _load_spec(module_path, filename):
@@ -60,6 +75,7 @@ def perform_rollouts(
     create_domain_fn,
     num_episodes=1,
     gin_config_str=None,
+    absl_flags=None,
     rollout_rewards_queue=None
 ):
   """Performs rollouts using the given policy.
@@ -76,9 +92,7 @@ def perform_rollouts(
       List of rewards from each episode.
   """
 
-  gin.parse_config(gin_config_str)
-  logging.info('Parsed gin config %s', gin_config_str)
-
+  setup_subprocess_env(gin_config_str, absl_flags)
   print(f'Create domain function: {create_domain_fn}')
   env = create_domain_fn()
   all_rewards = []
@@ -113,11 +127,10 @@ def perform_rollouts(
 def train(
     module_path,
     gin_config_str=None,
+    absl_flags=None
 ):
   """Trains the participant's policy."""
-  gin.parse_config(gin_config_str)
-  logging.info('Parsed gin config %s', gin_config_str)
-
+  setup_subprocess_env(gin_config_str, absl_flags)
   with working_directory(module_path):
     participant_module, participant_module_spec = _load_module(
         module_path, 'train.py')
@@ -217,6 +230,7 @@ class Submission:
     self.tracking_mode = tracking_mode
     self.mp_context = multiprocessing.get_context('spawn')
     self.gin_config_str = None
+    self.absl_flags = None
 
     self.measure_emissions = measure_emissions
     self.plot_metrics = plot_metrics
@@ -278,14 +292,16 @@ class Submission:
   def _train(
       self,
   ):
-    gin.parse_config(self.gin_config_str)
+    setup_subprocess_env(self.gin_config_str, self.absl_flags)
 
     @codecarbon.track_emissions(output_dir=self.metric_values_dir,
                                 output_file='train_emissions.csv')
     def train_and_track_emissions():
       train_process = self.mp_context.Process(
           target=train,
-          args=(self.participant_module_path, self.gin_config_str)
+          args=(
+              self.participant_module_path, self.gin_config_str,
+              self.absl_flags)
       )
       train_process.start()
       train_process.join()
@@ -293,7 +309,8 @@ class Submission:
     if self.measure_emissions:
       return train_and_track_emissions()
     else:
-      return train(self.participant_module_path, self.gin_config_str)
+      return train(self.participant_module_path, self.gin_config_str,
+                   self.absl_flags)
 
   def _perform_rollouts(self,
       num_episodes,
@@ -312,7 +329,7 @@ class Submission:
     Returns:
         List of rewards from each episode.
     """
-    gin.parse_config(self.gin_config_str)
+    setup_subprocess_env(self.gin_config_str, self.absl_flags)
 
     if measure_emissions:
       @codecarbon.track_emissions(output_dir=output_dir,
@@ -325,6 +342,7 @@ class Submission:
                 self.create_domain,
                 num_episodes,
                 self.gin_config_str,
+                self.absl_flags,
                 rollout_rewards_queue
             )
         )
@@ -336,7 +354,8 @@ class Submission:
       return perform_rollouts(create_domain_fn=self.create_domain,
                               num_episodes=num_episodes,
                               module_path=self.participant_module_path,
-                              gin_config_str=self.gin_config_str)
+                              gin_config_str=self.gin_config_str,
+                              absl_flags=self.absl_flags)
 
   def _run_training_benchmark(self):
     if not self.run_offline_metrics_only:
@@ -427,9 +446,10 @@ class Submission:
         json.dump(metric_results, f)
 
   def run_benchmark(self):
-    self.gin_config_str = (
-        gin.config_str()
-    )  # save gin configs for multiprocessing
+    # Save gin configs and absl flags for subproceses
+    self.gin_config_str = gin.config_str()
+    self.absl_flags = {name: flags.FLAGS[name].value for name in flags.FLAGS}
+
     if self.mode == BenchmarkMode.TRAIN:
       self._run_training_benchmark()
     elif self.mode == BenchmarkMode.INFERENCE:
