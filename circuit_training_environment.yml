@@ -191,6 +191,7 @@ dependencies:
   - rich==13.7.0
   - rlds==0.1.8
   - scipy==1.12.0
+  - selenium<4.17.0
   - shapely==2.0.2
   - shellingham==1.5.4
   - sniffio==1.3.0
