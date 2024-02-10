@@ -3,10 +3,9 @@ import subprocess
 
 from absl import app
 from absl import flags
+from absl import logging
 from pyfiglet import Figlet
 from termcolor import colored
-
-from absl import logging
 
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment ID for web navigation.'
@@ -59,8 +58,9 @@ _SKILL_LEVEL = flags.DEFINE_enum(
     'Skill level of the expert.',
 )
 _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
-    'vocabulary_manager_auth_key',None,
-    'Authentication key for the manager server.'
+    'vocabulary_manager_auth_key',
+    None,
+    'Authentication key for the manager server.',
 )
 
 _JOB_TYPE = flags.DEFINE_enum(
@@ -85,6 +85,9 @@ _RB_CAPACITY = flags.DEFINE_integer(
 
 _TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
     'timesteps_per_actorbatch', None, 'Timesteps per actor batch.'
+)
+_NUM_COLLECT_STEPS_PER_ACTOR = flags.DEFINE_integer(
+    'num_collect_steps_per_actor', None, 'Number of collect steps per actor.'
 )
 _TRAIN_CHECKPOINT_INTERVAL = flags.DEFINE_integer(
     'train_checkpoint_interval', None, 'Train checkpoint interval.'
@@ -177,6 +180,9 @@ def main(_):
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
+  os.environ['NUM_COLLECT_STEPS_PER_ACTOR'] = str(
+      _NUM_COLLECT_STEPS_PER_ACTOR.value
+  )
 
   # Export distributed training variables
   os.environ['MODE'] = _MODE.value
@@ -258,17 +264,13 @@ def main(_):
       f'--root_dir={root_dir}',
       f'--metric_values_dir={root_dir}/metrics',
       f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
-      f'--verbosity={logging.get_verbosity()}'
+      f'--verbosity={logging.get_verbosity()}',
   ]
 
   if _USE_XVFB.value:
     command = ['xvfb-run'] + command
 
-  process = subprocess.Popen(
-      command,
-      env=os.environ.copy(),
-      text=True
-  )
+  process = subprocess.Popen(command, env=os.environ.copy(), text=True)
 
   process.wait()
   if process.returncode != 0:
