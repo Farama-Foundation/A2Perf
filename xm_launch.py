@@ -48,8 +48,9 @@ _ALGOS = flags.DEFINE_list(
     ' sequence',
 )
 _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
-    'vocabulary_manager_auth_key', None,
-    'Authentication key for the manager server.'
+    'vocabulary_manager_auth_key',
+    None,
+    'Authentication key for the manager server.',
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
 
@@ -61,6 +62,7 @@ _DOMAIN = flags.DEFINE_enum(
     'Domain to run',
 )
 _USER_ID = flags.DEFINE_integer('user_id', None, 'User ID')
+_USER = flags.DEFINE_string('user', None, 'User')
 _NUM_COLLECT_MACHINES = flags.DEFINE_integer(
     'num_collect_machines', 1, 'Number of machines to use for collection'
 )
@@ -150,7 +152,7 @@ _EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
 )
 
 
-def _get_docker_instructions(user_id, env_name):
+def _get_docker_instructions(uid, user, env_name):
   repo_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
   docker_instructions = {
       'quadruped_locomotion': [
@@ -166,15 +168,18 @@ def _get_docker_instructions(user_id, env_name):
           """,
           # Set up user with the specified ID
           f"""
-          RUN if ! getent passwd {user_id}; then \
-                useradd -m -u {user_id} user; \
+          RUN if ! getent passwd {uid}; then \
+                useradd -m -u {uid} {user}; \
               else \
-                USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
-                useradd -m -d /home/user -l -N -g $USER_NAME user; \
+                existing_user=$(getent passwd {uid} | cut -d: -f1); \
+                if [ "{user}" != "$existing_user" ]; then \
+                  usermod -l {user} $existing_user; \
+                  usermod -d /home/{user} -m {user}; \
+                fi; \
               fi
           """,
-          """
-          RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+          f"""
+          RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
           """,
           # Set up python3.9 and install requirements for A2perf
           'RUN mkdir -p /workdir',
@@ -186,12 +191,13 @@ def _get_docker_instructions(user_id, env_name):
           """,
           f'COPY {repo_dir} .',
           f"""
-          RUN chown -R {user_id}:root /workdir && \
+          RUN chown -R {uid}:root /workdir && \
            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py39 && \
               pip install /workdir"        
         """,
           'ENV CONDA_DEFAULT_ENV=py39',
+          'ENV LD_LIBRARY_PATH="/opt/conda/envs/py39/lib:$LD_LIBRARY_PATH"',
       ],
       'web_navigation': [
           """
@@ -217,26 +223,37 @@ def _get_docker_instructions(user_id, env_name):
           """,
           # Set up user with the specified ID
           f"""
-          RUN if ! getent passwd {user_id}; then \
-                useradd -m -u {user_id} user; \
+          RUN if ! getent passwd {uid}; then \
+                useradd -m -u {uid} {user}; \
               else \
-                USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
-                useradd -m -d /home/user -l -N -g $USER_NAME user; \
+                existing_user=$(getent passwd {uid} | cut -d: -f1); \
+                if [ "{user}" != "$existing_user" ]; then \
+                  usermod -l {user} $existing_user; \
+                  usermod -d /home/{user} -m {user}; \
+                fi; \
               fi
           """,
-          f'RUN mkdir -p /var/run/dbus && chown -R {user_id}:root /var/run/dbus',
-          'RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers',
-          # Set up chromedriver installation and caching
-          """
-          RUN TODAYS_DATE=$(date +%Y-%m-%d) && \
-              wget --no-verbose -O /tmp/chromedriver-linux64.zip https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip && \
-              unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && \
-              mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && \
-              mkdir -p /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION} && \
-              mv /tmp/chromedriver /home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}/ && \
-              rm /tmp/chromedriver-linux64.zip && \
-              printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": "/home/user/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" > /home/user/.wdm/drivers.json
+          f"""
+          RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
           """,
+          # Set up chromedriver installation and caching for user
+          (
+              'RUN TODAYS_DATE=$(date +%Y-%m-%d) && '
+              'wget --no-verbose -O /tmp/chromedriver-linux64.zip'
+              ' https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip && '
+              'unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && '
+              'mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && '
+              'mkdir -p'
+              f' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION && '
+              'mv /tmp/chromedriver'
+              f' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
+              'rm /tmp/chromedriver-linux64.zip && '
+              """
+              printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": """
+              f""" "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"""
+              """ "}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" """
+              f'> /home/{user}/.wdm/drivers.json'
+          ),
           # Set up python3.10 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -247,17 +264,18 @@ def _get_docker_instructions(user_id, env_name):
           """,
           f'COPY {repo_dir} .',
           f"""
-          RUN chown -R {user_id}:root /home/user/.wdm && \
-           chown -R {user_id}:root /workdir && \
-           chown -R {user_id}:root /home/user/.wdm && \
+          RUN chown -R {uid}:root /home/{user}/.wdm && \
+           chown -R {uid}:root /workdir && \
+           chown -R {uid}:root /home/{user}/.wdm && \
            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
               pip install /workdir"
           """,
           (
-              'ENV PATH="/home/user/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"ENV'
-              ' CONDA_DEFAULT_ENV=py310'
+              'ENV PATH="/home/{user}/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
           ),
+          'ENV CONDA_DEFAULT_ENV=py310',
+          'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
       ],
       'circuit_training': [
           """
@@ -270,15 +288,18 @@ def _get_docker_instructions(user_id, env_name):
           'ENV TZ=America/New_York',
           # Set up user with the specified ID
           f"""
-          RUN if ! getent passwd {user_id}; then \
-                useradd -m -u {user_id} user; \
+          RUN if ! getent passwd {uid}; then \
+                useradd -m -u {uid} {user}; \
               else \
-                USER_NAME=$(getent passwd {user_id} | cut -d: -f1); \
-                useradd -m -d /home/user -l -N -g $USER_NAME user; \
+                existing_user=$(getent passwd {uid} | cut -d: -f1); \
+                if [ "{user}" != "$existing_user" ]; then \
+                  usermod -l {user} $existing_user; \
+                  usermod -d /home/{user} -m {user}; \
+                fi; \
               fi
           """,
-          """
-          RUN echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+          f"""
+          RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
           """,
           # Install basic system dependencies
           """
@@ -323,12 +344,13 @@ def _get_docker_instructions(user_id, env_name):
             conda env create -f /workdir/circuit_training_environment.yml --name py310 -y
           """,
           f'COPY {repo_dir} .',
-          f"""
+          """
           RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
               pip install /workdir"
           """,
           'ENV CONDA_DEFAULT_ENV=py310',
+          'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
       ],
   }
 
@@ -646,8 +668,9 @@ def main(_):
           experimental_stream_output=True,
       )
       docker_instructions = _get_docker_instructions(
-          _USER_ID.value, _DOMAIN.value
+          uid=_USER_ID.value, env_name=_DOMAIN.value, user=_USER.value
       )
+
       base_image = BASE_IMAGE[_DOMAIN.value]
       if _NUM_GPUS.value == 0:
         base_image = 'gcr.io/deeplearning-platform-release/base-cpu:latest'
