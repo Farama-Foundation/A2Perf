@@ -223,19 +223,34 @@ def _get_docker_instructions(uid, user, env_name):
           """,
           # Set up user with the specified ID
           f"""
-          RUN if ! getent passwd {uid}; then \
-                useradd -m -u {uid} {user}; \
-              else \
+          RUN if getent passwd {uid}; then \
                 existing_user=$(getent passwd {uid} | cut -d: -f1); \
                 if [ "{user}" != "$existing_user" ]; then \
-                  usermod -l {user} $existing_user; \
-                  usermod -d /home/{user} -m {user}; \
+                  userdel -r $existing_user; \
                 fi; \
-              fi
+              fi; \
+              if getent passwd {user}; then \
+                userdel -r {user}; \
+              fi; \
+              useradd -m -u {uid} {user};
           """,
           f"""
           RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
           """,
+          # Set up chromedriver installation and caching for user
+          (
+              'RUN TODAYS_DATE=$(date +%Y-%m-%d) && '
+              'wget --no-verbose -O /tmp/chromedriver-linux64.zip '
+              'https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip && '
+              'unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && '
+              'mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && '
+              'mkdir -p /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION && '
+              'mv /tmp/chromedriver /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
+              'rm /tmp/chromedriver-linux64.zip && '
+              """printf '{{"linux64_chromedriver_%s_for_%s": {{"timestamp": "%s", "binary_path": "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}}}' """
+              """$CHROMEDRIVER_VERSION $CHROME_VERSION $TODAYS_DATE $CHROMEDRIVER_VERSION """
+              '> /home/{user}/.wdm/drivers.json'
+          ).format(user=user),
           # Set up chromedriver installation and caching for user
           (
               'RUN TODAYS_DATE=$(date +%Y-%m-%d) && '
@@ -248,8 +263,7 @@ def _get_docker_instructions(uid, user, env_name):
               'mv /tmp/chromedriver'
               f' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
               'rm /tmp/chromedriver-linux64.zip && '
-              """
-              printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": """
+              """printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": """
               f""" "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"""
               """ "}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" """
               f'> /home/{user}/.wdm/drivers.json'
@@ -373,7 +387,7 @@ EOF
       'web_navigation': xm.CommandList([
           'service dbus start',
           f"""
-        su user -c /bin/bash <<EOF
+        su {_USER.value} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
