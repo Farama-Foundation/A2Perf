@@ -10,8 +10,8 @@ from termcolor import colored
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment ID for web navigation.'
 )
-_NUM_COLLECT_MACHINES = flags.DEFINE_integer(
-    'num_collect_machines', None, 'Number of machines for collecting data.'
+_NUM_REPLICAS = flags.DEFINE_integer(
+    'num_replicas', None, 'Number of replicas for distributed training.'
 )
 _MAX_VOCAB_SIZE = flags.DEFINE_integer(
     'max_vocab_size', None, 'Max vocab size for web navigation.'
@@ -174,7 +174,6 @@ def main(_):
   os.environ['POLICY_CHECKPOINT_INTERVAL'] = str(
       _POLICY_CHECKPOINT_INTERVAL.value
   )
-  os.environ['NUM_COLLECT_MACHINES'] = str(_NUM_COLLECT_MACHINES.value)
   os.environ['EVAL_INTERVAL'] = str(_EVAL_INTERVAL.value)
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
@@ -185,6 +184,7 @@ def main(_):
   )
 
   # Export distributed training variables
+  os.environ['NUM_REPLICAS'] = str(_NUM_REPLICAS.value)
   os.environ['MODE'] = _MODE.value
   os.environ['JOB_TYPE'] = str(_JOB_TYPE.value)
   os.environ['REPLAY_BUFFER_SERVER_ADDRESS'] = (
