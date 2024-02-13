@@ -244,8 +244,10 @@ def _get_docker_instructions(uid, user, env_name):
               'https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip && '
               'unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && '
               'mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && '
-              'mkdir -p /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION && '
-              'mv /tmp/chromedriver /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
+              'mkdir -p'
+              ' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION && '
+              'mv /tmp/chromedriver'
+              ' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
               'rm /tmp/chromedriver-linux64.zip && '
               """printf '{{"linux64_chromedriver_%s_for_%s": {{"timestamp": "%s", "binary_path": "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}}}' """
               """$CHROMEDRIVER_VERSION $CHROME_VERSION $TODAYS_DATE $CHROMEDRIVER_VERSION """
@@ -459,11 +461,6 @@ TASK_TO_MAX_SEQUENCE_LENGTH = dict(
         difficulty_level_1_num_websites_100=25,
     ),
 )
-
-NETLIST_MAX_SEQUENCE_LENGTH = {
-    'ariane': 134,
-    'toy_macro_stdcell': 3,
-}
 
 
 def create_experiment_name(hparams):
@@ -777,30 +774,17 @@ def main(_):
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
 
-      # Use the maximum sequence length to determine timesteps_per_actorbatch
-      max_sequenece_length = TASK_TO_MAX_SEQUENCE_LENGTH[_DOMAIN.value][task]
-      timesteps_per_actorbatch = (
-          max_sequenece_length * _EPISODES_PER_ACTORBATCH.value
-      )
-      hparams['timesteps_per_actorbatch'] = timesteps_per_actorbatch
+      hparams['task'] = task  # used in make_job
 
       # Set up the root directory for the experiment
       experiment_name = create_experiment_name(hparams)
-      experiment_dir = os.path.join(
-          base_root_dir,
-          task,
-          hparams['algo'],
-      )
-
       hparams['root_dir'] = os.path.join(
-          experiment_dir,
-          experiment_name,
+          base_root_dir, task, hparams['algo'], experiment_name
       )
 
       skill_level = hparams['skill_level']
       domain = hparams['domain']
       mode = hparams['mode']
-
       dataset_id = f'{domain[0].upper() + domain[1:]}-{task}-{skill_level}-v0'
 
       hparams.update(
