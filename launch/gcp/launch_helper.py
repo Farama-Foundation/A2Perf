@@ -18,6 +18,7 @@ _MOTION_FILE = flags.DEFINE_string('motion_file', None,
 _EXPERIMENT_ID = flags.DEFINE_string('experiment_id', None,
                                      'Experiment ID to be used')
 _USER_ID = flags.DEFINE_string('user_id', '1000', 'User ID to be used')
+_USER = flags.DEFINE_string('user', 'user', 'User to be used')
 _DEBUG = flags.DEFINE_boolean('debug', False, 'Debug mode')
 _NETLISTS = flags.DEFINE_enum('netlists', None,
                               ['toy_macro_stdcell', 'ariane',
@@ -50,6 +51,7 @@ def generate_commands():
       domain_options = (f"--num_websites={_NUM_WEBSITES.value} \\\n"
                         f"--difficulty_levels={_DIFFICULTY_LEVEL.value} \\\n"
                         f"--vocabulary_server_port=50000 \\\n"
+                        f"--vocabulary_manager_auth_key='' \\\n"
                         )
     elif _DOMAIN.value == 'quadruped_locomotion':
       domain_options = f"--motion_files={_MOTION_FILE.value} \\\n"
@@ -72,6 +74,7 @@ def generate_commands():
         f"--replay_buffer_server_port=8000 \\\n"
         f"--variable_container_server_port=8000 \\\n"
         f"--user_id={_USER_ID.value} \\\n"
+        f"--user={_USER.value} \\\n"
         f"--debug={_DEBUG.value} \\\n"
     )
 
