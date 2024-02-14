@@ -9,21 +9,21 @@
     path = quadruped_locomotion
     url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
 [submodule "src/quadruped_locomotion"]
-    path = rl_perf/domains/quadruped_locomotion
+	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
 [submodule "src/web_nav"]
-    path = rl_perf/domains/web_nav
+	path = a2perf/domains/web_nav
     url = https://github.com/Farama-Foundation/a2perf-web-nav.git  # Updated URL
 [submodule "rl_perf/rlperf_benchmark_submission"]
-    path = rl_perf/rlperf_benchmark_submission
+	path = a2perf/rlperf_benchmark_submission
     url = https://github.com/Farama-Foundation/a2perf-benchmark-submission.git
 [submodule "rl_perf/metrics/reliability"]
-    path = rl_perf/metrics/reliability
+	path = a2perf/metrics/reliability
     url = https://github.com/Farama-Foundation/a2perf-reliability-metrics.git
 [submodule "rl_perf/metrics/system/codecarbon"]
-    path = rl_perf/metrics/system/codecarbon
+	path = a2perf/metrics/system/codecarbon
     url = https://github.com/Farama-Foundation/a2perf-code-carbon.git
 [submodule "rl_perf/domains/circuit_training"]
-	path = rl_perf/domains/circuit_training
+	path = a2perf/domains/circuit_training
 	url = https://github.com/google-research/circuit_training.git
 	branch = r0.0.4
