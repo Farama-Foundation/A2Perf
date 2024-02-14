@@ -26,4 +26,4 @@
 [submodule "rl_perf/domains/circuit_training"]
 	path = a2perf/domains/circuit_training
 	url = https://github.com/google-research/circuit_training.git
-	branch = r0.0.4
+	branch = farama-dev
