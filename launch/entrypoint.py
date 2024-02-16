@@ -89,6 +89,9 @@ _TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
 _NUM_COLLECT_STEPS_PER_ACTOR = flags.DEFINE_integer(
     'num_collect_steps_per_actor', None, 'Number of collect steps per actor.'
 )
+_NUM_COLLECT_JOBS_PER_MACHINE = flags.DEFINE_integer(
+    'num_collect_jobs_per_machine', None, 'Number of collect jobs per machine.'
+)
 _TRAIN_CHECKPOINT_INTERVAL = flags.DEFINE_integer(
     'train_checkpoint_interval', None, 'Train checkpoint interval.'
 )
@@ -184,6 +187,9 @@ def main(_):
   )
 
   # Export distributed training variables
+  os.environ['NUM_COLLECT_JOBS_PER_MACHINE'] = str(
+      _NUM_COLLECT_JOBS_PER_MACHINE.value
+  )
   os.environ['NUM_REPLICAS'] = str(_NUM_REPLICAS.value)
   os.environ['MODE'] = _MODE.value
   os.environ['JOB_TYPE'] = str(_JOB_TYPE.value)
