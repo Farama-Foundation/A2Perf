@@ -247,26 +247,9 @@ def _get_docker_instructions(uid, user, env_name):
               ' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
               'rm /tmp/chromedriver-linux64.zip && '
               """printf '{{"linux64_chromedriver_%s_for_%s": {{"timestamp": "%s", "binary_path": "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}}}' """
-              """$CHROMEDRIVER_VERSION $CHROME_VERSION $TODAYS_DATE $CHROMEDRIVER_VERSION """
+              """$CHROMEDRIVER_VERSION $CHROME_VERSION $TODAYS_DATE $CHROMEDRIVER_VERSION"""
               '> /home/{user}/.wdm/drivers.json'
           ).format(user=user),
-          # Set up chromedriver installation and caching for user
-          (
-              'RUN TODAYS_DATE=$(date +%Y-%m-%d) && '
-              'wget --no-verbose -O /tmp/chromedriver-linux64.zip'
-              ' https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip && '
-              'unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && '
-              'mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && '
-              'mkdir -p'
-              f' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION && '
-              'mv /tmp/chromedriver'
-              f' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
-              'rm /tmp/chromedriver-linux64.zip && '
-              """printf '{"linux64_chromedriver_%s_for_%s": {"timestamp": "%s", "binary_path": """
-              f""" "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"""
-              """ "}}' "${CHROMEDRIVER_VERSION}" "${CHROME_VERSION}" "${TODAYS_DATE}" "${CHROMEDRIVER_VERSION}" """
-              f'> /home/{user}/.wdm/drivers.json'
-          ),
           # Set up python3.10 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -279,14 +262,13 @@ def _get_docker_instructions(uid, user, env_name):
           f"""
           RUN chown -R {uid}:root /home/{user}/.wdm && \
            chown -R {uid}:root /workdir && \
-           chown -R {uid}:root /home/{user}/.wdm && \
            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
               pip install /workdir"
           """,
           (
-              'ENV PATH="/home/{user}/.wdm/drivers/chromedriver/linux64/${CHROMEDRIVER_VERSION}:${PATH}"'
-          ),
+              'ENV PATH="/home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION:$PATH"'
+          ).format(user=user),
           'ENV CONDA_DEFAULT_ENV=py310',
           'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
       ],
