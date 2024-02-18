@@ -53,6 +53,11 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
     'Authentication key for the manager server.',
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
+_TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
+    'timesteps_per_actorbatch',
+    1000,
+    'Total number of timesteps to collect per iteration',
+)
 
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
 _DOMAIN = flags.DEFINE_enum(
@@ -635,6 +640,14 @@ def main(_):
     )
 
     async def make_job(work_unit: xm.WorkUnit, **hparams):
+
+      hparams['timesteps_per_actorbatch'] = _TIMESTEPS_PER_ACTORBATCH.value
+      hparams[
+        'num_collect_steps_per_actor'] = _TIMESTEPS_PER_ACTORBATCH.value // \
+                                         hparams['env_batch_size']
+      hparams['num_collect_jobs_per_machine'] = hparams['env_batch_size']
+      hparams['num_replicas'] = _NUM_GPUS.value
+
       executor = xm_local.Local(
           requirements=xm.JobRequirements(
               resources={
@@ -752,8 +765,6 @@ def main(_):
         task = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
-
-      hparams['task'] = task  # used in make_job
 
       # Set up the root directory for the experiment
       experiment_name = create_experiment_name(hparams)
