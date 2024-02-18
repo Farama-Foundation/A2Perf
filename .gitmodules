@@ -1,5 +1,5 @@
-[submodule "web_nav"]
-	path = a2perf/domains/web_nav
+[submodule "web_navigation"]
+	path = a2perf/domains/web_navigation
     url = https://github.com/Farama-Foundation/a2perf-web-nav.git  # Updated URL
 	branch = farama/farama-dev
 [submodule "quadruped_locomotion"]
