@@ -170,7 +170,6 @@ def main(_):
   os.environ['BATCH_SIZE'] = str(_BATCH_SIZE.value)
   os.environ['PARTICIPANT_MODULE_PATH'] = _PARTICIPANT_MODULE_PATH.value
   os.environ['RUN_OFFLINE_METRICS_ONLY'] = str(_RUN_OFFLINE_METRICS_ONLY.value)
-  os.environ['TIMESTEPS_PER_ACTOR_BATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
   os.environ['TRAIN_CHECKPOINT_INTERVAL'] = str(
       _TRAIN_CHECKPOINT_INTERVAL.value
   )
