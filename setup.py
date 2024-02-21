@@ -5,54 +5,72 @@ import sys
 import urllib.request
 
 from absl import logging
-from setuptools import Command
 from setuptools import find_packages
 from setuptools import setup
+from setuptools.command.install import install
 
 
-class DreamplaceInstall(Command):
-  """Custom command to download and extract Dreamplace."""
-  user_options = []
+def install_dreamplace():
+  # Dynamically determine the dreamplace version based on the Python version
+  python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+  dreamplace_version = f"dreamplace_python{python_version}.tar.gz"
+  logging.info(f"Installing Dreamplace version {dreamplace_version}")
 
-  def initialize_options(self):
-    pass
+  dreamplace_url = f"https://storage.googleapis.com/rl-infra-public/circuit-training/dreamplace/{dreamplace_version}"
+  logging.info(f"Downloading Dreamplace from {dreamplace_url}")
 
-  def finalize_options(self):
-    pass
+  site_packages_path = site.getsitepackages()[0]
+  dreamplace_dir = os.path.join(site_packages_path, 'dreamplace')
+  logging.info(f"Installing Dreamplace to {dreamplace_dir}")
+
+  os.makedirs(dreamplace_dir, exist_ok=True)
+  tar_path = os.path.join(dreamplace_dir, "dreamplace.tar.gz")
+
+  logging.info(f"Downloading Dreamplace to {tar_path}")
+  urllib.request.urlretrieve(dreamplace_url, tar_path)
+
+  logging.info('Extracting Dreamplace')
+  shutil.unpack_archive(tar_path, dreamplace_dir)
+
+  logging.info('Dreamplace installed')
+
+  # Create a .pth file in the site-packages directory
+  dreamplace_inner_dir = os.path.join(dreamplace_dir, 'dreamplace')
+  dreamplace_outer_pth = os.path.join(site_packages_path,
+                                      'dreamplace.pth')
+  with open(dreamplace_outer_pth, 'w') as file:
+    file.write(dreamplace_dir + '\n')
+
+  dreamplace_inner_pth = os.path.join(site_packages_path,
+                                      'dreamplace_dreamplace.pth')
+  with open(dreamplace_inner_pth, 'w') as file:
+    file.write(dreamplace_inner_dir + '\n')
+
+
+def set_executable_permissions():
+  """Set the executable permissions for the plc_wrapper_main binary and raise an error if it fails."""
+  binary_path = os.path.join(sys.prefix, 'bin', 'plc_wrapper_main')
+
+  if os.path.exists(binary_path):
+    try:
+      os.chmod(binary_path, 0o755)
+      logging.info("Executable permissions set for plc_wrapper_main.")
+    except Exception as e:
+      # Raise an exception to halt the installation
+      raise RuntimeError(
+          f"Failed to set executable permissions for plc_wrapper_main: {e}")
+  else:
+    # Raise an exception if the file is not found
+    raise FileNotFoundError("plc_wrapper_main not found at expected path.")
+
+
+class CustomInstall(install):
+  """Custom installation script to include Dreamplace and plc_wrapper_main installation."""
 
   def run(self):
-    # Dynamically determine the dreamplace version based on the Python version
-    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
-    dreamplace_version = f"dreamplace_python{python_version}.tar.gz"
-    logging.info(f"Installing Dreamplace version {dreamplace_version}")
-
-    dreamplace_url = f"https://storage.googleapis.com/rl-infra-public/circuit-training/dreamplace/{dreamplace_version}"
-    logging.info(f"Downloading Dreamplace from {dreamplace_url}")
-
-    site_packages_path = site.getsitepackages()[0]
-    dreamplace_dir = os.path.join(site_packages_path, 'dreamplace')
-    logging.info(f"Installing Dreamplace to {dreamplace_dir}")
-
-    os.makedirs(dreamplace_dir, exist_ok=True)
-    tar_path = os.path.join(dreamplace_dir, "dreamplace.tar.gz")
-
-    logging.info(f"Downloading Dreamplace to {tar_path}")
-    urllib.request.urlretrieve(dreamplace_url, tar_path)
-
-    logging.info('Extracting Dreamplace')
-    shutil.unpack_archive(tar_path, dreamplace_dir)
-
-    logging.info('Dreamplace installed')
-
-    # Create an __init__.py file in the top-level Dreamplace directory
-    init_path = os.path.join(dreamplace_dir, '__init__.py')
-    with open(init_path, 'w') as init_file:
-      init_file.write(
-          "from .dreamplace import ("
-          "PlaceDB, Params, NonLinearPlace, Placer, "
-          "PlaceObj, EvalMetrics, BasicPlace, "
-          "NesterovAcceleratedGradientOptimizer)\n"
-      )
+    install.run(self)
+    install_dreamplace()
+    set_executable_permissions()
 
 
 setup(
@@ -68,8 +86,11 @@ setup(
         'absl-py'
     ],
     cmdclass={
-        'dreamplace_install': DreamplaceInstall,
+        'install': CustomInstall,
     },
+    data_files=[
+        ('bin', ['bin/plc_wrapper_main']),
+    ],
     package_data={
         'a2perf': [
             # Include the default gin config files for running the becnhmark
