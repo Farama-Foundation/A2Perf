@@ -86,7 +86,7 @@ setup(
         'absl-py',
     ],
     extras_require={
-        'circuit-training': ['torch==1.13.1'],
+        'circuit-training': ['torch==1.13.1', 'tensorflow'],
         'web-navigation': ['selenium',
                            'webdriver-manager', ],
         'quadruped-locomotion': ['pybullet'],
@@ -95,6 +95,7 @@ setup(
             'selenium',
             'webdriver-manager',
             'pybullet',
+            'tensorflow'
         ],
     },
     cmdclass={
