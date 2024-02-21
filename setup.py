@@ -1,10 +1,10 @@
+import logging
 import os
 import shutil
 import site
 import sys
 import urllib.request
 
-from absl import logging
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
@@ -83,8 +83,20 @@ setup(
         'gymnasium',
         'gym',
         'minari',
-        'absl-py'
+        'absl-py',
     ],
+    extras_require={
+        'circuit-training': ['torch==1.13.1'],
+        'web-navigation': ['selenium',
+                           'webdriver-manager', ],
+        'quadruped-locomotion': ['pybullet'],
+        'all': [
+            'torch==1.13.1',
+            'selenium',
+            'webdriver-manager',
+            'pybullet',
+        ],
+    },
     cmdclass={
         'install': CustomInstall,
     },
@@ -93,7 +105,7 @@ setup(
     ],
     package_data={
         'a2perf': [
-            # Include the default gin config files for running the becnhmark
+            # Include the default gin config files for running the benchmark
             'submission/**/*.gin',
 
             # Include default gin config files for each domain
