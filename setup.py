@@ -86,7 +86,9 @@ setup(
         'absl-py',
     ],
     extras_require={
-        'circuit-training': ['torch==1.13.1', 'tensorflow'],
+        'circuit-training': ['torch==1.13.1', 'tensorflow', 'tf-agents',
+                             'timeout-decorator', 'matplotlib', 'cairocffi',
+                             'shapely'],
         'web-navigation': ['selenium',
                            'webdriver-manager', ],
         'quadruped-locomotion': ['pybullet'],
