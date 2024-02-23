@@ -1,19 +1,18 @@
-import collections
 import concurrent.futures
 import functools
 import glob
-import json
+import os
+import re
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
-import re
-import scipy
 import seaborn as sns
 import tensorflow as tf
 from absl import app
 from absl import flags
 from absl import logging
+
 from a2perf import analysis
 
 _SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
@@ -40,48 +39,18 @@ def _initialize_plotting():
   plt.rcParams['savefig.bbox'] = 'tight'
 
 
-def check_window_size(window_size):
-  all_training_metrics = collections.defaultdict(dict)
-
-  # In[ ]:
-
-  for domain, domain_group in all_df.groupby('domain'):
-    print(f'Processing domain: {domain}')
-    for task, task_group in domain_group.groupby('task'):
-      print(f'\tProcessing task: {task}')
-      for algo, algo_group in task_group.groupby('algo'):
-        print(f'\t\tProcessing algo: {algo}')
-        for exp_id, exp_group in algo_group.groupby('experiment'):
-          for seed, seed_group in exp_group.groupby('seed'):
-            seed_df = seed_group.sort_values(by='step').copy()
-            median_step_diff = seed_df['step'].diff().median()
-            window_size = int(EVAL_POINTS_PER_WINDOW * median_step_diff)
-            eval_points = list(
-                range(np.ceil(window_size / 2).astype(int),
-                      max(all_df['step']), int(median_step_diff)))
-            print(
-                f'Domain: {domain}, Algo: {algo}, Experiment: {exp_id}, Task: {task}, Seed: {seed}')
-            print(f'\tMedian step difference: {median_step_diff}')
-            print(f'\tWindow size: {window_size}')
-            print()
-            all_training_metrics[(domain, algo, exp_id, task, seed)][
-              'eval_points'] = eval_points
-            all_training_metrics[(domain, algo, exp_id, task, seed)][
-              'window_size'] = window_size
-            all_training_metrics[(domain, algo, exp_id, task, seed)][
-              'median_step_diff'] = median_step_diff
-
-
 def load_tb_data(log_file, tags=None):
   tf.compat.v1.enable_eager_execution()
 
   if tags is None:
     tags = []
 
-  # Initialize a nested dictionary for steps and values
-  data = {(tag, 'Step'): [] for tag in tags}
-  data.update({(tag, 'Value'): [] for tag in tags})
-  data.update({(tag, 'Timestamp'): [] for tag in tags})
+  # Initialize separate lists for steps, values, and timestamps for each tag
+  data = {}
+  for tag in tags:
+    data[f'{tag}_Step'] = []
+    data[f'{tag}_Value'] = []
+    data[f'{tag}_Timestamp'] = []
 
   for event in tf.compat.v1.train.summary_iterator(log_file):
     if event.HasField('summary'):
@@ -99,16 +68,16 @@ def load_tb_data(log_file, tags=None):
                 f'Expected simple_value or tensor, got {value.WhichOneof("value")}'
             )
 
-          data[(value.tag, 'Step')].append(event.step)
-          data[(value.tag, 'Value')].append(data_value)
-          data[(value.tag, 'Timestamp')].append(
+          data[f'{value.tag}_Step'].append(event.step)
+          data[f'{value.tag}_Value'].append(data_value)
+          data[f'{value.tag}_Timestamp'].append(
               pd.to_datetime(event.wall_time, unit='s'))
 
-  if all(len(data[tag, 'Step']) == 0 for tag in tags):
+  if all(len(data[f'{tag}_Step']) == 0 for tag in tags):
     return pd.DataFrame()  # Return an empty DataFrame if no data
 
-  # Construct and return the DataFrame
-  return pd.DataFrame(data).sort_index(axis=1)
+    # Construct and return the DataFrame
+  return pd.DataFrame(data)
 
 
 def process_tb_event_dir(event_file_path, tags=None):
@@ -157,30 +126,41 @@ def process_tb_event_dir(event_file_path, tags=None):
 
 
 def process_codecarbon_csv(csv_file_path):
-  training_system_metrics_df = []
-  for metric_dir in training_system_metric_dirs:
-    split_dir = metric_dir.split('/')
-    domain = split_dir[6]
-    exp_name = split_dir[-3]
-    exp_name_split = exp_name.split('_')
-    print(exp_name_split)
-    seed = exp_name_split[-5]
-    experiment = split_dir[-4]
-    algo = split_dir[-5]
-    task = split_dir[-6]
-    algo = algo.upper()
-    print(f'Processing Experiment: {experiment}, Seed: {seed}, Algo: {algo}')
+  df = pd.read_csv(csv_file_path)
+  exp_split = csv_file_path.split('/')
 
-    df = pd.read_csv(metric_dir)
-    df['seed'] = int(seed)
-    df['experiment'] = int(experiment)
-    df['algo'] = algo
-    df['task'] = task
-    df['domain'] = domain
-    df['timestamp'] = pd.to_datetime(df['timestamp']).apply(
-        lambda x: x.replace(tzinfo=None) if x.tzinfo else x)
-    training_system_metrics_df.append(df)
-  training_system_metrics_df = pd.concat(training_system_metrics_df)
+  # Process path to extract experiment details
+  if 'collect' in csv_file_path:
+    indices = [-6, -7, -8, -9, -10]
+  else:
+    indices = [-4, -5, -6, -7, -8]
+
+  exp_name, algo, task, experiment, domain = [exp_split[i] for i in indices]
+  seed = re.search(r'seed_(\d+)', exp_name).group(1)
+
+  print(f'Processing Experiment: {experiment}, Seed: {seed}, Algo: {algo}')
+
+  df['seed'] = int(seed)
+  df['experiment'] = experiment
+  df['algo'] = algo
+  df['task'] = task
+  df['domain'] = domain
+
+  # Convert timestamps and identify corrupt data
+  df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
+  corrupt_rows = df[df['timestamp'].isna()]
+
+  # Print corrupt rows
+  if not corrupt_rows.empty:
+    logging.warning("Corrupt rows due to invalid timestamps:")
+    logging.warning(corrupt_rows)
+
+  # Remove rows with corrupt timestamps
+  df = df.dropna(subset=['timestamp'])
+  df['timestamp'] = df['timestamp'].apply(
+      lambda x: x.replace(tzinfo=None) if x.tzinfo else x)
+
+  return df
 
 
 def plot_training_reward_data(metrics_df,
@@ -225,6 +205,7 @@ def load_training_reward_data(base_dir, experiment_ids,
         recursive=True)
     event_log_dirs.extend(logs)
 
+  event_log_dirs = set(event_log_dirs)
   logging.info(f'Found {len(event_log_dirs)} event log dirs')
 
   process_log_dir_fn = functools.partial(process_tb_event_dir,
@@ -253,23 +234,45 @@ def load_training_reward_data(base_dir, experiment_ids,
 
   # Add a "duration" column to the DataFrame
   for tag in event_file_tags:
-    # Create a MultiIndex for the new 'Duration' column
-    duration_index = pd.MultiIndex.from_tuples([(tag, 'Duration')])
-    timestamp_index = pd.MultiIndex.from_tuples([(tag, 'Timestamp')])
+    # Flat column names for timestamp and duration
+    timestamp_col = f'{tag}_Timestamp'
+    duration_col = f'{tag}_Duration'
+
     # Calculate the Duration and assign it to the DataFrame
-    metrics_df[duration_index] = metrics_df.groupby(
-        ['domain', 'task', 'algo', 'experiment', 'seed'])[
-      timestamp_index].transform(lambda x: x - x.min())
+    metrics_df[duration_col] = metrics_df.groupby(
+        ['domain', 'task', 'algo', 'experiment', 'seed']
+    )[timestamp_col].transform(lambda x: x - x.min())
 
     # Convert duration to seconds and round to the nearest second
-    metrics_df[duration_index] = metrics_df[duration_index].map(
-        lambda x: np.round(x.total_seconds()).astype(int))
+    metrics_df[duration_col] = metrics_df[
+      duration_col].dt.total_seconds().round().astype(int)
 
   return metrics_df
 
 
 def load_training_system_data(base_dir, experiment_ids):
-  pass
+  csv_files = []
+  for exp_id in experiment_ids:
+    logs = glob.glob(
+        os.path.join(base_dir,
+                     f'**/*{exp_id}*/**/*train_emissions.csv'),
+        recursive=True)
+    csv_files.extend(logs)
+
+  csv_files = set(csv_files)
+  logging.info(f'Found {len(csv_files)} csv files')
+
+  process_codecarbon_csv_fn = functools.partial(process_codecarbon_csv)
+
+  all_dfs = []
+  with concurrent.futures.ProcessPoolExecutor() as executor:
+    for data in executor.map(process_codecarbon_csv_fn, csv_files):
+      if data is not None:
+        all_dfs.append(data)
+  metrics_df = pd.concat(all_dfs)
+  logging.info(f'Loaded {len(metrics_df)} rows of data')
+
+  return metrics_df
 
 
 def load_inference_reward_data(base_dir, experiment_ids):
@@ -280,46 +283,27 @@ def load_inference_system_data(base_Dir, experiment_ids):
   pass
 
 
-def get_training_system_metrics(data_df):
-  pass
-
-
-def get_training_reward_metrics(data_df, tag, index):
-  reliability_metrics = analysis.get_training_reliability_metrics(
-      data_df=data_df, tag=tag, index=index)
-  return reliability_metrics
-
-
-def get_inference_reward_metrics(data_df):
-  pass
-
-
-def get_inference_system_metrics(data_df):
-  pass
-
-
 def main(_):
   tf.compat.v1.enable_eager_execution()
 
   np.random.seed(_SEED.value)
   tf.random.set_seed(_SEED.value)
   _initialize_plotting()
-
-  training_reward_metrics_df = load_training_reward_data(
-      base_dir=_BASE_DIR.value,
-      experiment_ids=_EXPERIMENT_IDS.value)
-  print(training_reward_metrics_df.head())
-  training_reward_metrics = get_training_reward_metrics(
-      data_df=training_reward_metrics_df, tag='Metrics/AverageReturn',
-      index='Step')
+  if 0 == 1:
+    training_reward_metrics_df = load_training_reward_data(
+        base_dir=_BASE_DIR.value,
+        experiment_ids=_EXPERIMENT_IDS.value)
+    print(training_reward_metrics_df.head())
+    training_reward_metrics = analysis.reliability.get_training_metrics(
+        data_df=training_reward_metrics_df, tag='Metrics/AverageReturn',
+        index='Step')
 
   training_system_metrics_df = load_training_system_data(
       base_dir=_BASE_DIR.value,
       experiment_ids=_EXPERIMENT_IDS.value)
   print(training_system_metrics_df.head())
-
-  training_system_metrics = get_training_system_metrics(
-      data_df=training_reward_metrics_df)
+  training_system_metrics = analysis.system.get_training_metrics(
+      data_df=training_system_metrics_df)
 
   inference_reward_metrics_df = load_inference_reward_data(
       base_dir=_BASE_DIR.value,
