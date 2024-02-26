@@ -1,9 +1,9 @@
 import os
 import subprocess
-
 from absl import app
 from absl import flags
 from absl import logging
+import numpy as np
 from pyfiglet import Figlet
 from termcolor import colored
 
@@ -235,7 +235,9 @@ def main(_):
     os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
     os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
     os.environ['USE_GAE'] = str(_USE_GAE.value)
-    os.environ['RB_CAPACITY'] = '10000000'  # doesn't matter for PPO
+    os.environ['RB_CAPACITY'] = (
+        _NUM_COLLECT_JOBS_PER_MACHINE.value * _NUM_COLLECT_STEPS_PER_ACTOR.value
+    )
   elif _ALGO.value == 'td3':
     os.environ['EXPLORATION_NOISE_STD'] = str(_EXPLORATION_NOISE_STD.value)
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
