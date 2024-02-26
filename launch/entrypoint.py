@@ -235,9 +235,7 @@ def main(_):
     os.environ['ENTROPY_REGULARIZATION'] = str(_ENTROPY_REGULARIZATION.value)
     os.environ['NUM_EPOCHS'] = str(_NUM_EPOCHS.value)
     os.environ['USE_GAE'] = str(_USE_GAE.value)
-    os.environ['RB_CAPACITY'] = (
-        _NUM_COLLECT_JOBS_PER_MACHINE.value * _NUM_COLLECT_STEPS_PER_ACTOR.value
-    )
+    os.environ['RB_CAPACITY'] = '100000'
   elif _ALGO.value == 'td3':
     os.environ['EXPLORATION_NOISE_STD'] = str(_EXPLORATION_NOISE_STD.value)
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
