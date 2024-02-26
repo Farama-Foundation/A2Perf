@@ -323,7 +323,7 @@ def risk_across_runs(data_df, tag, alpha=0.05):
     logging.info(f'\tCVaR: {cvar}')
 
     # Storing the CVaR values in the metrics dictionary
-    metrics[(domain, task, algo)] = cvar
+    metrics[(domain, algo, task)] = cvar
 
   return metrics
 
@@ -352,6 +352,6 @@ def get_training_metrics(data_df, tag, index):
 
 
 def get_inference_metrics(data_df):
-  # Dispersion Across Rollouts (IQR)
-  # Risk Across Rollouts (CVaR)
+  risk_across_rollouts_result = risk_across_rollouts(data_df)
+  dispersion_across_rollouts_result = dispersion_across_rollouts(data_df)
   return None

@@ -86,15 +86,13 @@ def process_tb_event_dir(event_file_path, tags=None):
   log_base_dir = os.path.dirname(event_file_path)
   exp_split = event_file_path.split('/')
 
-  # Extract the relevant information from the path
-  domain = exp_split[-11]
-  experiment_number = int(exp_split[-10])
-  task = exp_split[-9]
-  algo = exp_split[-8]
+  if 'collect' in event_file_path:
+    indices = [-7, -8, -9, -10, -11]
+  else:
+    indices = [-4, -5, -6, -7, -8]
 
-  # Extracting details from a segment in the path
-  details_segment = exp_split[-7]
-
+  details_segment, algo, task, experiment_number, domain = [exp_split[i] for i
+                                                            in indices]
   seed = int(re.search(r'seed_(\d+)', details_segment).group(1))
   skill_level = re.search(r'skill_level_(\w+)', details_segment).group(1)
 
@@ -150,6 +148,14 @@ def process_codecarbon_csv(csv_file_path):
   df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
   corrupt_rows = df[df['timestamp'].isna()]
 
+  # Make sure all of the power/ram fields are floats
+  # float_columns = [
+  #     'ram_process', 'gpu_power', 'cpu_power', 'ram_power', 'gpu_energy',
+  #     'ram_energy', 'cpu_energy']
+  #
+  # df[float_columns] = df[float_columns].apply(pd.to_numeric, errors='coerce')
+  # corrupt_rows = pd.concat([corrupt_rows, df[df[float_columns].isna()]])
+  #
   # Print corrupt rows
   if not corrupt_rows.empty:
     logging.warning("Corrupt rows due to invalid timestamps:")
@@ -160,6 +166,8 @@ def process_codecarbon_csv(csv_file_path):
   df['timestamp'] = df['timestamp'].apply(
       lambda x: x.replace(tzinfo=None) if x.tzinfo else x)
 
+  # Sort by timestamp
+  df = df.sort_values(by='timestamp')
   return df
 
 
@@ -232,6 +240,28 @@ def load_training_reward_data(base_dir, experiment_ids,
   row_counts = metrics_df.groupby(['domain', 'task', 'algo'])['seed'].count()
   logging.info(f'Row counts: {row_counts}')
 
+  # Since we have parallelized, distributed experiments, we'll see
+  # the same 'Step' multiple times. We simply need to combine the values
+  for tag in event_file_tags:
+    value_col = f'{tag}_Value'
+    step_col = f'{tag}_Step'
+
+    # Define aggregation methods: mean for the value column, first for others
+    aggregation = {value_col: 'mean'}
+    for col in metrics_df.columns:
+      if col not in [value_col, step_col, 'domain', 'task', 'algo',
+                     'experiment', 'seed']:
+        aggregation[col] = 'first'
+
+    # Group by and apply the specified aggregation
+    df = metrics_df.groupby(
+        ['domain', 'task', 'algo', 'experiment', 'seed', step_col]).agg(
+        aggregation).reset_index()
+    metrics_df = df
+
+  row_counts = metrics_df.groupby(['domain', 'task', 'algo'])['seed'].count()
+  logging.info(f'Row counts after removing duplicate steps: {row_counts}')
+
   # Add a "duration" column to the DataFrame
   for tag in event_file_tags:
     # Flat column names for timestamp and duration
@@ -279,7 +309,7 @@ def load_inference_reward_data(base_dir, experiment_ids):
   pass
 
 
-def load_inference_system_data(base_Dir, experiment_ids):
+def load_inference_system_data(base_dir, experiment_ids):
   pass
 
 
@@ -289,14 +319,14 @@ def main(_):
   np.random.seed(_SEED.value)
   tf.random.set_seed(_SEED.value)
   _initialize_plotting()
-  if 0 == 1:
-    training_reward_metrics_df = load_training_reward_data(
-        base_dir=_BASE_DIR.value,
-        experiment_ids=_EXPERIMENT_IDS.value)
-    print(training_reward_metrics_df.head())
-    training_reward_metrics = analysis.reliability.get_training_metrics(
-        data_df=training_reward_metrics_df, tag='Metrics/AverageReturn',
-        index='Step')
+
+  training_reward_data_df = load_training_reward_data(
+      base_dir=_BASE_DIR.value,
+      experiment_ids=_EXPERIMENT_IDS.value)
+  print(training_reward_data_df.head())
+  training_reward_metrics = analysis.reliability.get_training_metrics(
+      data_df=training_reward_data_df, tag='Metrics/AverageReturn',
+      index='Step')
 
   training_system_metrics_df = load_training_system_data(
       base_dir=_BASE_DIR.value,
@@ -305,19 +335,26 @@ def main(_):
   training_system_metrics = analysis.system.get_training_metrics(
       data_df=training_system_metrics_df)
 
-  inference_reward_metrics_df = load_inference_reward_data(
-      base_dir=_BASE_DIR.value,
-      experiment_ids=_EXPERIMENT_IDS.value)
-  print(inference_reward_metrics_df.head())
-  inference_reward_metrics = get_inference_reward_metrics(
-      data_df=inference_reward_metrics_df)
-
-  inference_system_metrics_df = load_inference_system_data(
-      base_dir=_BASE_DIR.value,
-      experiment_ids=_EXPERIMENT_IDS.value)
-  print(inference_system_metrics_df.head())
-  inference_system_metrics = get_inference_system_metrics(
-      data_df=inference_system_metrics_df)
+  # Display all training metrics
+  training_metrics = dict(**training_reward_metrics, **training_system_metrics)
+  training_metrics_df = analysis.results.metrics_dict_to_pandas_df(
+      training_metrics)
+  # Print out the latex table with training metrics only
+  print(analysis.results.df_as_latex(training_metrics_df, mode='train'))
+  #
+  # inference_reward_metrics_df = load_inference_reward_data(
+  #     base_dir=_BASE_DIR.value,
+  #     experiment_ids=_EXPERIMENT_IDS.value)
+  # print(inference_reward_metrics_df.head())
+  # inference_reward_metrics = get_inference_reward_metrics(
+  #     data_df=inference_reward_metrics_df)
+  #
+  # inference_system_metrics_df = load_inference_system_data(
+  #     base_dir=_BASE_DIR.value,
+  #     experiment_ids=_EXPERIMENT_IDS.value)
+  # print(inference_system_metrics_df.head())
+  # inference_system_metrics = get_inference_system_metrics(
+  #     data_df=inference_system_metrics_df)
 
 
 if __name__ == '__main__':

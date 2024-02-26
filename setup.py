@@ -70,10 +70,8 @@ class CustomInstall(install):
 
   def run(self):
     install.run(self)
-
-    if 'circuit-training' in self.distribution.extras_require:
-      install_dreamplace()
-      set_executable_permissions()
+    install_dreamplace()
+    set_executable_permissions()
 
 
 setup(
