@@ -95,7 +95,7 @@ setup(
             "shapely",
         ],
         "web-navigation": ["selenium", "webdriver-manager", "pillow", "regex"],
-        "quadruped-locomotion": ["pybullet"],
+        "quadruped-locomotion": ["pybullet", "mpi4py", "tensorflow", "scipy", "attrs"],
         "all": [
             "torch==1.13.1",
             "selenium",
@@ -114,10 +114,7 @@ setup(
         "a2perf": [
             # Include the default gin config files for running the benchmark
             "submission/**/*.gin",
-            # Include default gin config files for each domain
-            "domains/web_navigation/configs/web_navigation_env_config.gin",
-            "domains/quadruped_locomotion/motion_imitation/configs/envdesign.gin",
-            "domains/circuit_training/circuit_training/configs/envdesign.gin",
+            "domains/**/*.gin",
             # Include designs for creating web navigation environments
             "domains/web_navigation/environment_generation/data/difficulty_levels.zip",
             # Include gminiwob files for displaying web navigation environments
