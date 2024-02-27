@@ -264,6 +264,7 @@ def main(_):
   command = [
       'python',
       'a2perf/submission/main_submission.py',
+      f'--mode={_MODE.value}',
       f'--gin_config={_GIN_CONFIG.value}',
       f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
       f'--root_dir={root_dir}',
@@ -292,6 +293,7 @@ if __name__ == '__main__':
           _DOMAIN.name,
           _ALGO.name,
           _SKILL_LEVEL.name,
+          _MODE.name,
       ],
   )
   app.run(main)

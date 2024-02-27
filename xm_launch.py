@@ -49,7 +49,7 @@ _ALGOS = flags.DEFINE_list(
 )
 _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
     'vocabulary_manager_auth_key',
-    None,
+    '',
     'Authentication key for the manager server.',
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
@@ -196,7 +196,8 @@ def _get_docker_instructions(uid, user, env_name):
           RUN chown -R {uid}:root /workdir && \
            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py39 && \
-              pip install /workdir"        
+              python setup.py install && \
+              pip install /workdir[quadruped-locomotion]"
         """,
           'ENV CONDA_DEFAULT_ENV=py39',
           'ENV LD_LIBRARY_PATH="/opt/conda/envs/py39/lib:$LD_LIBRARY_PATH"',
@@ -269,7 +270,8 @@ def _get_docker_instructions(uid, user, env_name):
            chown -R {uid}:root /workdir && \
            /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
-              pip install /workdir"
+              python setup.py install && \
+              pip install /workdir[web-navigation]"
           """,
           (
               'ENV PATH="/home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION:$PATH"'
@@ -347,7 +349,8 @@ def _get_docker_instructions(uid, user, env_name):
           """
           RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
-              pip install /workdir"
+              python setup.py install && \
+              pip install /workdir[circuit-training]"
           """,
           'ENV CONDA_DEFAULT_ENV=py310',
           'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
@@ -435,9 +438,9 @@ TASK_TO_MAX_SEQUENCE_LENGTH = dict(
         netlist_ariane_std_cell_placer_mode_fd=134,
     ),
     quadruped_locomotion=dict(
-        dog_pace=600,
-        dog_trot=600,
-        dog_spin=600,
+        dog_pace=30,
+        dog_trot=30,
+        dog_spin=30,
     ),
     web_navigation=dict(
         difficulty_level_1_num_websites_1=25,

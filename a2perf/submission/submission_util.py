@@ -446,13 +446,24 @@ class Submission:
         json.dump(metric_results, f)
 
   def run_benchmark(self):
-    # Save gin configs and absl flags for subproceses
+    # Gin configs and absl flags must be saved to pass to subprocesses
     self.gin_config_str = gin.config_str()
     self.absl_flags = {name: flags.FLAGS[name].value for name in flags.FLAGS}
+
+    if not os.path.exists(self.participant_module_path):
+      raise FileNotFoundError(
+          f'Participant module path {self.participant_module_path} not found. This is necessary for running training and inference code.'
+      )
 
     if self.mode == BenchmarkMode.TRAIN:
       self._run_training_benchmark()
     elif self.mode == BenchmarkMode.INFERENCE:
+
+      if not os.path.exists(self.root_dir):
+        raise FileNotFoundError(
+            f'Root directory {self.root_dir} not found. This is necessary for loading the trained model'
+        )
+
       self._run_inference_benchmark()
     else:
       raise ValueError('Benchmark mode must be either train or inference')

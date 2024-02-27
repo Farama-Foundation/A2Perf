@@ -90,8 +90,7 @@ def generate_commands():
     inference_command = common_command + (
         f"--mode=inference \\\n"
         f"--num_gpus={_NUM_GPUS.value} \\\n"
-        f"--experiment_id={_EXPERIMENT_ID.value} \\\n"
-        f"--job_type=inference"
+        f"--experiment_id={_EXPERIMENT_ID.value}"
     )
 
     collect_command = common_command + (

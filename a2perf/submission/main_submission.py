@@ -4,8 +4,9 @@ import os
 import gin
 from absl import app
 from absl import flags
+from absl import logging
 
-from a2perf.submission.submission_util import Submission
+from a2perf.submission import submission_util
 
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None,
                                   'Path to the gin-config file.')
@@ -32,6 +33,10 @@ _EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run offline metrics only.'
 )
+_MODE = flags.DEFINE_enum(
+    'mode', 'train', ['train', 'inference'],
+    'Mode of the submission. train or inference.'
+)
 
 
 def main(_):
@@ -39,15 +44,16 @@ def main(_):
   os.chdir(os.path.dirname(os.path.abspath(__file__)))
   multiprocessing.set_start_method('spawn', force=False)
 
-  print('gin_config:', _GIN_CONFIG.value)
-  print('participant_module_path:', _PARTICIPANT_MODULE_PATH.value)
+  logging.info('Gin config for the submission: %s', _GIN_CONFIG.value)
+  logging.info('Participant module path: %s', _PARTICIPANT_MODULE_PATH.value)
 
   gin.parse_config_file(_GIN_CONFIG.value)
   for binding in _EXTRA_GIN_BINDINGS.value:
     gin.parse_config(binding)
-    print(binding)
+    logging.info('Adding extra gin binding: %s', binding)
 
-  submission = Submission(
+  submission = submission_util.Submission(
+      mode=submission_util.BenchmarkMode(_MODE.value),
       root_dir=_ROOT_DIR.value,
       metric_values_dir=_METRIC_VALUES_DIR.value,
       participant_module_path=_PARTICIPANT_MODULE_PATH.value,
