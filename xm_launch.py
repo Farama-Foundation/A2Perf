@@ -637,8 +637,7 @@ def main(_):
     )
 
     async def make_job(work_unit: xm.WorkUnit, **hparams):
-      task = hparams['task']
-      del hparams['task']
+      task = hparams['task_name']
       hparams['num_replicas'] = _NUM_GPUS.value
       hparams['num_collect_jobs_per_machine'] = 1
       hparams['max_sequence_length'] = \
@@ -732,7 +731,7 @@ def main(_):
 
     for hparams in hparam_sweeps:
       if _DOMAIN.value == 'quadruped_locomotion':
-        task = hparams['motion_file']
+        task_name = hparams['motion_file']
         hparams.pop('motion_file')
         hparams['motion_file_path'] = os.path.join(
             '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
@@ -741,7 +740,7 @@ def main(_):
       elif _DOMAIN.value == 'web_navigation':
         difficulty_level = hparams['difficulty_level']
         num_websites = hparams['num_websites']
-        task = (
+        task_name = (
             f'difficulty_level_{difficulty_level}_num_websites_{num_websites}'
         )
       elif _DOMAIN.value == 'circuit_training':
@@ -757,7 +756,7 @@ def main(_):
             'initial.plc',
         )
         hparams['std_cell_placer_mode'] = _STD_CELL_PLACER_MODE.value
-        task = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
+        task_name = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
       # Set up the root directory for the experiment

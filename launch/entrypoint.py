@@ -87,8 +87,8 @@ _RB_CAPACITY = flags.DEFINE_integer(
     'rb_capacity', None, 'Replay buffer capacity.'
 )
 
-_EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
-    'episodes_per_actorbatch', None, 'Episodes per actorbatch.'
+_NUM_EPISODES_PER_ITERATION = flags.DEFINE_integer(
+    'num_episodes_per_iteration', None, 'Number of episodes per iteration.'
 )
 _MAX_SEQUENCE_LENGTH = flags.DEFINE_integer(
     'max_sequence_length', None, 'Max sequence length.'
@@ -161,10 +161,11 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
 _MODE = flags.DEFINE_enum(
     'mode', None, ['train', 'collect', 'reverb', 'inference'], 'Mode.'
 )
+_TASK_NAME = flags.DEFINE_string('task_name', None, 'Name of the task.')
 
 
 def main(_):
-  # assert 0 == 1
+  os.environ['TASK_NAME'] = _TASK_NAME.value
   os.environ['EXPERIMENT_ID'] = _EXPERIMENT_ID.value
   os.environ['SEED'] = str(_SEED.value)
   os.environ['ENV_BATCH_SIZE'] = str(_ENV_BATCH_SIZE.value)
@@ -186,7 +187,9 @@ def main(_):
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
-  os.environ['EPISODES_PER_ACTORBATCH'] = str(_EPISODES_PER_ACTORBATCH.value)
+  os.environ['NUM_EPISODES_PER_ITERATION'] = str(
+      _NUM_EPISODES_PER_ITERATION.value
+  )
 
   # Export distributed training variables
   os.environ['NUM_ITERATIONS'] = str(_NUM_ITERATIONS.value)
