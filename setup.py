@@ -85,6 +85,29 @@ setup(
         'gym',
         'minari',
         'absl-py',
+        # codecarbon
+        "arrow",
+        "dash",
+        "dash_bootstrap_components",
+        "dataclasses",
+        "fire",
+        "flake8",
+        "fuzzywuzzy",
+        "isort",
+        "mypy",
+        "pandas",
+        "plotly",
+        "psutil",
+        "py-cpuinfo",
+        "pynvml",
+        "requests",
+        "responses",
+        "sphinx",
+        "sphinx-rtd-theme",
+        'fuzzywuzzy',
+        'pandas',
+        'pyfiglet',
+        'scipy'
     ],
     extras_require={
         'circuit-training': [
@@ -99,6 +122,7 @@ setup(
         'web-navigation': [
             'selenium',
             'webdriver-manager',
+            'regex'
         ],
         'quadruped-locomotion': ['pybullet'],
         'all': [
@@ -107,6 +131,7 @@ setup(
             'webdriver-manager',
             'pybullet',
             'tensorflow',
+            'regex'
         ],
     },
     cmdclass={
