@@ -53,12 +53,15 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
     'Authentication key for the manager server.',
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
-_TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
-    'timesteps_per_actorbatch',
-    1000,
-    'Total number of timesteps to collect per iteration',
+_EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
+    'episodes_per_actorbatch',
+    256,
+    'Total number of episodes to collect per iteration',
 )
 
+_NUM_ITERATIONS = flags.DEFINE_integer(
+    'num_iterations', 100, 'Total number of iterations to run'
+)
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
 _DOMAIN = flags.DEFINE_enum(
     'domain',
@@ -145,12 +148,6 @@ _VOCABULARY_SERVER_ADDRESS = flags.DEFINE_string(
 )
 _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
     'vocabulary_server_port', '50000', 'Port of the vocabulary server'
-)
-
-_EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
-    'episodes_per_actorbatch',
-    256,
-    'Total number of episodes to collect per iteration',
 )
 
 
@@ -438,9 +435,9 @@ TASK_TO_MAX_SEQUENCE_LENGTH = dict(
         netlist_ariane_std_cell_placer_mode_fd=134,
     ),
     quadruped_locomotion=dict(
-        dog_pace=30,
-        dog_trot=30,
-        dog_spin=30,
+        dog_pace=600,
+        dog_trot=600,
+        dog_spin=600,
     ),
     web_navigation=dict(
         difficulty_level_1_num_websites_1=25,
@@ -474,7 +471,6 @@ def get_hparam_sweeps(domain, **kwargs):
         'env_name': ['QuadrupedLocomotion-v0'],
         'motion_file': motion_files,
         'env_batch_size': [100],
-        'total_env_steps': [200000000],
         'train_checkpoint_interval': [1000000],
         'policy_checkpoint_interval': [1000000],
     }
@@ -528,7 +524,6 @@ def get_hparam_sweeps(domain, **kwargs):
         'profile_value_dropout': [profile_value_dropout],
         'use_xvfb': [use_xvfb],
         'env_batch_size': [100],
-        'total_env_steps': [100000000],
         'train_checkpoint_interval': [1000000],
         'policy_checkpoint_interval': [1000000],
     }
@@ -558,7 +553,6 @@ def get_hparam_sweeps(domain, **kwargs):
         'env_name': ['CircuitTraining-v0'],
         'netlist': netlists,
         'env_batch_size': [100],
-        'total_env_steps': [10000000],
         'train_checkpoint_interval': [1000000],
         'policy_checkpoint_interval': [1000000],
     }
@@ -643,14 +637,12 @@ def main(_):
     )
 
     async def make_job(work_unit: xm.WorkUnit, **hparams):
-
-      hparams['timesteps_per_actorbatch'] = _TIMESTEPS_PER_ACTORBATCH.value
-      hparams[
-        'num_collect_steps_per_actor'] = _TIMESTEPS_PER_ACTORBATCH.value // \
-                                         hparams['env_batch_size']
-      hparams['num_collect_jobs_per_machine'] = hparams['env_batch_size']
+      task = hparams['task']
+      del hparams['task']
       hparams['num_replicas'] = _NUM_GPUS.value
-
+      hparams['num_collect_jobs_per_machine'] = 1
+      hparams['max_sequence_length'] = \
+        TASK_TO_MAX_SEQUENCE_LENGTH[_DOMAIN.value][task]
       executor = xm_local.Local(
           requirements=xm.JobRequirements(
               resources={
@@ -768,8 +760,8 @@ def main(_):
         task = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
-
       # Set up the root directory for the experiment
+      hparams['task'] = task
       experiment_name = create_experiment_name(hparams)
       hparams['root_dir'] = os.path.join(
           base_root_dir, task, hparams['algo'], experiment_name
@@ -782,6 +774,8 @@ def main(_):
 
       hparams.update(
           dict(
+              num_iterations=_NUM_ITERATIONS.value,
+              episodes_per_actorbatch=_EPISODES_PER_ACTORBATCH.value,
               vocabulary_manager_auth_key=_VOCABULARY_MANAGER_AUTH_KEY.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,

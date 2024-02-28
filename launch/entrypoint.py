@@ -10,6 +10,9 @@ from termcolor import colored
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment ID for web navigation.'
 )
+_NUM_ITERATIONS = flags.DEFINE_integer(
+    'num_iterations', None, 'Number of iterations for training.'
+)
 _NUM_REPLICAS = flags.DEFINE_integer(
     'num_replicas', None, 'Number of replicas for distributed training.'
 )
@@ -79,16 +82,18 @@ _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_boolean(
     'run_offline_metrics_only', None, 'Run offline metrics only.'
 )
+
 _RB_CAPACITY = flags.DEFINE_integer(
     'rb_capacity', None, 'Replay buffer capacity.'
 )
 
-_TIMESTEPS_PER_ACTORBATCH = flags.DEFINE_integer(
-    'timesteps_per_actorbatch', None, 'Timesteps per actor batch.'
+_EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
+    'episodes_per_actorbatch', None, 'Episodes per actorbatch.'
 )
-_NUM_COLLECT_STEPS_PER_ACTOR = flags.DEFINE_integer(
-    'num_collect_steps_per_actor', None, 'Number of collect steps per actor.'
+_MAX_SEQUENCE_LENGTH = flags.DEFINE_integer(
+    'max_sequence_length', None, 'Max sequence length.'
 )
+
 _NUM_COLLECT_JOBS_PER_MACHINE = flags.DEFINE_integer(
     'num_collect_jobs_per_machine', None, 'Number of collect jobs per machine.'
 )
@@ -159,6 +164,7 @@ _MODE = flags.DEFINE_enum(
 
 
 def main(_):
+  # assert 0 == 1
   os.environ['EXPERIMENT_ID'] = _EXPERIMENT_ID.value
   os.environ['SEED'] = str(_SEED.value)
   os.environ['ENV_BATCH_SIZE'] = str(_ENV_BATCH_SIZE.value)
@@ -180,15 +186,14 @@ def main(_):
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
   os.environ['DEBUG'] = str(_DEBUG.value)
-  os.environ['TIMESTEPS_PER_ACTORBATCH'] = str(_TIMESTEPS_PER_ACTORBATCH.value)
-  os.environ['NUM_COLLECT_STEPS_PER_ACTOR'] = str(
-      _NUM_COLLECT_STEPS_PER_ACTOR.value
-  )
+  os.environ['EPISODES_PER_ACTORBATCH'] = str(_EPISODES_PER_ACTORBATCH.value)
 
   # Export distributed training variables
+  os.environ['NUM_ITERATIONS'] = str(_NUM_ITERATIONS.value)
   os.environ['NUM_COLLECT_JOBS_PER_MACHINE'] = str(
       _NUM_COLLECT_JOBS_PER_MACHINE.value
   )
+  os.environ['MAX_SEQUENCE_LENGTH'] = str(_MAX_SEQUENCE_LENGTH.value)
   os.environ['NUM_REPLICAS'] = str(_NUM_REPLICAS.value)
   os.environ['MODE'] = _MODE.value
   os.environ['JOB_TYPE'] = str(_JOB_TYPE.value)
@@ -207,6 +212,7 @@ def main(_):
   os.environ['VOCABULARY_SERVER_ADDRESS'] = _VOCABULARY_SERVER_ADDRESS.value
   os.environ['VOCABULARY_SERVER_PORT'] = str(_VOCABULARY_SERVER_PORT.value)
   os.environ['VOCABULARY_MANAGER_AUTH_KEY'] = _VOCABULARY_MANAGER_AUTH_KEY.value
+
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
   figlet_obj = Figlet(font='standard', width=300)
