@@ -53,8 +53,8 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
     'Authentication key for the manager server.',
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
-_EPISODES_PER_ACTORBATCH = flags.DEFINE_integer(
-    'episodes_per_actorbatch',
+_NUM_EPISODES_PER_ITERATION = flags.DEFINE_integer(
+    'num_episodes_per_iteration',
     256,
     'Total number of episodes to collect per iteration',
 )
@@ -735,7 +735,7 @@ def main(_):
         hparams.pop('motion_file')
         hparams['motion_file_path'] = os.path.join(
             '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
-            task + '.txt',
+            task_name + '.txt',
         )
       elif _DOMAIN.value == 'web_navigation':
         difficulty_level = hparams['difficulty_level']
@@ -760,21 +760,21 @@ def main(_):
       else:
         raise ValueError(f'Unknown domain: {_DOMAIN.value}')
       # Set up the root directory for the experiment
-      hparams['task'] = task
+      hparams['task_name'] = task_name
       experiment_name = create_experiment_name(hparams)
       hparams['root_dir'] = os.path.join(
-          base_root_dir, task, hparams['algo'], experiment_name
+          base_root_dir, task_name, hparams['algo'], experiment_name
       )
 
       skill_level = hparams['skill_level']
       domain = hparams['domain']
       mode = hparams['mode']
-      dataset_id = f'{domain[0].upper() + domain[1:]}-{task}-{skill_level}-v0'
+      dataset_id = f'{domain[0].upper() + domain[1:]}-{task_name}-{skill_level}-v0'
 
       hparams.update(
           dict(
               num_iterations=_NUM_ITERATIONS.value,
-              episodes_per_actorbatch=_EPISODES_PER_ACTORBATCH.value,
+              num_episodes_per_iteration=_NUM_EPISODES_PER_ITERATION.value,
               vocabulary_manager_auth_key=_VOCABULARY_MANAGER_AUTH_KEY.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
