@@ -435,9 +435,9 @@ TASK_TO_MAX_SEQUENCE_LENGTH = dict(
         netlist_ariane_std_cell_placer_mode_fd=134,
     ),
     quadruped_locomotion=dict(
-        dog_pace=600,
-        dog_trot=600,
-        dog_spin=600,
+        dog_pace=100,
+        dog_trot=100,
+        dog_spin=100,
     ),
     web_navigation=dict(
         difficulty_level_1_num_websites_1=25,
@@ -466,21 +466,21 @@ def get_hparam_sweeps(domain, **kwargs):
   if domain == 'quadruped_locomotion':
     motion_files = kwargs['motion_files']
     general_hyperparameters = {
-        'eval_interval': [1000],
-        'log_interval': [1000],
+        'eval_interval': [1],
+        'log_interval': [1],
         'env_name': ['QuadrupedLocomotion-v0'],
         'motion_file': motion_files,
         'env_batch_size': [100],
-        'train_checkpoint_interval': [1000000],
-        'policy_checkpoint_interval': [1000000],
+        'train_checkpoint_interval': [10],
+        'policy_checkpoint_interval': [10],
     }
 
     algo_hyperparameters = {
         'ppo': {
             'batch_size': [64],
             'algo': ['ppo'],
-            'use_gae': [True],
-            'entropy_regularization': [1e-4],
+            'use_gae': [False],
+            'entropy_regularization': [1e-2],
             'learning_rate': [3e-4],
             'num_epochs': [4],
         },
