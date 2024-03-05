@@ -14,32 +14,16 @@ Submission.measure_emissions=True
 ####################################
 # Set up benchmark mode
 ####################################
-Submission.num_inference_steps = 10000
+Submission.num_inference_steps = 100
 Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
 
 
 ####################################
 #Set up domain##
-####################################
-Submission.create_domain.init_placement = '/a2perf/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'
-Submission.create_domain.netlist_file = '/a2perf/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'
+#####################################
+Submission.create_domain.netlist = 'toy_macro_stdcell'
 Submission.create_domain.is_eval=True
-
-
-####################################
-# Reliability
-####################################
-
-METRICS = [
-    %ReliabilityMetrics.IqrAcrossRollouts,
-    %ReliabilityMetrics.LowerCVaRAcrossRollouts
-]
-Submission.reliability_metrics = %METRICS
-eval_metrics.Evaluator.metrics = %METRICS
-eval_metrics.Evaluator.timepoint_variable='episode_num'
-eval_metrics.Evaluator.dependent_variable='reward'
-eval_metrics.Evaluator.align_on_global_step = True
 
 # Set up codecarbon for system metrics
 track_emissions.project_name = 'a2perf_circuit_training_train_inference'
