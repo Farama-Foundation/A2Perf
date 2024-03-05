@@ -15,6 +15,7 @@ from absl import flags
 from absl import logging
 
 from a2perf.metrics.system import codecarbon
+import pkg_resources
 
 
 @contextmanager
@@ -179,9 +180,9 @@ class Submission:
       self,
       root_dir: str,
       metric_values_dir: str,
-      participant_module_path: str = None,
-      mode: BenchmarkMode = BenchmarkMode.TRAIN,
-      domain: BenchmarkDomain = BenchmarkDomain.WEB_NAVIGATION,
+      participant_module_path: str,
+      mode: BenchmarkMode,
+      domain: BenchmarkDomain,
       train_logs_dirs: typing.List[str] = None,
       num_inference_steps: int = 1000,
       num_inference_episodes: int = 1,
@@ -273,6 +274,24 @@ class Submission:
     elif self.domain == BenchmarkDomain.CIRCUIT_TRAINING:
       # noinspection PyUnresolvedReferences
       from a2perf.domains import circuit_training
+
+      netlist_to_use = kwargs.get('netlist', 'ariane')
+      kwargs.pop('netlist', None)
+      netlist_file_path = pkg_resources.resource_filename(
+          'a2perf',
+          f'domains/circuit_training/circuit_training/environment/test_data/{netlist_to_use}/netlist.pb.txt')
+
+      init_placement_file_path = pkg_resources.resource_filename(
+          'a2perf',
+          f'domains/circuit_training/circuit_training/environment/test_data/{netlist_to_use}/initial.plc'
+      )
+      kwargs.update({
+          'netlist_file': netlist_file_path,
+          'init_placement': init_placement_file_path,
+          'output_plc_file': os.path.join(self.root_dir,
+                                          'inference_output.plc'),
+      })
+
     elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
       # noinspection PyUnresolvedReferences
       from a2perf.domains import quadruped_locomotion
@@ -396,8 +415,14 @@ class Submission:
       participant_policy, participant_module = _load_policy(
           module_path=self.participant_module_path,
           env=env)
-      preprocessed_data = [participant_module.preprocess_observation(x) for x
-                           in inference_data]
+      # Only include time_step_spec if the participant policy has it as an
+      # attribute. This will be useful for participants using TF agents.
+      time_step_spec = getattr(participant_policy, 'time_step_spec', None)
+      preprocessed_data = [
+          participant_module.preprocess_observation(x,
+                                                    time_step_spec=time_step_spec)
+          for x
+          in inference_data]
       logging.info('Finished preprocessing the observation data')
 
       if self.time_inference_steps:
@@ -413,7 +438,10 @@ class Submission:
         metric_results['inference_time'] = {
             'values': inference_times,
             'mean': np.mean(inference_times),
-            'std': np.std(inference_times)
+            'std': np.std(inference_times),
+            'max': np.max(inference_times),
+            'median': np.median(inference_times),
+            'min': np.min(inference_times)
         }
 
       # Running rollouts in a subprocess
@@ -437,7 +465,10 @@ class Submission:
       metric_results['rollout_returns'] = {
           'values': all_rewards,
           'mean': np.mean(all_rewards),
-          'std': np.std(all_rewards)
+          'std': np.std(all_rewards),
+          'max': np.max(all_rewards),
+          'median': np.median(all_rewards),
+          'min': np.min(all_rewards)
       }
 
       print('Finished inference. Now saving')

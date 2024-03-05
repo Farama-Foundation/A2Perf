@@ -21,7 +21,7 @@ _METRIC_VALUES_DIR = flags.DEFINE_string(
 )
 _TRAIN_LOGS_DIRS = flags.DEFINE_multi_string(
     'train_logs_dirs',
-    ['train_logs'],
+    None,
     'Directories for train logs from all of the experiments that reliability'
     ' metrics will be calculated on',
 )
