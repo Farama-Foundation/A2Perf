@@ -29,21 +29,6 @@ Submission.num_inference_steps = 10000
 Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
 
-####################################
-# Reliability
-####################################
-
-METRICS = []
-Submission.reliability_metrics = %METRICS
-
-# ----------------------
-# EVALUATION CONFIGURATION
-# ----------------------
-eval_metrics.Evaluator.metrics = %METRICS
-eval_metrics.Evaluator.timepoint_variable = 'episode_num'
-eval_metrics.Evaluator.dependent_variable = 'reward'
-eval_metrics.Evaluator.align_on_global_step = True
-
 # ----------------------
 # SYSTEM METRICS SETUP
 # ----------------------
