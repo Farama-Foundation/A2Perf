@@ -1,0 +1,42 @@
+import a2perf.submission.submission_util
+import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
+import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
+import a2perf.metrics.system.codecarbon
+
+# Set up submission object
+Submission.mode = %BenchmarkMode.INFERENCE
+Submission.domain = %BenchmarkDomain.CIRCUIT_TRAINING
+Submission.run_offline_metrics_only=True
+Submission.measure_emissions=True
+
+
+####################################
+# Set up benchmark mode
+####################################
+Submission.num_inference_steps = 100
+Submission.num_inference_episodes = 100
+Submission.time_participant_code = True
+
+
+####################################
+#Set up domain##
+#####################################
+Submission.create_domain.netlist = 'toy_macro_stdcell'
+Submission.create_domain.is_eval=True
+
+# Set up codecarbon for system metrics
+track_emissions.project_name = 'a2perf_circuit_training_train_inference'
+track_emissions.measure_power_secs = 0.5 # Set measurement interval to 0.5 seconds
+track_emissions.save_to_file = True  # Save data to file
+track_emissions.save_to_logger = False  # Do not save data to logger
+track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
+track_emissions.log_level = 'info'  # Log level set to 'info'
+track_emissions.country_iso_code = 'USA'
+track_emissions.region = 'Massachusetts'
+track_emissions.baseline_measure_sec=10
+# track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
+
+OfflineEmissionsTracker.country_2letter_iso_code = 'US'
+OfflineEmissionsTracker.on_csv_write='append'

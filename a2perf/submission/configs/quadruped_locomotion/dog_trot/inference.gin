@@ -18,10 +18,9 @@ Submission.measure_emissions = True
 ####################################
 # Set up domain
 ####################################
-
-#Submission.domain_config_paths = '/a2perf/a2perf/submission/configs/quadruped_locomotion/debug/domain_configs/*.gin' # different instantiations of the same domain may need different setup. Change that here
 Submission.create_domain.mode='test'
 Submission.create_domain.num_parallel_envs=1
+Submission.create_domain.motion='dog_trot'
 
 ####################################
 # Set up benchmark mode

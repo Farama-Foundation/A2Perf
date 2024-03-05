@@ -22,7 +22,7 @@ Submission.time_participant_code = True
 ####################################
 #Set up domain##
 #####################################
-Submission.create_domain.netlist = 'toy_macro_stdcell'
+Submission.create_domain.netlist = 'ariane'
 Submission.create_domain.is_eval=True
 
 # Set up codecarbon for system metrics
@@ -35,7 +35,7 @@ track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
 track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
-track_emissions.baseline_measure_sec=2
+track_emissions.baseline_measure_sec=10
 # track_emissions.default_cpu_tdp = 125 # if your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'

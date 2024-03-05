@@ -11,11 +11,11 @@ from contextlib import contextmanager
 import gin
 import gymnasium as gym
 import numpy as np
+import pkg_resources
 from absl import flags
 from absl import logging
 
 from a2perf.metrics.system import codecarbon
-import pkg_resources
 
 
 @contextmanager
