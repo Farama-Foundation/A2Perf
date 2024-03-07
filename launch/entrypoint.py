@@ -67,7 +67,7 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
 )
 
 _JOB_TYPE = flags.DEFINE_enum(
-    'job_type', None, ['train', 'collect', 'reverb'], 'Type of job'
+    'job_type', None, ['train', 'collect', 'inference'], 'Type of job'
 )
 # _TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
@@ -219,14 +219,19 @@ def main(_):
   # For collect/inference, change the root dir to a subdirectory to make sure
   # That our system metrics are not overwritten
   figlet_obj = Figlet(font='standard', width=300)
-  if _JOB_TYPE.value in ['collect', 'inference']:
+  if _JOB_TYPE.value == 'collect':
     # Change the root dir to the machine's hostname
     root_dir = os.path.join(
         _ROOT_DIR.value, _JOB_TYPE.value, os.environ.get('HOSTNAME', 'unknown')
     )
     print(f'Changing root dir to {root_dir}')
     print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
-
+  elif _JOB_TYPE.value == 'inference':
+    # We leave the root dir alone since we need to load the model produced
+    # by the training job
+    root_dir = _ROOT_DIR.value
+    print(f'Changing root dir to {root_dir}')
+    print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
   else:
     print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value
