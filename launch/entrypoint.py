@@ -1,9 +1,9 @@
 import os
 import subprocess
+
 from absl import app
 from absl import flags
 from absl import logging
-import numpy as np
 from pyfiglet import Figlet
 from termcolor import colored
 
@@ -67,7 +67,13 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
 )
 
 _JOB_TYPE = flags.DEFINE_enum(
-    'job_type', None, ['train', 'collect', 'inference'], 'Type of job'
+    'job_type',
+    None,
+    ['train', 'collect', 'inference', 'evaluate'],
+    'Type of job',
+)
+_NUM_EVAL_EPISODES = flags.DEFINE_integer(
+    'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
 )
 # _TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
@@ -216,8 +222,8 @@ def main(_):
   os.environ['VOCABULARY_SERVER_PORT'] = str(_VOCABULARY_SERVER_PORT.value)
   os.environ['VOCABULARY_MANAGER_AUTH_KEY'] = _VOCABULARY_MANAGER_AUTH_KEY.value
 
-  # For collect/inference, change the root dir to a subdirectory to make sure
-  # That our system metrics are not overwritten
+  # For collect, change the root dir to a subdirectory to make sure that the
+  # training system metrics are not overwritten
   figlet_obj = Figlet(font='standard', width=300)
   if _JOB_TYPE.value == 'collect':
     # Change the root dir to the machine's hostname
@@ -232,13 +238,23 @@ def main(_):
     root_dir = _ROOT_DIR.value
     print(f'Changing root dir to {root_dir}')
     print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
-  else:
+  elif _JOB_TYPE.value == 'train':
     print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value
     print(colored(figlet_obj.renderText('Copy this'), 'red'))
     print('Experiment ID: ', _EXPERIMENT_ID.value)
-  os.environ['ROOT_DIR'] = root_dir
+  elif _JOB_TYPE.value == 'evaluate':
+    # If the job type is `evaluate`, then we do not need to run the
+    # benchmarking flow at all. This pathway is used for evaluating
+    # ALL policies in a given training run. We can use these returns to classify
+    # the policies into intermediate, novice, and expert.
+    root_dir = _ROOT_DIR.value
 
+    # Also want to run a different command
+  else:
+    raise ValueError(f'Invalid job type: {_JOB_TYPE.value}')
+
+  os.environ['ROOT_DIR'] = root_dir
   os.environ['ALGO'] = _ALGO.value
   if _ALGO.value == 'sac':
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
@@ -275,17 +291,23 @@ def main(_):
   else:
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
-  command = [
-      'python',
-      'a2perf/submission/main_submission.py',
-      f'--mode={_MODE.value}',
-      f'--gin_config={_GIN_CONFIG.value}',
-      f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
-      f'--root_dir={root_dir}',
-      f'--metric_values_dir={root_dir}/metrics',
-      f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
-      f'--verbosity={logging.get_verbosity()}',
-  ]
+  if _JOB_TYPE.value == 'evaluate':
+    command = ['python', 'a2perf/analysis/evaluation.py',
+               f'--num_eval_episodes={_NUM_EVAL_EPISODES.value}',
+               f'--root_dir={root_dir}',
+               f'--env_name={_ENV_NAME.value}']
+  else:
+    command = [
+        'python',
+        'a2perf/submission/main_submission.py',
+        f'--mode={_MODE.value}',
+        f'--gin_config={_GIN_CONFIG.value}',
+        f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
+        f'--root_dir={root_dir}',
+        f'--metric_values_dir={root_dir}/metrics',
+        f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
+        f'--verbosity={logging.get_verbosity()}',
+    ]
 
   if _USE_XVFB.value:
     command = ['xvfb-run'] + command
