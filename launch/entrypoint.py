@@ -165,7 +165,8 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
 )
 
 _MODE = flags.DEFINE_enum(
-    'mode', None, ['train', 'collect', 'reverb', 'inference'], 'Mode.'
+    'mode', None, ['train', 'collect', 'reverb', 'inference', 'evaluate'],
+    'Mode.'
 )
 _TASK_NAME = flags.DEFINE_string('task_name', None, 'Name of the task.')
 
@@ -249,8 +250,6 @@ def main(_):
     # ALL policies in a given training run. We can use these returns to classify
     # the policies into intermediate, novice, and expert.
     root_dir = _ROOT_DIR.value
-
-    # Also want to run a different command
   else:
     raise ValueError(f'Invalid job type: {_JOB_TYPE.value}')
 
@@ -292,14 +291,13 @@ def main(_):
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
   if _JOB_TYPE.value == 'evaluate':
-    command = ['python', 'a2perf/analysis/evaluation.py',
+    command = ['python', '-m', 'a2perf.analysis.evaluation',
                f'--num_eval_episodes={_NUM_EVAL_EPISODES.value}',
                f'--root_dir={root_dir}',
                f'--env_name={_ENV_NAME.value}']
   else:
     command = [
-        'python',
-        'a2perf/submission/main_submission.py',
+        'python', '-m', 'a2perf.submission.main_submission',
         f'--mode={_MODE.value}',
         f'--gin_config={_GIN_CONFIG.value}',
         f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
