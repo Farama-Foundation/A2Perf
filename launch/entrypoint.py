@@ -94,10 +94,10 @@ _RB_CAPACITY = flags.DEFINE_integer(
 )
 
 _NUM_EPISODES_PER_ITERATION = flags.DEFINE_integer(
-    'num_episodes_per_iteration', None, 'Number of episodes per iteration.'
+    'num_episodes_per_iteration', -1, 'Number of episodes per iteration.'
 )
 _MAX_SEQUENCE_LENGTH = flags.DEFINE_integer(
-    'max_sequence_length', None, 'Max sequence length.'
+    'max_sequence_length', -1, 'Max sequence length.'
 )
 
 _NUM_COLLECT_JOBS_PER_MACHINE = flags.DEFINE_integer(
