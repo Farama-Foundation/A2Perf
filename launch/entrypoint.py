@@ -69,13 +69,12 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
 _JOB_TYPE = flags.DEFINE_enum(
     'job_type',
     None,
-    ['train', 'collect', 'inference', 'evaluate'],
+    ['train', 'collect', 'inference', 'evaluate', 'generate'],
     'Type of job',
 )
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
 )
-# _TASK = flags.DEFINE_string('task', None, 'Task to run.')
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
 _LEARNING_RATE = flags.DEFINE_float('learning_rate', None, 'Learning rate.')
 _BATCH_SIZE = flags.DEFINE_integer(
@@ -165,10 +164,15 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
 )
 
 _MODE = flags.DEFINE_enum(
-    'mode', None, ['train', 'collect', 'reverb', 'inference', 'evaluate'],
+    'mode', None,
+    ['train', 'collect', 'reverb', 'inference', 'evaluate', 'generate'],
     'Mode.'
 )
 _TASK_NAME = flags.DEFINE_string('task_name', None, 'Name of the task.')
+
+_DATASETS_PATH = flags.DEFINE_string(
+    'datasets_path', None, 'Path to save the dataset to.'
+)
 
 
 def main(_):
@@ -250,6 +254,8 @@ def main(_):
     # ALL policies in a given training run. We can use these returns to classify
     # the policies into intermediate, novice, and expert.
     root_dir = _ROOT_DIR.value
+  elif _JOB_TYPE.value == 'generate':
+    root_dir = _ROOT_DIR.value
   else:
     raise ValueError(f'Invalid job type: {_JOB_TYPE.value}')
 
@@ -294,7 +300,20 @@ def main(_):
     command = ['python', '-m', 'a2perf.analysis.evaluation',
                f'--num_eval_episodes={_NUM_EVAL_EPISODES.value}',
                f'--root_dir={root_dir}',
-               f'--env_name={_ENV_NAME.value}']
+               f'--env_name={_ENV_NAME.value}',
+               f'--max_parallel_envs={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+               f'--verbosity={logging.get_verbosity()}']
+  elif _JOB_TYPE.value == 'generate':
+    command = ['python', '-m', 'a2perf.data.generate',
+               f'--env_name={_ENV_NAME.value}',
+               f'--root_dir={root_dir}',
+               f'--verbosity={logging.get_verbosity()}',
+               f'--num_episodes={_NUM_EVAL_EPISODES.value}',
+               f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+               f'--skill_level={_SKILL_LEVEL.value}',
+               f'--dataset_id={_DATASET_ID.value}',
+               f'--seed={_SEED.value}',
+               f'--datasets_path={root_dir}', ]
   else:
     command = [
         'python', '-m', 'a2perf.submission.main_submission',

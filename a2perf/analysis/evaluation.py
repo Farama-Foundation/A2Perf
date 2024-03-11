@@ -8,6 +8,7 @@ from typing import Dict
 import numpy as np
 from absl import app
 from absl import flags
+from absl import logging
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.policies import policy_loader
@@ -24,6 +25,9 @@ _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
 )
 
+_MAX_PARALLEL_ENVS = flags.DEFINE_integer(
+    'max_parallel_envs', 1, 'Maximum number of parallel environments to use.'
+)
 _ROOT_DIR = flags.DEFINE_string(
     'root_dir',
     None,
@@ -36,7 +40,8 @@ _ENV_NAME = flags.DEFINE_string(
 )
 
 
-def create_domain(env_name) -> py_environment.PyEnvironment:
+def create_domain(env_name, gym_env_wrappers=(), env_wrappers=(),
+) -> py_environment.PyEnvironment:
   if env_name == 'CircuitTraining-v0':
 
     netlist_path = os.environ.get('NETLIST_PATH', None)
@@ -57,7 +62,9 @@ def create_domain(env_name) -> py_environment.PyEnvironment:
   else:
     raise ValueError(f'Unknown environment: {env_name}')
 
-  return suite_gym.load(env_name, gym_kwargs=kwargs)
+  return suite_gym.load(env_name, gym_kwargs=kwargs,
+                        gym_env_wrappers=gym_env_wrappers,
+                        env_wrappers=env_wrappers)
 
 
 def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
@@ -78,11 +85,18 @@ def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
   return policy
 
 
-def load_policy_and_perform_rollouts(checkpoint_path: str, env_name: str,
-    policy_path: str,
-    num_episodes: int) -> Dict[str, Any]:
-  policy = load_policy(policy_path, checkpoint_path)
-  env = create_domain(env_name)
+def perform_rollouts(policy: TFPolicy, env: py_environment.PyEnvironment,
+    num_episodes: int) -> np.ndarray:
+  """Perform rollouts using the policy and environment.
+
+  Args:
+      policy: The policy to use.
+      env: The environment to use.
+      num_episodes: The number of episodes to perform.
+
+  Returns:
+      The returns for each episode.
+  """
 
   obs = env.reset()
   episode_returns = []
@@ -94,17 +108,28 @@ def load_policy_and_perform_rollouts(checkpoint_path: str, env_name: str,
       episode_return += obs.reward
     episode_returns.append(episode_return)
 
-  episode_returns = np.array(episode_returns)
+  return np.array(episode_returns)
 
-  return {
+
+def load_policy_and_perform_rollouts(checkpoint_path: str, env_name: str,
+    policy_path: str,
+    num_episodes: int) -> Dict[str, Any]:
+  policy = load_policy(policy_path, checkpoint_path)
+  env = create_domain(env_name)
+  episode_returns = perform_rollouts(policy, env, num_episodes)
+
+  eval_dict = {
       checkpoint_path: {
           'mean': np.mean(episode_returns),
           'std': np.std(episode_returns),
           'min': np.min(episode_returns),
           'max': np.max(episode_returns),
           'median': np.median(episode_returns),
+          'count': episode_returns.size,
       }
   }
+  logging.info(f'Evaluation for {checkpoint_path}: {eval_dict}')
+  return eval_dict
 
 
 def main(_):
@@ -120,11 +145,12 @@ def main(_):
   # Create a partial function that has all the fixed parameters set
   partial_func = functools.partial(
       load_policy_and_perform_rollouts,
-      env_name=_ENV_NAME.value, policy_path=saved_model_path,
+      env_name=_ENV_NAME.value,
+      policy_path=saved_model_path,
       num_episodes=_NUM_EVAL_EPISODES.value
   )
 
-  with multiprocessing.Pool() as pool:
+  with multiprocessing.Pool(_MAX_PARALLEL_ENVS.value) as pool:
     episode_returns = pool.map(
         partial_func, all_checkpoints_paths
     )

@@ -769,8 +769,8 @@ def main(_):
       skill_level = hparams['skill_level']
       domain = hparams['domain']
       mode = hparams['mode']
-      dataset_id = f'{domain[0].upper() + domain[1:]}-{task_name}-{skill_level}-v0'
-
+      env_name = ENV_NAMES[domain][:-3]
+      dataset_id = f'{env_name}-{task_name}-{skill_level}-v0'
       hparams.update(
           dict(
               num_iterations=_NUM_ITERATIONS.value,

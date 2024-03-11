@@ -1,100 +1,133 @@
-import collections
+import glob
 import json
+import os
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from absl import app
+from absl import flags
+from absl import logging
 from matplotlib import pyplot as plt
 
-NUM_POLICIES_PER_EXPERTISE_LEVEL = 50
-EVAL_POINTS_PER_WINDOW = 5
+_EXPERIMENT_IDS = flags.DEFINE_list(
+    'experiment_ids', [], 'List of experiment IDs to load the evaluation data.'
+)
+_ROOT_DIR = flags.DEFINE_string(
+    'root_dir',
+    None,
+    'Root directory to load the evaluation data.'
+)
+
+_AVERAGE_MEASURE = flags.DEFINE_enum(
+    'average_measure', 'median', ['mean', 'median'],
+    'Measure to use for averaging the episode rewards.'
+)
 
 
-def calculate_score_bounds_per_task(df, group_cols, reward_col):
-  bounds_per_task = {}
-
-  for group_keys, group in df.groupby(group_cols):
-    mean_reward = group[reward_col].mean()
-    std_reward = group[reward_col].std()
-
-    bounds_per_task[group_keys] = {
-        'novice': (-np.inf, mean_reward - (2 * std_reward)),
-        'intermediate': (mean_reward - std_reward, mean_reward + std_reward),
-        'expert': (mean_reward + (2 * std_reward), np.inf)
-    }
-
-  return bounds_per_task
-
-
-def assign_expertise_level(row, bounds):
+def assign_skill_level(row, col_name, bounds):
   """
-  Assign expertise level to a row based on episode_reward and predefined bounds.
+  Assign skill level to a row based on episode_reward and predefined bounds.
   """
-  task_key = (row['domain'], row['task'])  # Create the key tuple for the task
-  reward = row['episode_reward']
+  reward = row[col_name]
 
   # Check against the bounds and assign the level
-  if reward <= bounds[task_key]['novice'][1]:
+  if reward <= bounds['novice'][1]:
     return 'novice'
-  elif bounds[task_key]['novice'][1] < reward <= \
-      bounds[task_key]['intermediate'][1]:
+  elif bounds['intermediate'][0] <= reward <= bounds['intermediate'][1]:
     return 'intermediate'
-  elif reward > bounds[task_key]['intermediate'][1]:
+  elif reward >= bounds['expert'][0]:
     return 'expert'
+  else:
+    # If it is not in any bounds, we place a pd.NA and drop it later
+    return pd.NA
 
 
-def plot_expertise_levels():
-  for task, group in all_df.groupby('task'):
-    plt.figure(figsize=(10, 6))  # Set the figure size for better visibility
+def plot_skill_levels(data_df, col_name, save_path=None):
+  plt.figure(figsize=(10, 6))
 
-    # Plot histograms for each expertise level on the same axes
-    sns.histplot(data=group[group['expertise_level'] == 'novice'],
-                 x='episode_reward', color='blue', label='Novice', kde=True,
-                 stat="density", linewidth=0)
-    sns.histplot(data=group[group['expertise_level'] == 'intermediate'],
-                 x='episode_reward', color='orange', label='Intermediate',
-                 kde=True, stat="density", linewidth=0)
-    sns.histplot(data=group[group['expertise_level'] == 'expert'],
-                 x='episode_reward', color='green', label='Expert', kde=True,
-                 stat="density", linewidth=0)
+  sns.histplot(data=data_df,
+               x=col_name,
+               hue='skill_level',
+               kde=False,
+               stat='count',
+               linewidth=0)
 
-    plt.title(f'Episode Reward Distribution for Task: {task}')
-    plt.xlabel('Episode Reward')  # Label for the x-axis
-    plt.ylabel('Density')  # Label for the y-axis
-    plt.legend()  # Show the legend
-    plt.show()  # Display the plot
+  plt.title('Episode Reward Distribution by Skill Level')
+  plt.xlabel('Episode Reward')
+  plt.ylabel('Density')
+  plt.legend()
+  plt.show()
+
+  if save_path:
+    plt.savefig(save_path)
 
 
-def get_expertise_levels():
-  expertise_level_to_policy_paths = collections.defaultdict(dict)
+def load_evaluation_json_data(base_dir, experiment_ids):
+  json_file_paths = []
+  for exp_id in experiment_ids:
+    json_files = glob.glob(
+        os.path.join(base_dir, f'**/*{exp_id}*/**/evaluation.json'),
+        recursive=True)
+    json_file_paths.extend(json_files)
 
-  for domain, domain_group in dataset_df.groupby('domain'):
-    print(f'Processing domain: {domain}')
-    task_to_expertise_policy_paths = collections.defaultdict(
-        lambda: collections.defaultdict(list))
-    for task, task_group in domain_group.groupby('task'):
-      print(f'\tProcessing task: {task}')
-      for expertise_level, expertise_level_group in task_group.groupby(
-          'expertise_level'):
-        print(f'\t\tProcessing expertise_level: {expertise_level}')
-        chosen_policies = np.random.choice(
-            expertise_level_group['path'].values,
-            NUM_POLICIES_PER_EXPERTISE_LEVEL,
-            replace=False
-        )
-        task_to_expertise_policy_paths[task][
-          expertise_level] = chosen_policies.tolist()
-    expertise_level_to_policy_paths[domain] = task_to_expertise_policy_paths
+  json_files_paths = set(json_file_paths)
 
-  # Example of what the structure would look like
-  print(json.dumps(expertise_level_to_policy_paths, indent=2))
+  all_data = []
+  for file_path in json_files_paths:
+    with open(file_path, 'r') as f:
+      data = json.load(f)
+      data_df = pd.DataFrame.from_dict(data, orient='index').reset_index()
+      data_df = data_df.rename(columns={'index': 'checkpoint_path'})
+      all_data.append(data_df)
+  all_data = pd.concat(all_data, ignore_index=True)
+  return all_data
 
 
-def get_training_sample_cost():
-  # Merge with a tolerance of 4000 steps
-  dataset_df = pd.merge_asof(policy_path_df_sorted,
-                             all_df_sorted,
-                             on='step',
-                             by=['domain', 'task', 'algo', 'seed'],
-                             direction='nearest',
-                             tolerance=4000)
+def main(_):
+  evaluation_data_df = load_evaluation_json_data(base_dir=_ROOT_DIR.value,
+                                                 experiment_ids=_EXPERIMENT_IDS.value)
+
+  logging.info('Loaded evaluation data')
+
+  logging.info('Using average measure: %s', _AVERAGE_MEASURE.value)
+  average_average_return = evaluation_data_df[_AVERAGE_MEASURE.value].mean()
+  logging.info('Average average return: %s', average_average_return)
+
+  std_average_return = evaluation_data_df[_AVERAGE_MEASURE.value].std()
+  logging.info('Standard deviation of average return: %s', std_average_return)
+
+  novice_cutoff = (-np.inf, average_average_return - (2 * std_average_return))
+  intermediate_cutoff = (average_average_return - std_average_return,
+                         average_average_return + std_average_return)
+  expert_cutoff = (average_average_return + (2 * std_average_return), np.inf)
+
+  logging.info('Novice cutoff: %s', novice_cutoff)
+  logging.info('Intermediate cutoff: %s', intermediate_cutoff)
+  logging.info('Expert cutoff: %s', expert_cutoff)
+
+  # Add a column to the evaluation_data_df for the skill level
+  evaluation_data_df['skill_level'] = evaluation_data_df.apply(
+      assign_skill_level,
+      args=(_AVERAGE_MEASURE.value, {
+          'novice': novice_cutoff,
+          'intermediate': intermediate_cutoff,
+          'expert': expert_cutoff
+      },),
+      axis=1)
+
+  # Drop rows with pd.NA since they do not fall into any skill level
+  evaluation_data_df = evaluation_data_df.dropna(subset=['skill_level'])
+
+  plot_skill_levels(evaluation_data_df, _AVERAGE_MEASURE.value,
+                    save_path=os.path.join(_ROOT_DIR.value,
+                                           'skill_level_distribution.png'))
+
+  # Save the data with skill levels so we can load to generate datasets
+  evaluation_data_df.to_csv(
+      os.path.join(_ROOT_DIR.value, 'evaluation_data_with_skill_levels.csv'),
+      index=False)
+
+
+if __name__ == '__main__':
+  app.run(main)
