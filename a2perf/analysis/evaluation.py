@@ -7,23 +7,20 @@ from typing import Dict
 from typing import OrderedDict
 from typing import Union
 
-import numpy as np
-import tensorflow as tf
+from a2perf.domains import circuit_training
+from a2perf.domains import quadruped_locomotion
+from a2perf.domains import web_navigation
 from absl import app
 from absl import flags
 from absl import logging
+import numpy as np
+import numpy as np
+import tensorflow as tf
 from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.policies import policy_loader
 from tf_agents.policies.tf_policy import TFPolicy
 from tf_agents.trajectories import time_step as ts
-
-# noinspection PyUnresolvedReferences
-from a2perf.domains import circuit_training
-# noinspection PyUnresolvedReferences
-from a2perf.domains import quadruped_locomotion
-# noinspection PyUnresolvedReferences
-from a2perf.domains import web_navigation
 
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
@@ -69,18 +66,21 @@ def preprocess_observation(
       if time_step_spec and key in time_step_spec.observation.keys():
         spec = time_step_spec.observation[key]
         # Adjust dtype and shape according to the time_step_spec
-        processed_observation[key] = tf.convert_to_tensor(value,
-                                                          dtype=spec.dtype)
+        processed_observation[key] = tf.convert_to_tensor(
+            value, dtype=spec.dtype
+        )
       else:
         # Use the numpy dtype of the element that was passed in
-        processed_observation[key] = tf.convert_to_tensor(value,
-                                                          dtype=value.dtype)
+        processed_observation[key] = tf.convert_to_tensor(
+            value, dtype=value.dtype
+        )
     observation = processed_observation
   elif isinstance(observation, np.ndarray):
     if time_step_spec:
       shape = time_step_spec.observation.shape
-      observation = tf.convert_to_tensor(observation,
-                                         dtype=time_step_spec.observation.dtype)
+      observation = tf.convert_to_tensor(
+          observation, dtype=time_step_spec.observation.dtype
+      )
       observation.set_shape(shape)
     else:
       # Convert the ndarray directly, using its own dtype
@@ -90,12 +90,20 @@ def preprocess_observation(
 
   # Convert step_type, reward, and discount using their respective dtypes from time_step_spec
   # if it is provided, otherwise default to the dtype inferred from the input
-  step_type = tf.convert_to_tensor(step_type,
-                                   dtype=time_step_spec.step_type.dtype if time_step_spec else step_type.dtype)
-  reward = tf.convert_to_tensor(reward,
-                                dtype=time_step_spec.reward.dtype if time_step_spec else np.float32)
-  discount = tf.convert_to_tensor(discount,
-                                  dtype=time_step_spec.discount.dtype if time_step_spec else np.float32)
+  step_type = tf.convert_to_tensor(
+      step_type,
+      dtype=time_step_spec.step_type.dtype
+      if time_step_spec
+      else step_type.dtype,
+  )
+  reward = tf.convert_to_tensor(
+      reward,
+      dtype=time_step_spec.reward.dtype if time_step_spec else np.float32,
+  )
+  discount = tf.convert_to_tensor(
+      discount,
+      dtype=time_step_spec.discount.dtype if time_step_spec else np.float32,
+  )
 
   return ts.TimeStep(
       step_type=step_type,
@@ -105,7 +113,10 @@ def preprocess_observation(
   )
 
 
-def create_domain(env_name, gym_env_wrappers=(), env_wrappers=(),
+def create_domain(
+    env_name,
+    gym_env_wrappers=(),
+    env_wrappers=(),
 ) -> py_environment.PyEnvironment:
   if env_name == 'CircuitTraining-v0':
 
@@ -127,9 +138,12 @@ def create_domain(env_name, gym_env_wrappers=(), env_wrappers=(),
   else:
     raise ValueError(f'Unknown environment: {env_name}')
 
-  return suite_gym.load(env_name, gym_kwargs=kwargs,
-                        gym_env_wrappers=gym_env_wrappers,
-                        env_wrappers=env_wrappers)
+  return suite_gym.load(
+      env_name,
+      gym_kwargs=kwargs,
+      gym_env_wrappers=gym_env_wrappers,
+      env_wrappers=env_wrappers,
+  )
 
 
 def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
@@ -137,8 +151,8 @@ def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
 
   Args:
       saved_model_path: The path of a directory containing a full saved model.
-      checkpoint_path: The path to a directory that contains variable checkpoints
-        (as opposed to full saved models) for the policy.
+      checkpoint_path: The path to a directory that contains variable
+        checkpoints (as opposed to full saved models) for the policy.
 
   Returns:
       The loaded policy.
@@ -150,8 +164,9 @@ def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
   return policy
 
 
-def perform_rollouts(policy: TFPolicy, env: py_environment.PyEnvironment,
-    num_episodes: int) -> np.ndarray:
+def perform_rollouts(
+    policy: TFPolicy, env: py_environment.PyEnvironment, num_episodes: int
+) -> np.ndarray:
   """Perform rollouts using the policy and environment.
 
   Args:
@@ -168,8 +183,9 @@ def perform_rollouts(policy: TFPolicy, env: py_environment.PyEnvironment,
   for _ in range(num_episodes):
     episode_return = 0
     while not obs.is_last():
-      obs = preprocess_observation(observation=obs.observation,
-                                   time_step_spec=policy.time_step_spec)
+      obs = preprocess_observation(
+          observation=obs.observation, time_step_spec=policy.time_step_spec
+      )
       action = policy.action(obs)
       obs = env.step(action.action)
       episode_return += obs.reward
@@ -178,9 +194,9 @@ def perform_rollouts(policy: TFPolicy, env: py_environment.PyEnvironment,
   return np.array(episode_returns)
 
 
-def load_policy_and_perform_rollouts(checkpoint_path: str, env_name: str,
-    policy_path: str,
-    num_episodes: int) -> Dict[str, Any]:
+def load_policy_and_perform_rollouts(
+    checkpoint_path: str, env_name: str, policy_path: str, num_episodes: int
+) -> Dict[str, Any]:
   policy = load_policy(policy_path, checkpoint_path)
   env = create_domain(env_name)
   episode_returns = perform_rollouts(policy, env, num_episodes)
@@ -214,19 +230,20 @@ def main(_):
       load_policy_and_perform_rollouts,
       env_name=_ENV_NAME.value,
       policy_path=saved_model_path,
-      num_episodes=_NUM_EVAL_EPISODES.value
+      num_episodes=_NUM_EVAL_EPISODES.value,
   )
 
   with multiprocessing.Pool(_MAX_PARALLEL_ENVS.value) as pool:
-    episode_returns = pool.map(
-        partial_func, all_checkpoints_paths
-    )
+    episode_returns = pool.map(partial_func, all_checkpoints_paths)
+    pool.close()
+    pool.join()
 
   all_episode_returns = {k: v for d in episode_returns for k, v in d.items()}
 
   # Save as JSON
-  evaluation_save_path = os.path.join(_ROOT_DIR.value, 'policies',
-                                      'evaluation.json')
+  evaluation_save_path = os.path.join(
+      _ROOT_DIR.value, 'policies', 'evaluation.json'
+  )
   with open(evaluation_save_path, 'w') as f:
     json.dump(all_episode_returns, f, indent=2)
 
