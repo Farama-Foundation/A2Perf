@@ -164,9 +164,10 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
 )
 
 _MODE = flags.DEFINE_enum(
-    'mode', None,
+    'mode',
+    None,
     ['train', 'collect', 'reverb', 'inference', 'evaluate', 'generate'],
-    'Mode.'
+    'Mode.',
 )
 _TASK_NAME = flags.DEFINE_string('task_name', None, 'Name of the task.')
 
@@ -297,26 +298,36 @@ def main(_):
     raise ValueError(f'Invalid domain in entrypoint.py: {_DOMAIN.value}')
 
   if _JOB_TYPE.value == 'evaluate':
-    command = ['python', '-m', 'a2perf.analysis.evaluation',
-               f'--num_eval_episodes={_NUM_EVAL_EPISODES.value}',
-               f'--root_dir={root_dir}',
-               f'--env_name={_ENV_NAME.value}',
-               f'--max_parallel_envs={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
-               f'--verbosity={logging.get_verbosity()}']
+    command = [
+        'python',
+        '-m',
+        'a2perf.analysis.evaluation',
+        f'--num_eval_episodes={_NUM_EVAL_EPISODES.value}',
+        f'--root_dir={root_dir}',
+        f'--env_name={_ENV_NAME.value}',
+        f'--max_parallel_envs={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+        f'--verbosity={logging.get_verbosity()}',
+    ]
   elif _JOB_TYPE.value == 'generate':
-    command = ['python', '-m', 'a2perf.data.generate',
-               f'--env_name={_ENV_NAME.value}',
-               f'--root_dir={root_dir}',
-               f'--verbosity={logging.get_verbosity()}',
-               f'--num_episodes={_NUM_EVAL_EPISODES.value}',
-               f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
-               f'--skill_level={_SKILL_LEVEL.value}',
-               f'--dataset_id={_DATASET_ID.value}',
-               f'--seed={_SEED.value}',
-               f'--datasets_path={root_dir}', ]
+    command = [
+        'python',
+        '-m',
+        'a2perf.data.generate',
+        f'--env_name={_ENV_NAME.value}',
+        f'--root_dir={root_dir}',
+        f'--verbosity={logging.get_verbosity()}',
+        f'--num_episodes={_NUM_EVAL_EPISODES.value}',
+        f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+        f'--skill_level={_SKILL_LEVEL.value}',
+        f'--dataset_id={_DATASET_ID.value}',
+        f'--seed={_SEED.value}',
+        f'--datasets_path={root_dir}',
+    ]
   else:
     command = [
-        'python', '-m', 'a2perf.submission.main_submission',
+        'python',
+        '-m',
+        'a2perf.submission.main_submission',
         f'--mode={_MODE.value}',
         f'--gin_config={_GIN_CONFIG.value}',
         f'--participant_module_path={_PARTICIPANT_MODULE_PATH.value}',
