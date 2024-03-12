@@ -4,8 +4,11 @@ import multiprocessing
 import os
 from typing import Any
 from typing import Dict
+from typing import OrderedDict
+from typing import Union
 
 import numpy as np
+import tensorflow as tf
 from absl import app
 from absl import flags
 from absl import logging
@@ -13,6 +16,7 @@ from tf_agents.environments import py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.policies import policy_loader
 from tf_agents.policies.tf_policy import TFPolicy
+from tf_agents.trajectories import time_step as ts
 
 # noinspection PyUnresolvedReferences
 from a2perf.domains import circuit_training
@@ -38,6 +42,67 @@ _ROOT_DIR = flags.DEFINE_string(
 _ENV_NAME = flags.DEFINE_string(
     'env_name', 'CartPole-v0', 'The name of the environment to evaluate.'
 )
+
+
+def preprocess_observation(
+    observation: Union[np.ndarray, Any],
+    reward: float = 0.0,
+    discount: float = 1.0,
+    step_type: ts.StepType = ts.StepType.MID,
+    time_step_spec: ts.TimeStep = None,
+) -> ts.TimeStep:
+  """Preprocesses a raw observation from the Gym environment into a TF Agents TimeStep.
+
+  Args:
+      observation: Raw observation from the environment.
+      reward: The reward received after the last action.
+      discount: The discount factor.
+      step_type: The type of the current step.
+      time_step_spec: The spec of the time_step used to extract dtype and shape.
+
+  Returns:
+      A preprocessed TimeStep object suitable for the policy.
+  """
+  if isinstance(observation, (dict, OrderedDict)):
+    processed_observation = {}
+    for key, value in observation.items():
+      if time_step_spec and key in time_step_spec.observation.keys():
+        spec = time_step_spec.observation[key]
+        # Adjust dtype and shape according to the time_step_spec
+        processed_observation[key] = tf.convert_to_tensor(value,
+                                                          dtype=spec.dtype)
+      else:
+        # Use the numpy dtype of the element that was passed in
+        processed_observation[key] = tf.convert_to_tensor(value,
+                                                          dtype=value.dtype)
+    observation = processed_observation
+  elif isinstance(observation, np.ndarray):
+    if time_step_spec:
+      shape = time_step_spec.observation.shape
+      observation = tf.convert_to_tensor(observation,
+                                         dtype=time_step_spec.observation.dtype)
+      observation.set_shape(shape)
+    else:
+      # Convert the ndarray directly, using its own dtype
+      observation = tf.convert_to_tensor(observation, dtype=observation.dtype)
+  else:
+    raise ValueError(f'Unknown observation type: {type(observation)}')
+
+  # Convert step_type, reward, and discount using their respective dtypes from time_step_spec
+  # if it is provided, otherwise default to the dtype inferred from the input
+  step_type = tf.convert_to_tensor(step_type,
+                                   dtype=time_step_spec.step_type.dtype if time_step_spec else step_type.dtype)
+  reward = tf.convert_to_tensor(reward,
+                                dtype=time_step_spec.reward.dtype if time_step_spec else np.float32)
+  discount = tf.convert_to_tensor(discount,
+                                  dtype=time_step_spec.discount.dtype if time_step_spec else np.float32)
+
+  return ts.TimeStep(
+      step_type=step_type,
+      reward=reward,
+      discount=discount,
+      observation=observation,
+  )
 
 
 def create_domain(env_name, gym_env_wrappers=(), env_wrappers=(),
@@ -103,6 +168,8 @@ def perform_rollouts(policy: TFPolicy, env: py_environment.PyEnvironment,
   for _ in range(num_episodes):
     episode_return = 0
     while not obs.is_last():
+      obs = preprocess_observation(observation=obs.observation,
+                                   time_step_spec=policy.time_step_spec)
       action = policy.action(obs)
       obs = env.step(action.action)
       episode_return += obs.reward
