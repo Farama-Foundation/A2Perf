@@ -68,8 +68,8 @@ def create_domain(env_name) -> gym.Env:
     netlist_path = os.environ.get('NETLIST_PATH', None)
     init_placement_path = os.environ.get('INIT_PLACEMENT_PATH', None)
     kwargs = {
-        'netlist_path': netlist_path,
-        'init_placement_path': init_placement_path,
+        'netlist_file': netlist_path,
+        'init_placement': init_placement_path,
     }
   elif env_name == 'QuadrupedLocomotion-v0':
     motion_file_path = os.environ.get('MOTION_FILE_PATH', None)
