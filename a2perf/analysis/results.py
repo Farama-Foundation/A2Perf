@@ -11,8 +11,8 @@ OPTIMAL_METRIC_CRITERIA = dict(
     peak_ram_usage='min',
     ram_usage='min',
     wall_clock_time='min',
-    inference_time='min'
-    , gpu_power_usage='min'
+    inference_time='min',
+    gpu_power_usage='min',
 )
 
 METRIC_TO_DISPLAY_NAME = dict(
@@ -27,7 +27,7 @@ METRIC_TO_DISPLAY_NAME = dict(
     mean_ram_usage='Mean RAM Usage',
     wall_clock_time='Wall Clock Time',
     inference_time='Inference Time',
-    gpu_power_usage='GPU Power Usage'
+    gpu_power_usage='GPU Power Usage',
 )
 
 METRIC_TO_CATEGORY = dict(
@@ -42,7 +42,7 @@ METRIC_TO_CATEGORY = dict(
     mean_ram_usage='System',
     wall_clock_time='System',
     inference_time='System',
-    gpu_power_usage='System'
+    gpu_power_usage='System',
 )
 
 METRIC_TO_UNIT = dict(
@@ -57,8 +57,7 @@ METRIC_TO_UNIT = dict(
     mean_ram_usage='GB',
     wall_clock_time='Hours',
     inference_time='ms',
-    gpu_power_usage='W'
-
+    gpu_power_usage='W',
 )
 
 
@@ -74,15 +73,26 @@ def metrics_dict_to_pandas_df(metrics_dict):
       if isinstance(values, dict):
         mean = values['mean']
         std = values['std']
-        display_val = f"{mean:.2f} ± {std:.2f}"
+        display_val = f'{mean:.2f} ± {std:.2f}'
       else:
         value = values
-        display_val = f"{value:.2f}"
+        display_val = f'{value:.2f}'
       data_for_df.append(
-          (domain, task, algo, category, display_name, unit, display_val))
+          (domain, task, algo, category, display_name, unit, display_val)
+      )
 
-  df = pd.DataFrame(data_for_df, columns=['domain', 'task', 'algo', 'category',
-                                          'metric', 'unit', 'display_val'])
+  df = pd.DataFrame(
+      data_for_df,
+      columns=[
+          'domain',
+          'task',
+          'algo',
+          'category',
+          'metric',
+          'unit',
+          'display_val',
+      ],
+  )
   return df
 
 
@@ -95,19 +105,27 @@ def df_as_latex(df, mode):
 
   # Reindex and sort the DataFrame
   df = df.set_index(
-      ['domain', 'task', 'category', 'metric', 'algo']).sort_index()
+      ['domain', 'task', 'category', 'metric', 'algo']
+  ).sort_index()
 
   # Create a pivot table with 'category' and 'metric' as the row index, and 'algo' as the column index
-  df_pivot = df.pivot_table(index=['category', 'metric'],
-                            columns='algo',
-                            values='display_val', aggfunc='first')
+  df_pivot = df.pivot_table(
+      index=['category', 'metric'],
+      columns='algo',
+      values='display_val',
+      aggfunc='first',
+  )
 
   df_pivot = df_pivot.rename_axis(
-      index={'category': '\\textbf{Category}',
-             'metric': '\\textbf{Metric Name}'})
+      index={
+          'category': '\\textbf{Category}',
+          'metric': '\\textbf{Metric Name}',
+      }
+  )
 
-  df_pivot.columns = [f'\\textbf{{{algo.upper()}}}' for algo in
-                      df_pivot.columns]
+  df_pivot.columns = [
+      f'\\textbf{{{algo.upper()}}}' for algo in df_pivot.columns
+  ]
 
   # Determine the number of algorithms dynamically for column formatting
   column_format = '|l|l|' + 'c|' * len(df_pivot.columns)
@@ -123,7 +141,7 @@ def df_as_latex(df, mode):
       caption='Metrics for the application domain',
       na_rep='N/A',
       label='tab:metrics',
-      escape=False  # Allow LaTeX commands within cells
+      escape=False,  # Allow LaTeX commands within cells
   )
 
   return latex_table

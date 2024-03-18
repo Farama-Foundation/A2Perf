@@ -3,7 +3,6 @@ import logging
 
 import numpy as np
 import pandas as pd
-
 import scipy
 
 LEFT_TAIL_ALPHA = 0.05
@@ -59,14 +58,20 @@ def risk_across_rollouts(data_df, tag, index):
         cvar = np.mean(values[values <= bottom_alpha_percent])
         print(f'\t\t\tCVaR: {cvar}')
 
-        all_inference_metrics[(domain, algo, task,)][
-          'risk_across_rollouts'] = cvar
+        all_inference_metrics[(
+            domain,
+            algo,
+            task,
+        )]['risk_across_rollouts'] = cvar
 
         # Also get the dispersion across rollouts
         iqr = scipy.stats.iqr(values)
         print(f'\t\t\tIQR: {iqr}')
-        all_inference_metrics[(domain, algo, task,)][
-          'dispersion_across_rollouts'] = iqr
+        all_inference_metrics[(
+            domain,
+            algo,
+            task,
+        )]['dispersion_across_rollouts'] = iqr
 
 
 def lowpass_filter(curve, lowpass_thresh):
@@ -92,9 +97,9 @@ def dispersion_across_runs(data_df, tag, index):
   lowpass_value_col = f'{tag}_lowpass_Value'
 
   # Lowpass filter each curve
-  data_df[lowpass_value_col] = \
-    data_df.groupby(['domain', 'task', 'algo', 'experiment', 'seed'])[
-      value_col].transform(apply_lowpass)
+  data_df[lowpass_value_col] = data_df.groupby(
+      ['domain', 'task', 'algo', 'experiment', 'seed']
+  )[value_col].transform(apply_lowpass)
 
   # Group the curves by 'domain', 'algo', 'task', and 'step_col' to compute dispersion
   dispersion_groups = data_df.groupby(['domain', 'algo', 'task', step_col])
@@ -108,46 +113,67 @@ def dispersion_across_runs(data_df, tag, index):
     else:
       # Log a message about insufficient data
       logging.warning(
-          f'Insufficient data at step {group.name[-1]} for tag {tag}. Skipping dispersion calculation.')
+          f'Insufficient data at step {group.name[-1]} for tag {tag}. Skipping'
+          ' dispersion calculation.'
+      )
       return None  # or return some default value
 
-  dispersion_df = dispersion_groups[lowpass_value_col].apply(
-      compute_dispersion_if_enough_data).reset_index()
+  dispersion_df = (
+      dispersion_groups[lowpass_value_col]
+      .apply(compute_dispersion_if_enough_data)
+      .reset_index()
+  )
 
   # Drop rows where '{tag}_lowpass_Value' column has NaN values
   lowpass_value_col = f'{tag}_lowpass_Value'
   dispersion_df = dispersion_df.dropna(subset=[lowpass_value_col])
 
   # Renaming the column for clarity
-  dispersion_df.rename(columns={lowpass_value_col: 'iqr_dispersion'},
-                       inplace=True)
+  dispersion_df.rename(
+      columns={lowpass_value_col: 'iqr_dispersion'}, inplace=True
+  )
 
   metrics = {}
   for (domain, algo, task), group in dispersion_df.groupby(
-      ['domain', 'algo', 'task']):
+      ['domain', 'algo', 'task']
+  ):
     mean_iqr = group['iqr_dispersion'].mean()
     std_iqr = group['iqr_dispersion'].std()
-    metrics[(domain, algo, task,)] = dict(mean=mean_iqr, std=std_iqr)
+    metrics[(
+        domain,
+        algo,
+        task,
+    )] = dict(mean=mean_iqr, std=std_iqr)
     logging.info(
-        f'Domain: {domain}, Task: {task}, Algo: {algo}, Mean IQR: {mean_iqr}, Std IQR: {std_iqr}')
+        f'Domain: {domain}, Task: {task}, Algo: {algo}, Mean IQR: {mean_iqr},'
+        f' Std IQR: {std_iqr}'
+    )
 
   return metrics
 
 
-def compute_eval_points_within_runs(data_df, tag, index,
-    eval_points_per_window=5):
+def compute_eval_points_within_runs(
+    data_df, tag, index, eval_points_per_window=5
+):
   experiment_meta_data = {}
   for (domain, task, algo, experiment, seed), group in data_df.groupby(
-      ['domain', 'task', 'algo', 'experiment', 'seed']):
+      ['domain', 'task', 'algo', 'experiment', 'seed']
+  ):
     df = group.sort_values(by=f'{tag}_{index}').copy()
     median_step_diff = df[f'{tag}_{index}'].diff().median()
     window_size = int(eval_points_per_window * median_step_diff)
     eval_points = list(
-        range(np.ceil(window_size / 2).astype(int), max(df[f'{tag}_{index}']),
-              int(median_step_diff)))
+        range(
+            np.ceil(window_size / 2).astype(int),
+            max(df[f'{tag}_{index}']),
+            int(median_step_diff),
+        )
+    )
 
     logging.info(
-        f'Domain: {domain}, Algo: {algo}, Experiment: {experiment}, Task: {task}, Seed: {seed}')
+        f'Domain: {domain}, Algo: {algo}, Experiment: {experiment}, Task:'
+        f' {task}, Seed: {seed}'
+    )
     logging.info(f'\tMedian step difference: {median_step_diff}')
     logging.info(f'\tWindow size: {window_size}')
     logging.info(f'\tNum eval points: {len(eval_points)}')
@@ -155,57 +181,72 @@ def compute_eval_points_within_runs(data_df, tag, index,
     experiment_meta_data[(domain, task, algo, experiment, seed)] = {
         'eval_points': eval_points,
         'window_size': window_size,
-        'median_step_diff': median_step_diff
+        'median_step_diff': median_step_diff,
     }
 
   return experiment_meta_data
 
 
-def dispersion_within_runs(data_df, tag, index, experiment_meta_data,
-    dispersion_window_fn=scipy.stats.iqr):
+def dispersion_within_runs(
+    data_df,
+    tag,
+    index,
+    experiment_meta_data,
+    dispersion_window_fn=scipy.stats.iqr,
+):
   metrics = {}
   for (domain, task, algo), group in data_df.groupby(
-      ['domain', 'task', 'algo']):
+      ['domain', 'task', 'algo']
+  ):
     print(f'Processing Domain: {domain}, Task: {task}, Algo: {algo}')
     all_iqr_values = []
     for exp_id, exp_group in group.groupby('experiment'):
       for seed, seed_group in exp_group.groupby('seed'):
-        seed_group[f'{tag}_Value_diff'] = seed_group[
-          f'{tag}_Value'].diff()
+        seed_group[f'{tag}_Value_diff'] = seed_group[f'{tag}_Value'].diff()
         seed_group = seed_group[[f'{tag}_{index}', f'{tag}_Value_diff']].copy()
         seed_group = seed_group.dropna()
         steps, episode_reward_diff = seed_group.to_numpy().T
 
-        window_size = \
-          experiment_meta_data[(domain, task, algo, exp_id, seed)][
-            'window_size']
-        for eval_point in \
-            experiment_meta_data[(domain, task, algo, exp_id, seed)][
-              'eval_points']:
+        window_size = experiment_meta_data[(domain, task, algo, exp_id, seed)][
+            'window_size'
+        ]
+        for eval_point in experiment_meta_data[
+            (domain, task, algo, exp_id, seed)
+        ]['eval_points']:
           low_end = np.ceil(eval_point - (window_size / 2))
           high_end = np.floor(eval_point + (window_size / 2))
 
           eval_points_above = steps >= low_end
           eval_points_below = steps <= high_end
-          eval_points_in_window = np.logical_and(eval_points_above,
-                                                 eval_points_below)
+          eval_points_in_window = np.logical_and(
+              eval_points_above, eval_points_below
+          )
           valid_eval_points = np.nonzero(eval_points_in_window)[0]
 
           if len(valid_eval_points) == 0:
             logging.warning(
-                f'No valid eval points for domain: {domain}, task: {task}, algo: {algo}, exp_id: {exp_id}, seed: {seed}, eval_point: {eval_point}')
+                f'No valid eval points for domain: {domain}, task: {task},'
+                f' algo: {algo}, exp_id: {exp_id}, seed: {seed}, eval_point:'
+                f' {eval_point}'
+            )
             break
 
           # Apply window_fn to get the IQR for the current window
           window_dispersion = dispersion_window_fn(
-              episode_reward_diff[valid_eval_points])
+              episode_reward_diff[valid_eval_points]
+          )
           all_iqr_values.append(window_dispersion)
     mean_iqr = np.mean(all_iqr_values)
     std_iqr = np.std(all_iqr_values)
-    metrics[(domain, algo, task,)] = dict(
-        mean=mean_iqr, std=std_iqr)
+    metrics[(
+        domain,
+        algo,
+        task,
+    )] = dict(mean=mean_iqr, std=std_iqr)
     print(
-        f'Domain: {domain}, Task: {task}, Algo: {algo}, Mean IQR: {mean_iqr}, Std IQR: {std_iqr}')
+        f'Domain: {domain}, Task: {task}, Algo: {algo}, Mean IQR: {mean_iqr},'
+        f' Std IQR: {std_iqr}'
+    )
 
   return metrics
 
@@ -213,7 +254,8 @@ def dispersion_within_runs(data_df, tag, index, experiment_meta_data,
 def short_term_risk(data_df, tag, index):
   metrics = {}
   for (domain, task, algo), group in data_df.groupby(
-      ['domain', 'task', 'algo']):
+      ['domain', 'task', 'algo']
+  ):
     logging.info(f'Processing Domain: {domain}, Task: {task}, Algo: {algo}')
     all_diffs = []
     for exp_id, exp_group in group.groupby('experiment'):
@@ -225,35 +267,39 @@ def short_term_risk(data_df, tag, index):
         episode_reward_diffs = seed_df[f'{tag}_Value_diff'].values
         all_diffs.extend(episode_reward_diffs)
 
-    risk = np.percentile(all_diffs, LEFT_TAIL_ALPHA * 100,
-                         method='linear')
+    risk = np.percentile(all_diffs, LEFT_TAIL_ALPHA * 100, method='linear')
 
     # CVaR is the average of the bottom "alpha" percent of diffs
     all_diffs = np.array(all_diffs)
-    cvar = np.mean(
-        all_diffs[all_diffs <= risk])
+    cvar = np.mean(all_diffs[all_diffs <= risk])
     cvar = -cvar  # make it positive for easier interpretation
     logging.info(f'\t\t\tCVaR: {cvar}')
-    metrics[(domain, algo, task,)] = cvar
+    metrics[(
+        domain,
+        algo,
+        task,
+    )] = cvar
   return metrics
 
 
 def long_term_risk(data_df, tag, index):
-  """
-  Calculate the Conditional Value at Risk (CVaR) for different experimental groups.
+  """Calculate the Conditional Value at Risk (CVaR) for different experimental groups.
 
   Args:
+
   data_df (DataFrame): The dataset containing the experimental results.
   tag (str): The tag used to identify the relevant columns in data_df.
   index (str): The index used to sort the data within each group.
 
   Returns:
-  dict: A dictionary containing the CVaR for each (domain, algorithm, task) combination.
+  dict: A dictionary containing the CVaR for each (domain, algorithm, task)
+  combination.
   """
 
   metrics = {}
   for (domain, task, algo), group in data_df.groupby(
-      ['domain', 'task', 'algo']):
+      ['domain', 'task', 'algo']
+  ):
     logging.info(f'Processing Domain: {domain}, Task: {task}, Algo: {algo}')
     all_drawdowns = []
 
@@ -261,7 +307,7 @@ def long_term_risk(data_df, tag, index):
       for seed, seed_group in exp_group.groupby('seed'):
         # Ensure the correct column exists
         if f'{tag}_{index}' not in seed_group.columns:
-          logging.warning(f"Column {tag}_{index} not found in data.")
+          logging.warning(f'Column {tag}_{index} not found in data.')
           continue
 
         # Sort the seed group by the index
@@ -283,16 +329,18 @@ def long_term_risk(data_df, tag, index):
       metrics[(domain, algo, task)] = cvar
     else:
       logging.warning(
-          f"No drawdown data available for Domain: {domain}, Task: {task}, Algo: {algo}")
+          f'No drawdown data available for Domain: {domain}, Task: {task},'
+          f' Algo: {algo}'
+      )
 
   return metrics
 
 
 def risk_across_runs(data_df, tag, alpha=0.05):
-  """
-  Calculate the Conditional Value at Risk (CVaR) for the final values across different runs.
+  """Calculate the Conditional Value at Risk (CVaR) for the final values across different runs.
 
   Args:
+
   data_df (DataFrame): The dataset containing the experimental results.
   tag (str): The tag used to identify the relevant value columns in data_df.
   index (str): The index used to sort the data within each group.
@@ -306,13 +354,18 @@ def risk_across_runs(data_df, tag, alpha=0.05):
 
   # Extract the final values for each group
   final_values_col = f'{tag}_Value'
-  final_tag_values = \
-    data_df.groupby(['domain', 'task', 'algo', 'experiment', 'seed'])[
-      final_values_col].last().reset_index()
+  final_tag_values = (
+      data_df.groupby(['domain', 'task', 'algo', 'experiment', 'seed'])[
+          final_values_col
+      ]
+      .last()
+      .reset_index()
+  )
 
   # Grouping all experiments and seeds within a specific domain/task/algo
   for (domain, task, algo), group in final_tag_values.groupby(
-      ['domain', 'task', 'algo']):
+      ['domain', 'task', 'algo']
+  ):
     # Get the bottom "alpha" percentile of final values
     values = group[final_values_col].values
     bottom_alpha_percent = np.percentile(values, alpha * 100, method='linear')
@@ -330,24 +383,29 @@ def risk_across_runs(data_df, tag, alpha=0.05):
 
 def get_training_metrics(data_df, tag, index):
   dispersion_across_runs_result = dispersion_across_runs(data_df, tag, index)
-  experiment_meta_data = compute_eval_points_within_runs(data_df=data_df,
-                                                         tag=tag, index=index)
-  dispersion_within_runs_result = dispersion_within_runs(data_df=data_df,
-                                                         tag=tag, index=index,
-                                                         experiment_meta_data=experiment_meta_data)
-  short_term_risk_result = short_term_risk(data_df=data_df, tag=tag,
-                                           index=index)
-  long_term_risk_result = long_term_risk(data_df=data_df, tag=tag,
-                                         index=index)
-  risk_across_runs_result = risk_across_runs(data_df=data_df, tag=tag,
-                                             alpha=LEFT_TAIL_ALPHA)
+  experiment_meta_data = compute_eval_points_within_runs(
+      data_df=data_df, tag=tag, index=index
+  )
+  dispersion_within_runs_result = dispersion_within_runs(
+      data_df=data_df,
+      tag=tag,
+      index=index,
+      experiment_meta_data=experiment_meta_data,
+  )
+  short_term_risk_result = short_term_risk(
+      data_df=data_df, tag=tag, index=index
+  )
+  long_term_risk_result = long_term_risk(data_df=data_df, tag=tag, index=index)
+  risk_across_runs_result = risk_across_runs(
+      data_df=data_df, tag=tag, alpha=LEFT_TAIL_ALPHA
+  )
 
   return {
       'dispersion_across_runs': dispersion_across_runs_result,
       'dispersion_within_runs': dispersion_within_runs_result,
       'short_term_risk': short_term_risk_result,
       'long_term_risk': long_term_risk_result,
-      'risk_across_runs': risk_across_runs_result
+      'risk_across_runs': risk_across_runs_result,
   }
 
 

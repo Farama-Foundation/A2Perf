@@ -13,13 +13,15 @@ def get_inference_time():
   pass
 
 
-def get_distributed_experiment_metric(data_df, metric,
-    tolerance=pd.Timedelta('10sec'), dtype=float):
+def get_distributed_experiment_metric(
+    data_df, metric, tolerance=pd.Timedelta('10sec'), dtype=float
+):
   data_df['timestamp'] = pd.to_datetime(data_df['timestamp'])
 
   aggregated_df = pd.DataFrame()
   for _, group in data_df.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed']):
+      ['domain', 'algo', 'task', 'experiment', 'seed']
+  ):
     group = group.sort_values('timestamp')
 
     merged_group = None
@@ -27,33 +29,47 @@ def get_distributed_experiment_metric(data_df, metric,
 
     for i, run_id in enumerate(run_ids):
       run_group = group[group['run_id'] == run_id].rename(
-          columns={metric: f'{metric}_{run_id}'})
+          columns={metric: f'{metric}_{run_id}'}
+      )
       run_group[f'{metric}_{run_id}'] = run_group[f'{metric}_{run_id}'].astype(
-          dtype)
+          dtype
+      )
       if merged_group is None:
         merged_group = run_group
       else:
-        merged_group = pd.merge_asof(merged_group, run_group, on='timestamp',
-                                     suffixes=('', f'_{run_id}'),
-                                     tolerance=tolerance)
+        merged_group = pd.merge_asof(
+            merged_group,
+            run_group,
+            on='timestamp',
+            suffixes=('', f'_{run_id}'),
+            tolerance=tolerance,
+        )
 
         # Check for NaN values in the 'ram_process' columns of all merged run_ids so far.
         # This ensures we know how much RAM the experiment is using overall.
-        na_check_columns = [f'{metric}_{rid}' for rid in run_ids[:i + 1]]
+        na_check_columns = [f'{metric}_{rid}' for rid in run_ids[: i + 1]]
         merged_group = merged_group.dropna(subset=na_check_columns)
 
     # After everything is merged, we can group by 'domain', 'algo', 'task',
     # 'experiment', 'seed' and aggregate all ram_process columns
-    metric_columns = [col for col in merged_group if
-                      col.startswith(f'{metric}_')]
-    merged_group[f'experiment_{metric}'] = merged_group[
-      metric_columns].sum(
-        axis=1)
+    metric_columns = [
+        col for col in merged_group if col.startswith(f'{metric}_')
+    ]
+    merged_group[f'experiment_{metric}'] = merged_group[metric_columns].sum(
+        axis=1
+    )
 
     # Append the merged group to the aggregated DataFrame
     aggregated_df = pd.concat([aggregated_df, merged_group])
-  final_columns = ['domain', 'algo', 'task', 'experiment', 'seed', 'run_id',
-                   f'experiment_{metric}']
+  final_columns = [
+      'domain',
+      'algo',
+      'task',
+      'experiment',
+      'seed',
+      'run_id',
+      f'experiment_{metric}',
+  ]
   return aggregated_df[final_columns]
 
 
@@ -63,29 +79,29 @@ def get_metric(data_df, metric, tolerance=pd.Timedelta('10sec')):
 
   metrics = {}
   for (domain, algo, task), group in metric_df.groupby(
-      ['domain', 'algo', 'task']):
+      ['domain', 'algo', 'task']
+  ):
     mean_metric = group[experiment_metric_col_name].mean()
     std_metric = group[experiment_metric_col_name].std()
-    metrics[(domain, algo, task)] = {
-        'mean': mean_metric,
-        'std': std_metric
-    }
+    metrics[(domain, algo, task)] = {'mean': mean_metric, 'std': std_metric}
   return metrics
 
 
 def get_mean_ram_usage(data_df, tolerance=pd.Timedelta('10sec')):
-  ram_usage_df = get_distributed_experiment_metric(data_df, 'ram_process',
-                                                   tolerance=tolerance)
+  ram_usage_df = get_distributed_experiment_metric(
+      data_df, 'ram_process', tolerance=tolerance
+  )
   metrics = {}
 
   for (domain, algo, task), group in ram_usage_df.groupby(
-      ['domain', 'algo', 'task']):
+      ['domain', 'algo', 'task']
+  ):
     mean_ram_usage = group['experiment_ram_process'].mean()
     std_ram_usage = group['experiment_ram_process'].std()
 
     metrics[(domain, algo, task)] = {
         'mean': mean_ram_usage,
-        'std': std_ram_usage
+        'std': std_ram_usage,
     }
 
   return metrics
@@ -95,32 +111,32 @@ def get_gpu_power_usage(data_df):
   gpu_power_usage_df = get_distributed_experiment_metric(data_df, 'gpu_power')
   metrics = {}
   for (domain, algo, task), group in gpu_power_usage_df.groupby(
-      ['domain', 'algo', 'task']):
+      ['domain', 'algo', 'task']
+  ):
     mean_gpu_power_usage = group['experiment_gpu_power'].mean()
     std_gpu_power_usage = group['experiment_gpu_power'].std()
 
     metrics[(domain, algo, task)] = {
         'mean': mean_gpu_power_usage,
-        'std': std_gpu_power_usage
+        'std': std_gpu_power_usage,
     }
 
   return metrics
 
 
 def get_peak_ram_usage(data_df, tolerance=pd.Timedelta('10sec')):
-  ram_usage_df = get_distributed_experiment_metric(data_df, 'ram_process',
-                                                   tolerance=tolerance)
+  ram_usage_df = get_distributed_experiment_metric(
+      data_df, 'ram_process', tolerance=tolerance
+  )
   # Find the max ram usage for each experiment
   peak_ram_usage = ram_usage_df.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed'])[
-    'experiment_ram_process'].max()
+      ['domain', 'algo', 'task', 'experiment', 'seed']
+  )['experiment_ram_process'].max()
   metrics = {}
   for (domain, algo, task), group in peak_ram_usage.groupby(
-      ['domain', 'algo', 'task']):
-    metrics[(domain, algo, task)] = {
-        'mean': group.mean(),
-        'std': group.std()
-    }
+      ['domain', 'algo', 'task']
+  ):
+    metrics[(domain, algo, task)] = {'mean': group.mean(), 'std': group.std()}
 
   return metrics
 
@@ -137,13 +153,16 @@ def get_wall_clock_time(data_df):
 
   # Find the earliest shared and latest shared timestamps for each experiment
   earliest_shared_timestamp = earliest_timestamp.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed']).max()
+      ['domain', 'algo', 'task', 'experiment', 'seed']
+  ).max()
   latest_shared_timestamp = latest_timestamp.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed']).min()
+      ['domain', 'algo', 'task', 'experiment', 'seed']
+  ).min()
 
   # Compute wall clock time in seconds
   wall_clock_time = (
-      latest_shared_timestamp - earliest_shared_timestamp).dt.total_seconds()
+      latest_shared_timestamp - earliest_shared_timestamp
+  ).dt.total_seconds()
 
   # Group by 'domain', 'algo', 'task' and calculate mean and std of wall clock time
   metrics = {}
@@ -151,7 +170,7 @@ def get_wall_clock_time(data_df):
   for (domain, algo, task), group_data in grouped_wall_clock:
     metrics[(domain, algo, task)] = {
         'mean': group_data.mean(),
-        'std': group_data.std()
+        'std': group_data.std(),
     }
 
   return metrics
@@ -175,7 +194,7 @@ def get_power_usage(data_df):
   return {
       'ram_power_usage': ram_power_usage,
       'gpu_power_usage': gpu_power_usage,
-      'cpu_power_usage': cpu_power_usage
+      'cpu_power_usage': cpu_power_usage,
   }
 
 
@@ -189,5 +208,5 @@ def get_training_metrics(data_df):
       'mean_ram_usage': mean_ram_usage,
       'peak_ram_usage': peak_ram_usage,
       'wall_clock_time': wall_clock_time,
-      **power_usage
+      **power_usage,
   }

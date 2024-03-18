@@ -10,6 +10,11 @@ from termcolor import colored
 _EXPERIMENT_ID = flags.DEFINE_string(
     'experiment_id', None, 'Experiment ID for web navigation.'
 )
+_EXPERIMENT_IDS = flags.DEFINE_list(
+    'experiment_ids',
+    None,
+    'List of experiment ids to use for generating datasets.',
+)
 _NUM_ITERATIONS = flags.DEFINE_integer(
     'num_iterations', None, 'Number of iterations for training.'
 )
@@ -256,7 +261,20 @@ def main(_):
     # the policies into intermediate, novice, and expert.
     root_dir = _ROOT_DIR.value
   elif _JOB_TYPE.value == 'generate':
-    root_dir = _ROOT_DIR.value
+    # For dataset generation, we want the root dir to be at
+    # the domain level, so we can load the expertise data
+    # os.path.join(
+    #       a2perf,
+    #         _DOMAIN.value,
+    #         str(exp_id),
+    #         task_name,
+    #         algo,
+    #         exp_name
+    #         work_unit_id,
+    #     )
+    # so the root dir should be at the domain level
+    root_dir = os.path.join(_ROOT_DIR.value, *(['..'] * 5))
+    root_dir = os.path.abspath(root_dir)
   else:
     raise ValueError(f'Invalid job type: {_JOB_TYPE.value}')
 
@@ -309,20 +327,56 @@ def main(_):
         f'--verbosity={logging.get_verbosity()}',
     ]
   elif _JOB_TYPE.value == 'generate':
-    command = [
+    # Before generating datasets, we must use the evaluation data to classify
+    # the policies into novice, intermediate, and expert. We can then use these
+    # classifications to generate datasets.
+
+    skill_level_command = [
         'python',
         '-m',
-        'a2perf.data.generate',
-        f'--env_name={_ENV_NAME.value}',
+        'a2perf.analysis.expertise',
         f'--root_dir={root_dir}',
         f'--verbosity={logging.get_verbosity()}',
-        f'--num_episodes={_NUM_EVAL_EPISODES.value}',
-        f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
-        f'--skill_level={_SKILL_LEVEL.value}',
-        f'--dataset_id={_DATASET_ID.value}',
-        f'--seed={_SEED.value}',
-        f'--datasets_path={root_dir}',
+        '--average_measure=mean',
+        f'--experiment_ids={",".join(_EXPERIMENT_IDS.value)}',
     ]
+
+    print(skill_level_command)
+    skill_level_process = subprocess.Popen(
+        skill_level_command, env=os.environ.copy(), text=True
+    )
+    skill_level_process.wait()
+    if skill_level_process.returncode != 0:
+      raise ValueError(f'Error running the command: {skill_level_command}')
+    else:
+      print('Finished running the command successfully.')
+
+    skill_levels = ['novice', 'intermediate', 'expert']
+    generate_commands = [
+        [
+            'python',
+            '-m',
+            'a2perf.data.generate',
+            f'--env_name={_ENV_NAME.value}',
+            f'--root_dir={root_dir}',
+            f'--verbosity={logging.get_verbosity()}',
+            f'--num_episodes={_NUM_EVAL_EPISODES.value}',
+            f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+            f'--skill_level={skill_level}',
+            f'--task_name={_TASK_NAME.value}',
+            f'--seed={_SEED.value}',
+            f'--datasets_path={root_dir}',
+        ]
+        for skill_level in skill_levels
+    ]
+
+    print(generate_commands)
+    for generate_command in generate_commands:
+      subprocess.run(
+          generate_command, env=os.environ.copy(), text=True, check=True
+      )
+
+    return
   else:
     command = [
         'python',
@@ -347,8 +401,6 @@ def main(_):
     raise ValueError(f'Error running the command: {command}')
   else:
     print('Finished running the command successfully.')
-
-  del figlet_obj
 
 
 if __name__ == '__main__':

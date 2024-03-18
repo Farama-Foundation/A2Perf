@@ -4,27 +4,29 @@ import glob
 import os
 import re
 
+from a2perf import analysis
+from absl import app
+from absl import flags
+from absl import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
-from absl import app
-from absl import flags
-from absl import logging
-
-from a2perf import analysis
 
 _SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
-_BASE_DIR = flags.DEFINE_string('base_dir',
-                                '/home/ikechukwuu/workspace/rl-perf/logs',
-                                'Base directory for logs.')
-_EXPERIMENT_IDS = flags.DEFINE_list('experiment_ids', [94408569],
-                                    'Experiment IDs to process.')
+_BASE_DIR = flags.DEFINE_string(
+    'base_dir',
+    '/home/ikechukwuu/workspace/rl-perf/logs',
+    'Base directory for logs.',
+)
+_EXPERIMENT_IDS = flags.DEFINE_list(
+    'experiment_ids', [94408569], 'Experiment IDs to process.'
+)
 
 
 def _initialize_plotting():
-  sns.set_style("whitegrid")
+  sns.set_style('whitegrid')
   plt.rcParams['figure.figsize'] = (12, 6)
   plt.rcParams['font.size'] = 14
   plt.rcParams['axes.labelsize'] = 14
@@ -64,14 +66,15 @@ def load_tb_data(log_file, tags=None):
             data_value = tensor.item()
           else:
             raise ValueError(
-                f'Value type not recognized for tag {value.tag}. '
-                f'Expected simple_value or tensor, got {value.WhichOneof("value")}'
+                f'Value type not recognized for tag {value.tag}. Expected'
+                f' simple_value or tensor, got {value.WhichOneof("value")}'
             )
 
           data[f'{value.tag}_Step'].append(event.step)
           data[f'{value.tag}_Value'].append(data_value)
           data[f'{value.tag}_Timestamp'].append(
-              pd.to_datetime(event.wall_time, unit='s'))
+              pd.to_datetime(event.wall_time, unit='s')
+          )
 
   if all(len(data[f'{tag}_Step']) == 0 for tag in tags):
     return pd.DataFrame()  # Return an empty DataFrame if no data
@@ -91,22 +94,24 @@ def process_tb_event_dir(event_file_path, tags=None):
   else:
     indices = [-4, -5, -6, -7, -8]
 
-  details_segment, algo, task, experiment_number, domain = [exp_split[i] for i
-                                                            in indices]
+  details_segment, algo, task, experiment_number, domain = [
+      exp_split[i] for i in indices
+  ]
   seed = int(re.search(r'seed_(\d+)', details_segment).group(1))
   skill_level = re.search(r'skill_level_(\w+)', details_segment).group(1)
 
   logging.info(f'Processing log dir: {event_file_path}')
   logging.info(
-      f'\tDomain: {domain}, Task: {task}, Algo: {algo}, Experiment Number: {experiment_number}, Seed: {seed}, Skill Level: {skill_level}')
+      f'\tDomain: {domain}, Task: {task}, Algo: {algo}, Experiment Number:'
+      f' {experiment_number}, Seed: {seed}, Skill Level: {skill_level}'
+  )
   data_csv_path = os.path.join(log_base_dir, 'data.csv')
 
   if 1 == 0 and os.path.exists(data_csv_path):
     data = pd.read_csv(data_csv_path)
     logging.info(f'Loaded data from {data_csv_path}')
   else:
-    data = load_tb_data(
-        event_file_path, tags)
+    data = load_tb_data(event_file_path, tags)
     if data.empty:
       logging.warning(f'No data found in {event_file_path}')
       return None
@@ -158,21 +163,23 @@ def process_codecarbon_csv(csv_file_path):
   #
   # Print corrupt rows
   if not corrupt_rows.empty:
-    logging.warning("Corrupt rows due to invalid timestamps:")
+    logging.warning('Corrupt rows due to invalid timestamps:')
     logging.warning(corrupt_rows)
 
   # Remove rows with corrupt timestamps
   df = df.dropna(subset=['timestamp'])
   df['timestamp'] = df['timestamp'].apply(
-      lambda x: x.replace(tzinfo=None) if x.tzinfo else x)
+      lambda x: x.replace(tzinfo=None) if x.tzinfo else x
+  )
 
   # Sort by timestamp
   df = df.sort_values(by='timestamp')
   return df
 
 
-def plot_training_reward_data(metrics_df,
-    event_file_tags=('Metrics/AverageReturn',)):
+def plot_training_reward_data(
+    metrics_df, event_file_tags=('Metrics/AverageReturn',)
+):
   # Plot each event_file_tag once using "Step" as the x-axis
   # then "duration" as the x-axis
   for tag in event_file_tags:
@@ -180,20 +187,31 @@ def plot_training_reward_data(metrics_df,
     plot_df = metrics_df.groupby(['domain', 'task', 'algo'])
 
     for (domain, task, algo), group in plot_df:
-      fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(
-          15, 5))  # Create subplots: one row, two columns
+      fig, (ax1, ax2) = plt.subplots(
+          1, 2, figsize=(15, 5)
+      )  # Create subplots: one row, two columns
 
       # Plot using 'Step' as x-axis
-      sns.lineplot(ax=ax1, x=(tag, 'Step'), y=(tag, 'Value'), data=group,
-                   label=f'{domain}/{task}/{algo}')
+      sns.lineplot(
+          ax=ax1,
+          x=(tag, 'Step'),
+          y=(tag, 'Value'),
+          data=group,
+          label=f'{domain}/{task}/{algo}',
+      )
       ax1.set_xlabel('Step')
       ax1.set_ylabel(tag)
       ax1.set_title(f'Step-wise Plot for {domain}/{task}/{algo}')
       ax1.legend()
 
       # Plot using 'Timestamp' as x-axis
-      sns.lineplot(ax=ax2, x=(tag, 'Duration'), y=(tag, 'Value'), data=group,
-                   label=f'{domain}/{task}/{algo}')
+      sns.lineplot(
+          ax=ax2,
+          x=(tag, 'Duration'),
+          y=(tag, 'Value'),
+          data=group,
+          label=f'{domain}/{task}/{algo}',
+      )
       ax2.set_xlabel('Duration')
       ax2.set_ylabel(tag)
       ax2.set_title(f'Duration-wise Plot for {domain}/{task}/{algo}')
@@ -203,21 +221,25 @@ def plot_training_reward_data(metrics_df,
       plt.show()
 
 
-def load_training_reward_data(base_dir, experiment_ids,
-    event_file_tags=('Metrics/AverageReturn',)):
+def load_training_reward_data(
+    base_dir, experiment_ids, event_file_tags=('Metrics/AverageReturn',)
+):
   event_log_dirs = []
   for exp_id in experiment_ids:
     logs = glob.glob(
-        os.path.join(base_dir,
-                     f'**/*{exp_id}*/**/collect/**/*events.out.tfevents*'),
-        recursive=True)
+        os.path.join(
+            base_dir, f'**/*{exp_id}*/**/collect/**/*events.out.tfevents*'
+        ),
+        recursive=True,
+    )
     event_log_dirs.extend(logs)
 
   event_log_dirs = set(event_log_dirs)
   logging.info(f'Found {len(event_log_dirs)} event log dirs')
 
-  process_log_dir_fn = functools.partial(process_tb_event_dir,
-                                         tags=event_file_tags)
+  process_log_dir_fn = functools.partial(
+      process_tb_event_dir, tags=event_file_tags
+  )
 
   all_dfs = []
   with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -225,7 +247,9 @@ def load_training_reward_data(base_dir, experiment_ids,
       if data is not None:
         # print logging message based on the log dir
         print(
-            f'Processing log dir: {data.iloc[0]["domain"]}/{data.iloc[0]["task"]}/{data.iloc[0]["algo"]}/{data.iloc[0]["experiment"]}/{data.iloc[0]["seed"]}')
+            'Processing log dir:'
+            f' {data.iloc[0]["domain"]}/{data.iloc[0]["task"]}/{data.iloc[0]["algo"]}/{data.iloc[0]["experiment"]}/{data.iloc[0]["seed"]}'
+        )
         all_dfs.append(data)
   metrics_df = pd.concat(all_dfs)
   logging.info(f'Loaded {len(metrics_df)} rows of data')
@@ -249,14 +273,25 @@ def load_training_reward_data(base_dir, experiment_ids,
     # Define aggregation methods: mean for the value column, first for others
     aggregation = {value_col: 'mean'}
     for col in metrics_df.columns:
-      if col not in [value_col, step_col, 'domain', 'task', 'algo',
-                     'experiment', 'seed']:
+      if col not in [
+          value_col,
+          step_col,
+          'domain',
+          'task',
+          'algo',
+          'experiment',
+          'seed',
+      ]:
         aggregation[col] = 'first'
 
     # Group by and apply the specified aggregation
-    df = metrics_df.groupby(
-        ['domain', 'task', 'algo', 'experiment', 'seed', step_col]).agg(
-        aggregation).reset_index()
+    df = (
+        metrics_df.groupby(
+            ['domain', 'task', 'algo', 'experiment', 'seed', step_col]
+        )
+        .agg(aggregation)
+        .reset_index()
+    )
     metrics_df = df
 
   row_counts = metrics_df.groupby(['domain', 'task', 'algo'])['seed'].count()
@@ -274,8 +309,9 @@ def load_training_reward_data(base_dir, experiment_ids,
     )[timestamp_col].transform(lambda x: x - x.min())
 
     # Convert duration to seconds and round to the nearest second
-    metrics_df[duration_col] = metrics_df[
-      duration_col].dt.total_seconds().round().astype(int)
+    metrics_df[duration_col] = (
+        metrics_df[duration_col].dt.total_seconds().round().astype(int)
+    )
 
   return metrics_df
 
@@ -284,9 +320,9 @@ def load_training_system_data(base_dir, experiment_ids):
   csv_files = []
   for exp_id in experiment_ids:
     logs = glob.glob(
-        os.path.join(base_dir,
-                     f'**/*{exp_id}*/**/*train_emissions.csv'),
-        recursive=True)
+        os.path.join(base_dir, f'**/*{exp_id}*/**/*train_emissions.csv'),
+        recursive=True,
+    )
     csv_files.extend(logs)
 
   csv_files = set(csv_files)
@@ -321,24 +357,26 @@ def main(_):
   _initialize_plotting()
 
   training_reward_data_df = load_training_reward_data(
-      base_dir=_BASE_DIR.value,
-      experiment_ids=_EXPERIMENT_IDS.value)
+      base_dir=_BASE_DIR.value, experiment_ids=_EXPERIMENT_IDS.value
+  )
   print(training_reward_data_df.head())
   training_reward_metrics = analysis.reliability.get_training_metrics(
-      data_df=training_reward_data_df, tag='Metrics/AverageReturn',
-      index='Step')
+      data_df=training_reward_data_df, tag='Metrics/AverageReturn', index='Step'
+  )
 
   training_system_metrics_df = load_training_system_data(
-      base_dir=_BASE_DIR.value,
-      experiment_ids=_EXPERIMENT_IDS.value)
+      base_dir=_BASE_DIR.value, experiment_ids=_EXPERIMENT_IDS.value
+  )
   print(training_system_metrics_df.head())
   training_system_metrics = analysis.system.get_training_metrics(
-      data_df=training_system_metrics_df)
+      data_df=training_system_metrics_df
+  )
 
   # Display all training metrics
   training_metrics = dict(**training_reward_metrics, **training_system_metrics)
   training_metrics_df = analysis.results.metrics_dict_to_pandas_df(
-      training_metrics)
+      training_metrics
+  )
   # Print out the latex table with training metrics only
   print(analysis.results.df_as_latex(training_metrics_df, mode='train'))
   #
