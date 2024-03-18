@@ -64,7 +64,8 @@ _ENV_NAME = flags.DEFINE_string('env_name', None, 'Name of the environment.')
 
 def delete_dataset_wrapper(unique_id):
   unique_id = f'{unique_id:03d}'
-  dataset_path = os.path.join(_DATASETS_PATH.value, unique_id)
+  dataset_path = os.path.join(os.path.expanduser(_DATASETS_PATH.value),
+                              unique_id)
   shutil.rmtree(dataset_path)
 
 
@@ -195,11 +196,11 @@ def perform_rollouts(
       The returns for each episode.
   """
 
-  obs, info = env.reset()
   episode_returns = []
   for _ in range(num_episodes):
     episode_return = 0
     terminated = truncated = False
+    obs, info = env.reset()
     while not terminated and not truncated:
       obs = preprocess_observation(obs, time_step_spec=policy.time_step_spec)
       action_step = policy.action(obs)
@@ -218,7 +219,8 @@ def collect_dataset(
     seed,
 ):
   unique_id = f'{unique_id:03d}'
-  dataset_path = os.path.join(_DATASETS_PATH.value, str(unique_id))
+  dataset_path = os.path.join(os.path.expanduser(_DATASETS_PATH.value),
+                              str(unique_id))
   os.environ['MINARI_DATASETS_PATH'] = dataset_path
   np.random.seed(seed)
   tf.random.set_seed(seed)
@@ -262,7 +264,8 @@ def collect_dataset(
 
 def main(_):
   if _DATASETS_PATH.value is not None:
-    os.environ['MINARI_DATASETS_PATH'] = _DATASETS_PATH.value
+    os.environ['MINARI_DATASETS_PATH'] = os.path.expanduser(
+        _DATASETS_PATH.value)
 
   root_dir = os.path.expanduser(_ROOT_DIR.value)
   env_name = _ENV_NAME.value[:-3]
