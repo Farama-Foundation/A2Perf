@@ -10,6 +10,8 @@ from absl import flags
 from absl import logging
 from matplotlib import pyplot as plt
 
+import multiprocessing
+
 _EXPERIMENT_IDS = flags.DEFINE_list(
     'experiment_ids', [], 'List of experiment IDs to load the evaluation data.'
 )
@@ -44,34 +46,41 @@ def assign_skill_level(row, col_name, bounds):
 
 
 def plot_skill_levels(data_df, col_name, save_path=None):
-  plt.figure(figsize=(10, 6))
+  fig, ax = plt.subplots(figsize=(10, 6))
+
+  data_df['skill_level'] = data_df['skill_level'].astype('category')
 
   sns.histplot(data=data_df,
                x=col_name,
                hue='skill_level',
                kde=False,
                stat='count',
-               linewidth=0)
+               legend=True,
+               linewidth=0,
+               ax=ax)
 
-  plt.title('Episode Reward Distribution by Skill Level')
-  plt.xlabel('Episode Reward')
-  plt.ylabel('Density')
-  plt.legend()
-  plt.show()
-
+  ax.set_title('Episode Reward Distribution by Skill Level')
+  ax.set_xlabel('Episode Reward')
+  ax.set_ylabel('Count')
+  fig.legend()
+  fig.show()
   if save_path:
-    plt.savefig(save_path)
+    fig.savefig(save_path)
+
+
+def glob_path(path):
+  return glob.glob(path, recursive=True)
 
 
 def load_evaluation_json_data(base_dir, experiment_ids):
-  json_file_paths = []
-  for exp_id in experiment_ids:
-    json_files = glob.glob(
-        os.path.join(base_dir, f'**/*{exp_id}*/**/evaluation.json'),
-        recursive=True)
-    json_file_paths.extend(json_files)
-
-  json_files_paths = set(json_file_paths)
+  with multiprocessing.Pool() as pool:
+    json_files = pool.map(glob_path, [
+        os.path.join(base_dir, f'{exp_id}/**/evaluation.json') for exp_id in
+        experiment_ids])
+    pool.close()
+    pool.join()
+  json_files_paths = [item for sublist in json_files for item in sublist]
+  json_files_paths = set(json_files_paths)
 
   all_data = []
   for file_path in json_files_paths:
@@ -85,7 +94,8 @@ def load_evaluation_json_data(base_dir, experiment_ids):
 
 
 def main(_):
-  evaluation_data_df = load_evaluation_json_data(base_dir=_ROOT_DIR.value,
+  root_dir = os.path.expanduser(_ROOT_DIR.value)
+  evaluation_data_df = load_evaluation_json_data(base_dir=root_dir,
                                                  experiment_ids=_EXPERIMENT_IDS.value)
 
   logging.info('Loaded evaluation data')
@@ -120,12 +130,12 @@ def main(_):
   evaluation_data_df = evaluation_data_df.dropna(subset=['skill_level'])
 
   plot_skill_levels(evaluation_data_df, _AVERAGE_MEASURE.value,
-                    save_path=os.path.join(_ROOT_DIR.value,
+                    save_path=os.path.join(root_dir,
                                            'skill_level_distribution.png'))
 
   # Save the data with skill levels so we can load to generate datasets
   evaluation_data_df.to_csv(
-      os.path.join(_ROOT_DIR.value, 'evaluation_data_with_skill_levels.csv'),
+      os.path.join(root_dir, 'evaluation_data_with_skill_levels.csv'),
       index=False)
 
 
