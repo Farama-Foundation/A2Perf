@@ -80,6 +80,9 @@ _JOB_TYPE = flags.DEFINE_enum(
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
 )
+_NUM_EPISODES_TO_GENERATE = flags.DEFINE_integer(
+    'num_episodes_to_generate', 0, 'Number of episodes to generate datasets.'
+)
 _GIN_CONFIG = flags.DEFINE_string('gin_config', None, 'Gin config file.')
 _LEARNING_RATE = flags.DEFINE_float('learning_rate', None, 'Learning rate.')
 _BATCH_SIZE = flags.DEFINE_integer(
@@ -360,7 +363,7 @@ def main(_):
             f'--env_name={_ENV_NAME.value}',
             f'--root_dir={root_dir}',
             f'--verbosity={logging.get_verbosity()}',
-            f'--num_episodes={_NUM_EVAL_EPISODES.value}',
+            f'--num_episodes={_NUM_EPISODES_TO_GENERATE.value}',
             f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
             f'--skill_level={skill_level}',
             f'--task_name={_TASK_NAME.value}',
