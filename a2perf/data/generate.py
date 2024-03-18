@@ -264,6 +264,7 @@ def main(_):
   if _DATASETS_PATH.value is not None:
     os.environ['MINARI_DATASETS_PATH'] = _DATASETS_PATH.value
 
+  root_dir = os.path.expanduser(_ROOT_DIR.value)
   env_name = _ENV_NAME.value[:-3]
   dataset_id = f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0'
   np.random.seed(_SEED.value)
@@ -271,7 +272,7 @@ def main(_):
 
   # Load the dataframe containing evaluation data
   evaluation_df = pd.read_csv(
-      os.path.join(_ROOT_DIR.value, 'evaluation_data_with_skill_levels.csv')
+      os.path.join(root_dir, 'evaluation_data_with_skill_levels.csv')
   )
 
   # Filter the dataframe by the skill level
