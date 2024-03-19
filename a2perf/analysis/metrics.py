@@ -1,6 +1,9 @@
+import collections
 import concurrent.futures
 import functools
 import glob
+import json
+import multiprocessing
 import os
 import re
 
@@ -107,7 +110,7 @@ def process_tb_event_dir(event_file_path, tags=None):
   )
   data_csv_path = os.path.join(log_base_dir, 'data.csv')
 
-  if 1 == 0 and os.path.exists(data_csv_path):
+  if 0 == 1 and os.path.exists(data_csv_path):
     data = pd.read_csv(data_csv_path)
     logging.info(f'Loaded data from {data_csv_path}')
   else:
@@ -140,28 +143,21 @@ def process_codecarbon_csv(csv_file_path):
 
   exp_name, algo, task, experiment, domain = [exp_split[i] for i in indices]
   seed = re.search(r'seed_(\d+)', exp_name).group(1)
+  skill_level = re.search(r'skill_level_(\w+)', exp_name).group(1)
 
-  print(f'Processing Experiment: {experiment}, Seed: {seed}, Algo: {algo}')
-
+  logging.info('Processing Experiment: %s, Seed: %s, Algo: %s', experiment,
+               seed, algo)
   df['seed'] = int(seed)
   df['experiment'] = experiment
   df['algo'] = algo
   df['task'] = task
   df['domain'] = domain
+  df['skill_level'] = skill_level
 
   # Convert timestamps and identify corrupt data
   df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
   corrupt_rows = df[df['timestamp'].isna()]
 
-  # Make sure all of the power/ram fields are floats
-  # float_columns = [
-  #     'ram_process', 'gpu_power', 'cpu_power', 'ram_power', 'gpu_energy',
-  #     'ram_energy', 'cpu_energy']
-  #
-  # df[float_columns] = df[float_columns].apply(pd.to_numeric, errors='coerce')
-  # corrupt_rows = pd.concat([corrupt_rows, df[df[float_columns].isna()]])
-  #
-  # Print corrupt rows
   if not corrupt_rows.empty:
     logging.warning('Corrupt rows due to invalid timestamps:')
     logging.warning(corrupt_rows)
@@ -221,20 +217,34 @@ def plot_training_reward_data(
       plt.show()
 
 
+def glob_path(path):
+  return glob.glob(path, recursive=True)
+
+
+def load_data(patterns):
+  with multiprocessing.Pool() as pool:
+    files = pool.map(
+        glob_path,
+        [
+            pattern
+            for pattern in patterns
+        ],
+    )
+    pool.close()
+    pool.join()
+  files = [item for sublist in files for item in sublist]
+  files = set(files)
+  return files
+
+
 def load_training_reward_data(
     base_dir, experiment_ids, event_file_tags=('Metrics/AverageReturn',)
 ):
-  event_log_dirs = []
-  for exp_id in experiment_ids:
-    logs = glob.glob(
-        os.path.join(
-            base_dir, f'**/*{exp_id}*/**/collect/**/*events.out.tfevents*'
-        ),
-        recursive=True,
-    )
-    event_log_dirs.extend(logs)
-
-  event_log_dirs = set(event_log_dirs)
+  patterns = [
+      os.path.join(base_dir, f'{exp_id}/**/collect/**/*events.out.tfevents*')
+      for exp_id in experiment_ids
+  ]
+  event_log_dirs = load_data(patterns)
   logging.info(f'Found {len(event_log_dirs)} event log dirs')
 
   process_log_dir_fn = functools.partial(
@@ -245,24 +255,22 @@ def load_training_reward_data(
   with concurrent.futures.ProcessPoolExecutor() as executor:
     for data in executor.map(process_log_dir_fn, event_log_dirs):
       if data is not None:
-        # print logging message based on the log dir
-        print(
-            'Processing log dir:'
-            f' {data.iloc[0]["domain"]}/{data.iloc[0]["task"]}/{data.iloc[0]["algo"]}/{data.iloc[0]["experiment"]}/{data.iloc[0]["seed"]}'
-        )
+        logging.info('Processing log dir: %s',
+                     f' {data.iloc[0]["domain"]}/{data.iloc[0]["task"]}/{data.iloc[0]["algo"]}/{data.iloc[0]["experiment"]}/{data.iloc[0]["seed"]}')
+
         all_dfs.append(data)
   metrics_df = pd.concat(all_dfs)
-  logging.info(f'Loaded {len(metrics_df)} rows of data')
+  logging.info('Loaded %s rows of data', len(metrics_df))
 
   # Get the number of seeds for each algo, domain, task combo to make sure
   # we have the right number of seeds
   seed_counts = metrics_df.groupby(['domain', 'task', 'algo']).seed.nunique()
-  logging.info(f'Seed counts: {seed_counts}')
+  logging.info('Seed counts: %s', seed_counts)
 
   # Get the number of rows for each algo, domain, task combo to make sure
   # each experiment has the same number of steps
   row_counts = metrics_df.groupby(['domain', 'task', 'algo'])['seed'].count()
-  logging.info(f'Row counts: {row_counts}')
+  logging.info('Row counts: %s', row_counts)
 
   # Since we have parallelized, distributed experiments, we'll see
   # the same 'Step' multiple times. We simply need to combine the values
@@ -295,7 +303,7 @@ def load_training_reward_data(
     metrics_df = df
 
   row_counts = metrics_df.groupby(['domain', 'task', 'algo'])['seed'].count()
-  logging.info(f'Row counts after removing duplicate steps: {row_counts}')
+  logging.info('Row counts after removing duplicate steps: %s', row_counts)
 
   # Add a "duration" column to the DataFrame
   for tag in event_file_tags:
@@ -317,16 +325,12 @@ def load_training_reward_data(
 
 
 def load_training_system_data(base_dir, experiment_ids):
-  csv_files = []
-  for exp_id in experiment_ids:
-    logs = glob.glob(
-        os.path.join(base_dir, f'**/*{exp_id}*/**/*train_emissions.csv'),
-        recursive=True,
-    )
-    csv_files.extend(logs)
-
-  csv_files = set(csv_files)
-  logging.info(f'Found {len(csv_files)} csv files')
+  patterns = [
+      os.path.join(base_dir, f'{exp_id}/**/collect/**/train_emissions.csv')
+      for exp_id in experiment_ids
+  ]
+  csv_files = load_data(patterns)
+  logging.info('Found %s csv files', len(csv_files))
 
   process_codecarbon_csv_fn = functools.partial(process_codecarbon_csv)
 
@@ -336,17 +340,91 @@ def load_training_system_data(base_dir, experiment_ids):
       if data is not None:
         all_dfs.append(data)
   metrics_df = pd.concat(all_dfs)
-  logging.info(f'Loaded {len(metrics_df)} rows of data')
+  logging.info('Loaded %s rows of data', len(metrics_df))
 
   return metrics_df
 
 
-def load_inference_reward_data(base_dir, experiment_ids):
-  pass
+def load_inference_metric_data(base_dir, experiment_ids):
+  patterns = [
+      os.path.join(base_dir, f'{exp_id}/**/inference_metrics_results.json')
+      for exp_id in experiment_ids]
+  json_files = load_data(patterns)
+  logging.info('Found %s json files', len(json_files))
+
+  # Load all of the json files
+  all_dfs = []
+  for json_file in json_files:
+    logging.info('Processing json file: %s', json_file)
+    indices = [-4, -5, -6, -7, -8]
+    exp_split = json_file.split('/')
+    details_segment, algo, task, experiment_number, domain = [
+        exp_split[i] for i in indices
+    ]
+    seed = int(re.search(r'seed_(\d+)', details_segment).group(1))
+    skill_level = re.search(r'skill_level_(\w+)', details_segment).group(1)
+
+    logging.info('Processing log dir: %s', json_file)
+    logging.info(
+        '\tDomain: %s, Task: %s, Algo: %s, Experiment Number: %s, Seed: %s, Skill Level: %s',
+        domain, task, algo, experiment_number, seed, skill_level)
+
+    with open(json_file, 'r') as f:
+      data = json.load(f)
+      data_df = pd.DataFrame.from_dict(data, orient='index').reset_index()
+      data_df = data_df.rename(columns={'index': 'metric'})
+      # Add columns for domain/algo/task/expeirment/seed so we can group by them
+      # later
+
+      data_df['domain'] = domain
+      data_df['task'] = task
+      data_df['algo'] = algo
+      data_df['experiment'] = experiment_number
+      data_df['seed'] = seed
+      data_df['skill_level'] = skill_level
+      all_dfs.append(data_df)
+
+  metrics_df = pd.concat(all_dfs)
+  metrics = collections.defaultdict(dict)
+
+  for metric, df in metrics_df.groupby('metric'):
+    for (domain, task, algo,), group in df.groupby(
+        ['domain', 'task', 'algo', ]
+    ):
+      # Each row has a list object in the 'values' column. We need to aggregate
+      # these lists to get the mean and standard deviation
+      all_values = []
+      for values in group['values']:
+        all_values.extend(values)
+
+      mean_val = np.mean(all_values)
+      std_val = np.std(all_values)
+      metrics[metric][(domain, algo, task)] = {
+          'mean': mean_val,
+          'std': std_val
+      }
+  return metrics, metrics_df
 
 
 def load_inference_system_data(base_dir, experiment_ids):
-  pass
+  patterns = [
+      os.path.join(base_dir, f'{exp_id}/**/inference_emissions.csv')
+      for exp_id in experiment_ids
+  ]
+  csv_files = load_data(patterns)
+  logging.info('Found %s csv files', len(csv_files))
+
+  process_codecarbon_csv_fn = functools.partial(process_codecarbon_csv)
+
+  all_dfs = []
+  with concurrent.futures.ProcessPoolExecutor() as executor:
+    for data in executor.map(process_codecarbon_csv_fn, csv_files):
+      if data is not None:
+        all_dfs.append(data)
+  metrics_df = pd.concat(all_dfs)
+  logging.info('Loaded %s rows of data', len(metrics_df))
+
+  return metrics_df
 
 
 def main(_):
@@ -356,43 +434,47 @@ def main(_):
   tf.random.set_seed(_SEED.value)
   _initialize_plotting()
 
+  base_dir = os.path.expanduser(_BASE_DIR.value)
   training_reward_data_df = load_training_reward_data(
-      base_dir=_BASE_DIR.value, experiment_ids=_EXPERIMENT_IDS.value
+      base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
   )
-  print(training_reward_data_df.head())
   training_reward_metrics = analysis.reliability.get_training_metrics(
       data_df=training_reward_data_df, tag='Metrics/AverageReturn', index='Step'
   )
-
   training_system_metrics_df = load_training_system_data(
-      base_dir=_BASE_DIR.value, experiment_ids=_EXPERIMENT_IDS.value
+      base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
   )
-  print(training_system_metrics_df.head())
   training_system_metrics = analysis.system.get_training_metrics(
       data_df=training_system_metrics_df
   )
-
-  # Display all training metrics
   training_metrics = dict(**training_reward_metrics, **training_system_metrics)
+
+  inference_reward_metrics, inference_reward_metrics_df = load_inference_metric_data(
+      base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
+  )
+  inference_reward_metrics.update(analysis.reliability.get_inference_metrics(
+      data_df=inference_reward_metrics_df))
+  inference_system_metrics_df = load_inference_system_data(
+      base_dir=base_dir,
+      experiment_ids=_EXPERIMENT_IDS.value)
+  inference_system_metrics = analysis.system.get_inference_metrics(
+      data_df=inference_system_metrics_df)
+  inference_metrics = dict(**inference_reward_metrics,
+                           **inference_system_metrics)
+
+  # Take rollout_returns from inference_metrics and add it to training_metrics
+  training_metrics['rollout_returns'] = inference_metrics['rollout_returns']
+  del inference_metrics['rollout_returns']
+
   training_metrics_df = analysis.results.metrics_dict_to_pandas_df(
       training_metrics
   )
-  # Print out the latex table with training metrics only
+  inference_metrics_df = analysis.results.metrics_dict_to_pandas_df(
+      inference_metrics
+  )
+
   print(analysis.results.df_as_latex(training_metrics_df, mode='train'))
-  #
-  # inference_reward_metrics_df = load_inference_reward_data(
-  #     base_dir=_BASE_DIR.value,
-  #     experiment_ids=_EXPERIMENT_IDS.value)
-  # print(inference_reward_metrics_df.head())
-  # inference_reward_metrics = get_inference_reward_metrics(
-  #     data_df=inference_reward_metrics_df)
-  #
-  # inference_system_metrics_df = load_inference_system_data(
-  #     base_dir=_BASE_DIR.value,
-  #     experiment_ids=_EXPERIMENT_IDS.value)
-  # print(inference_system_metrics_df.head())
-  # inference_system_metrics = get_inference_system_metrics(
-  #     data_df=inference_system_metrics_df)
+  print(analysis.results.df_as_latex(inference_metrics_df, mode='inference'))
 
 
 if __name__ == '__main__':

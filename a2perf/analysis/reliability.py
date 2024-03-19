@@ -36,44 +36,6 @@ def compute_drawdown(sequence):
   return peak_so_far - sequence
 
 
-def dispersion_across_rollouts(data_df, tag, index):
-  return risk_across_rollouts(data_df, tag, index)
-
-
-def risk_across_rollouts(data_df, tag, index):
-  # Get the bottom "alpha" percent of rollouts (we use the 5th percentile to get the bottom 5% of rollouts)
-  reliability_df = inference_df[inference_df['metric'] == 'rollout_returns']
-  for domain, domain_group in reliability_df.groupby('domain'):
-    print(f'Processing domain: {domain}')
-    for task, task_group in domain_group.groupby('task'):
-      print(f'\tProcessing task: {task}')
-      for algo, algo_group in task_group.groupby('algo'):
-        print(f'\t\tProcessing algo: {algo}')
-        values = algo_group[0]
-
-        # get the bottom 5% of rollouts
-        bottom_alpha_percent = np.percentile(values, 5)
-
-        # CVaR is the average of the bottom "alpha" percent of rollouts
-        cvar = np.mean(values[values <= bottom_alpha_percent])
-        print(f'\t\t\tCVaR: {cvar}')
-
-        all_inference_metrics[(
-            domain,
-            algo,
-            task,
-        )]['risk_across_rollouts'] = cvar
-
-        # Also get the dispersion across rollouts
-        iqr = scipy.stats.iqr(values)
-        print(f'\t\t\tIQR: {iqr}')
-        all_inference_metrics[(
-            domain,
-            algo,
-            task,
-        )]['dispersion_across_rollouts'] = iqr
-
-
 def lowpass_filter(curve, lowpass_thresh):
   filt_b, filt_a = scipy.signal.butter(8, lowpass_thresh)
 
@@ -105,17 +67,14 @@ def dispersion_across_runs(data_df, tag, index):
   dispersion_groups = data_df.groupby(['domain', 'algo', 'task', step_col])
 
   # Log all groups just to make sure we're capturing correct data
-  logging.info(f'Groups: {dispersion_groups}')
+  logging.info('Groups: %s', dispersion_groups)
 
   def compute_dispersion_if_enough_data(group):
     if len(group) > MIN_NUM_DISPERSION_DATA_POINTS:
       return compute_dispersion(group)
     else:
-      # Log a message about insufficient data
-      logging.warning(
-          f'Insufficient data at step {group.name[-1]} for tag {tag}. Skipping'
-          ' dispersion calculation.'
-      )
+      logging.warning('Insufficient data at step %s for tag %s. Skipping'
+                      ' dispersion calculation.', group.name[-1], tag)
       return None  # or return some default value
 
   dispersion_df = (
@@ -144,11 +103,8 @@ def dispersion_across_runs(data_df, tag, index):
         algo,
         task,
     )] = dict(mean=mean_iqr, std=std_iqr)
-    logging.info(
-        f'Domain: {domain}, Task: {task}, Algo: {algo}, Mean IQR: {mean_iqr},'
-        f' Std IQR: {std_iqr}'
-    )
-
+    logging.info('Domain: %s, Task: %s, Algo: %s, Mean IQR: %s, Std IQR: %s',
+                 domain, task, algo, mean_iqr, std_iqr)
   return metrics
 
 
@@ -171,12 +127,12 @@ def compute_eval_points_within_runs(
     )
 
     logging.info(
-        f'Domain: {domain}, Algo: {algo}, Experiment: {experiment}, Task:'
-        f' {task}, Seed: {seed}'
+        'Domain: %s, Algo: %s, Experiment: %s, Task: %s, Seed: %s',
+        domain, algo, experiment, task, seed
     )
-    logging.info(f'\tMedian step difference: {median_step_diff}')
-    logging.info(f'\tWindow size: {window_size}')
-    logging.info(f'\tNum eval points: {len(eval_points)}')
+    logging.info('\tMedian step difference: %s', median_step_diff)
+    logging.info('\tWindow size: %s', window_size)
+    logging.info('\tNum eval points: %s', len(eval_points))
 
     experiment_meta_data[(domain, task, algo, experiment, seed)] = {
         'eval_points': eval_points,
@@ -208,10 +164,10 @@ def dispersion_within_runs(
         steps, episode_reward_diff = seed_group.to_numpy().T
 
         window_size = experiment_meta_data[(domain, task, algo, exp_id, seed)][
-            'window_size'
+          'window_size'
         ]
         for eval_point in experiment_meta_data[
-            (domain, task, algo, exp_id, seed)
+          (domain, task, algo, exp_id, seed)
         ]['eval_points']:
           low_end = np.ceil(eval_point - (window_size / 2))
           high_end = np.floor(eval_point + (window_size / 2))
@@ -225,11 +181,19 @@ def dispersion_within_runs(
 
           if len(valid_eval_points) == 0:
             logging.warning(
-                f'No valid eval points for domain: {domain}, task: {task},'
-                f' algo: {algo}, exp_id: {exp_id}, seed: {seed}, eval_point:'
-                f' {eval_point}'
+                'No valid eval points for domain: %s, task: %s, algo: %s,'
+                ' exp_id: %s, seed: %s, eval_point: %s',
+                domain, task, algo, exp_id, seed, eval_point)
+
+            continue
+          elif len(valid_eval_points) < 2:
+            # IQR needs at least 2 data points for meaningful calculation
+            logging.warning(
+                'Insufficient data points for IQR calculation for domain: %s,'
+                ' task: %s, algo: %s, exp_id: %s, seed: %s, eval_point: %s',
+                domain, task, algo, exp_id, seed, eval_point
             )
-            break
+            continue
 
           # Apply window_fn to get the IQR for the current window
           window_dispersion = dispersion_window_fn(
@@ -256,7 +220,9 @@ def short_term_risk(data_df, tag, index):
   for (domain, task, algo), group in data_df.groupby(
       ['domain', 'task', 'algo']
   ):
-    logging.info(f'Processing Domain: {domain}, Task: {task}, Algo: {algo}')
+    logging.info('Processing Domain: %s, Task: %s, Algo: %s', domain, task,
+                 algo)
+
     all_diffs = []
     for exp_id, exp_group in group.groupby('experiment'):
       for seed, seed_group in exp_group.groupby('seed'):
@@ -273,7 +239,7 @@ def short_term_risk(data_df, tag, index):
     all_diffs = np.array(all_diffs)
     cvar = np.mean(all_diffs[all_diffs <= risk])
     cvar = -cvar  # make it positive for easier interpretation
-    logging.info(f'\t\t\tCVaR: {cvar}')
+    logging.info('\t\t\tCVaR: %s', cvar)
     metrics[(
         domain,
         algo,
@@ -300,14 +266,15 @@ def long_term_risk(data_df, tag, index):
   for (domain, task, algo), group in data_df.groupby(
       ['domain', 'task', 'algo']
   ):
-    logging.info(f'Processing Domain: {domain}, Task: {task}, Algo: {algo}')
+    logging.info('Processing Domain: %s, Task: %s, Algo: %s', domain, task,
+                 algo)
     all_drawdowns = []
 
     for exp_id, exp_group in group.groupby('experiment'):
       for seed, seed_group in exp_group.groupby('seed'):
         # Ensure the correct column exists
         if f'{tag}_{index}' not in seed_group.columns:
-          logging.warning(f'Column {tag}_{index} not found in data.')
+          logging.warning('Column %s not found in data.', f'{tag}_{index}')
           continue
 
         # Sort the seed group by the index
@@ -325,14 +292,11 @@ def long_term_risk(data_df, tag, index):
 
       # CVaR is the average of the worst "alpha" percent of drawdowns
       cvar = np.mean(all_drawdowns[all_drawdowns >= top_alpha_percent])
-      logging.info(f'\t\t\tCVaR: {cvar}')
+      logging.info('\t\t\tCVaR: %s', cvar)
       metrics[(domain, algo, task)] = cvar
     else:
-      logging.warning(
-          f'No drawdown data available for Domain: {domain}, Task: {task},'
-          f' Algo: {algo}'
-      )
-
+      logging.warning('No drawdown data available for %s, %s, %s', domain, task,
+                      algo)
   return metrics
 
 
@@ -356,7 +320,7 @@ def risk_across_runs(data_df, tag, alpha=0.05):
   final_values_col = f'{tag}_Value'
   final_tag_values = (
       data_df.groupby(['domain', 'task', 'algo', 'experiment', 'seed'])[
-          final_values_col
+        final_values_col
       ]
       .last()
       .reset_index()
@@ -372,9 +336,9 @@ def risk_across_runs(data_df, tag, alpha=0.05):
     cvar = np.mean(values[values <= bottom_alpha_percent])
 
     # Logging the process and results
-    logging.info(f'Processing domain: {domain}, task: {task}, algo: {algo}')
-    logging.info(f'\tCVaR: {cvar}')
-
+    logging.info('Processing Domain: %s, Task: %s, Algo: %s', domain, task
+                 , algo)
+    logging.info('\t\t\tCVaR: %s', cvar)
     # Storing the CVaR values in the metrics dictionary
     metrics[(domain, algo, task)] = cvar
 
@@ -409,7 +373,55 @@ def get_training_metrics(data_df, tag, index):
   }
 
 
+def dispersion_across_rollouts(data_df):
+  metrics = {}
+  for (domain, algo, task), group in data_df.groupby(
+      ['domain', 'algo', 'task']):
+
+    # We are only interested in the `rollout_returns` metric
+    group = group[group['metric'] == 'rollout_returns']
+    all_values = []
+    for values in group['values']:
+      all_values.extend(values)
+
+    all_values = np.array(all_values)
+
+    iqr = scipy.stats.iqr(all_values)
+    logging.info('Processing Domain: %s, Task: %s, Algo: %s', domain, task,
+                 algo)
+    logging.info('\t\t\tIQR: %s', iqr)
+
+    metrics[(domain, algo, task)] = iqr
+  return metrics
+
+
+def risk_across_rollouts(data_df):
+  metrics = {}
+  for (domain, algo, task), group in data_df.groupby(
+      ['domain', 'algo', 'task']):
+
+    # We are only interested in the `rollout_returns` metric
+    group = group[group['metric'] == 'rollout_returns']
+    all_values = []
+    for values in group['values']:
+      all_values.extend(values)
+
+    all_values = np.array(all_values)
+    bottom_alpha_percent = np.percentile(all_values, LEFT_TAIL_ALPHA * 100,
+                                         method='linear')
+    cvar = np.mean(all_values[all_values <= bottom_alpha_percent])
+    logging.info('Processing Domain: %s, Task: %s, Algo: %s', domain, task,
+                 algo)
+    logging.info('\t\t\tCVaR: %s', cvar)
+
+    metrics[(domain, algo, task)] = cvar
+  return metrics
+
+
 def get_inference_metrics(data_df):
   risk_across_rollouts_result = risk_across_rollouts(data_df)
   dispersion_across_rollouts_result = dispersion_across_rollouts(data_df)
-  return None
+  return {
+      'risk_across_rollouts': risk_across_rollouts_result,
+      'dispersion_across_rollouts': dispersion_across_rollouts_result,
+  }

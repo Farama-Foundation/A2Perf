@@ -1,7 +1,7 @@
 import pandas as pd
 
 OPTIMAL_METRIC_CRITERIA = dict(
-    returns='max',
+    rollout_returns='max',
     dispersion_across_runs='min',
     dispersion_within_runs='min',
     dispersion_across_rollouts='min',
@@ -13,10 +13,13 @@ OPTIMAL_METRIC_CRITERIA = dict(
     wall_clock_time='min',
     inference_time='min',
     gpu_power_usage='min',
+    risk_across_rollouts='max',
+    disperion_across_rollouts='min',
+
 )
 
 METRIC_TO_DISPLAY_NAME = dict(
-    returns='Returns',
+    rollout_returns='Returns',
     dispersion_across_runs='Dispersion Across Runs',
     dispersion_within_runs='Dispersion Within Runs',
     dispersion_across_rollouts='Dispersion Across Rollouts',
@@ -28,10 +31,12 @@ METRIC_TO_DISPLAY_NAME = dict(
     wall_clock_time='Wall Clock Time',
     inference_time='Inference Time',
     gpu_power_usage='GPU Power Usage',
+    risk_across_rollouts='Risk Across Rollouts',
+    disperion_across_rollouts='Dispersion Across Rollouts',
 )
 
 METRIC_TO_CATEGORY = dict(
-    returns='Application',
+    rollout_returns='Application',
     dispersion_across_runs='Reliability',
     dispersion_within_runs='Reliability',
     dispersion_across_rollouts='Reliability',
@@ -43,10 +48,12 @@ METRIC_TO_CATEGORY = dict(
     wall_clock_time='System',
     inference_time='System',
     gpu_power_usage='System',
+    risk_across_rollouts='Reliability',
+    disperion_across_rollouts='Reliability',
 )
 
 METRIC_TO_UNIT = dict(
-    returns='100 eps.',
+    rollout_returns='100 eps.',
     dispersion_across_runs='IQR',
     dispersion_within_runs='IQR',
     dispersion_across_rollouts='IQR',
@@ -58,6 +65,8 @@ METRIC_TO_UNIT = dict(
     wall_clock_time='Hours',
     inference_time='ms',
     gpu_power_usage='W',
+    risk_across_rollouts='CVaR',
+    disperion_across_rollouts='IQR',
 )
 
 

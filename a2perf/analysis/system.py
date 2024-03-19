@@ -1,16 +1,6 @@
 import pandas as pd
 
 
-def get_inference_time():
-  # Mean/STD of the inference time metric
-  # inference_time_df = inference_df[inference_df['metric'] == 'inference_time']
-  # mean_inference_time = inference_time_df.groupby(['domain', 'algo', 'task', ])[
-  #   0].mean()
-  # std_inference_time = inference_time_df.groupby(['domain', 'algo', 'task', ])[
-  #   0].std()
-  # mean_inference_time, std_inference_time
-
-  pass
 
 
 def get_distributed_experiment_metric(
@@ -159,10 +149,10 @@ def get_wall_clock_time(data_df):
       ['domain', 'algo', 'task', 'experiment', 'seed']
   ).min()
 
-  # Compute wall clock time in seconds
+  # Compute wall clock time in hours
   wall_clock_time = (
       latest_shared_timestamp - earliest_shared_timestamp
-  ).dt.total_seconds()
+  ).dt.total_seconds() / 3600
 
   # Group by 'domain', 'algo', 'task' and calculate mean and std of wall clock time
   metrics = {}
@@ -208,5 +198,16 @@ def get_training_metrics(data_df):
       'mean_ram_usage': mean_ram_usage,
       'peak_ram_usage': peak_ram_usage,
       'wall_clock_time': wall_clock_time,
+      **power_usage,
+  }
+
+def get_inference_metrics(data_df):
+  mean_ram_usage = get_mean_ram_usage(data_df=data_df)
+  peak_ram_usage = get_peak_ram_usage(data_df=data_df)
+  power_usage = get_power_usage(data_df=data_df)
+
+  return {
+      'mean_ram_usage': mean_ram_usage,
+      'peak_ram_usage': peak_ram_usage,
       **power_usage,
   }
