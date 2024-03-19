@@ -259,6 +259,7 @@ def collect_dataset(
   dataset = data_collector_env.create_dataset(
       dataset_id=temp_dataset_id,
   )
+  env.close()
   return dataset
 
 
