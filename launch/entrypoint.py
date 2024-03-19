@@ -354,30 +354,25 @@ def main(_):
     else:
       print('Finished running the command successfully.')
 
-    skill_levels = ['novice', 'intermediate', 'expert']
-    generate_commands = [
-        [
-            'python',
-            '-m',
-            'a2perf.data.generate',
-            f'--env_name={_ENV_NAME.value}',
-            f'--root_dir={root_dir}',
-            f'--verbosity={logging.get_verbosity()}',
-            f'--num_episodes={_NUM_EPISODES_TO_GENERATE.value}',
-            f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
-            f'--skill_level={skill_level}',
-            f'--task_name={_TASK_NAME.value}',
-            f'--seed={_SEED.value}',
-            f'--datasets_path={root_dir}',
-        ]
-        for skill_level in skill_levels
+    generate_command = [
+        'python',
+        '-m',
+        'a2perf.data.generate',
+        f'--env_name={_ENV_NAME.value}',
+        f'--root_dir={root_dir}',
+        f'--verbosity={logging.get_verbosity()}',
+        f'--num_episodes={_NUM_EPISODES_TO_GENERATE.value}',
+        f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+        f'--skill_level={_SKILL_LEVEL.value}',
+        f'--task_name={_TASK_NAME.value}',
+        f'--seed={_SEED.value}',
+        f'--datasets_path={root_dir}',
     ]
 
-    print(generate_commands)
-    for generate_command in generate_commands:
-      subprocess.run(
-          generate_command, env=os.environ.copy(), text=True, check=True
-      )
+    print(generate_command)
+    subprocess.run(
+        generate_command, env=os.environ.copy(), text=True, check=True
+    )
 
     return
   else:
