@@ -9,12 +9,13 @@ OPTIMAL_METRIC_CRITERIA = dict(
     long_term_risk='min',
     risk_across_runs='max',
     peak_ram_usage='min',
-    ram_usage='min',
+    mean_ram_usage='min',
     wall_clock_time='min',
     inference_time='min',
     gpu_power_usage='min',
     risk_across_rollouts='max',
     disperion_across_rollouts='min',
+
 
 )
 
@@ -84,12 +85,53 @@ def metrics_dict_to_pandas_df(metrics_dict):
         std = values['std']
         display_val = f'{mean:.2f} ± {std:.2f}'
       else:
-        value = values
-        display_val = f'{value:.2f}'
+        value_to_compare = values
+        display_val = f'{value_to_compare:.2f}'
       data_for_df.append(
           (domain, task, algo, category, display_name, unit, display_val)
       )
 
+  # For every metric, we must decide which algorithm is the best
+  for metric_name, metric_data in metrics_dict.items():
+    optimal_criterion = OPTIMAL_METRIC_CRITERIA[metric_name]
+
+    best_exps = []
+    best_value = None
+    for (domain, algo, task), values in metric_data.items():
+      category = METRIC_TO_CATEGORY[metric_name]
+      display_name = METRIC_TO_DISPLAY_NAME[metric_name]
+      unit = METRIC_TO_UNIT[metric_name]
+
+      value_to_compare = values
+      comparison_function = None
+
+      if isinstance(value_to_compare, dict):
+        value_to_compare = value_to_compare['mean']
+
+      if best_value is None:
+        comparison_function = lambda new, old: True
+      elif optimal_criterion == 'min':
+        comparison_function = lambda new, old: new < old
+      elif optimal_criterion == 'max':
+        comparison_function = lambda new, old: new > old
+
+      if comparison_function is not None and comparison_function(
+          value_to_compare, best_value):
+        best_exps.clear()
+        best_value = value_to_compare
+
+      # Check for equality for the case where it's as good as the best_value (and best_value is not None)
+      parameters_to_add =(domain, task, algo, category, display_name, unit, display_val)
+      if best_value is not None and value_to_compare == best_value:
+        best_exps.append(
+            parameters_to_add)
+      elif comparison_function(value_to_compare, best_value):
+        best_exps = [
+            parameters_to_add]
+  # After comparing all experiments, for the optimal experiment we simply need to replace
+  # the values with a latex bolded version
+  for exp in best_exps:
+    pass
   df = pd.DataFrame(
       data_for_df,
       columns=[
