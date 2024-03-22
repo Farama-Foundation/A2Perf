@@ -252,6 +252,9 @@ def main(_):
     root_dir = _ROOT_DIR.value
     print(f'Changing root dir to {root_dir}')
     print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
+
+    # We perform inference with the greedy policy
+    os.environ['POLICY_NAME'] = 'greedy_policy'
   elif _JOB_TYPE.value == 'train':
     print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value

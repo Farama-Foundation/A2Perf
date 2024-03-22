@@ -99,6 +99,7 @@ def perform_rollouts(
   all_rewards = []
 
   policy, participant_module = _load_policy(module_path, env)
+  time_step_spec = getattr(policy, 'time_step_spec', None)
   for _ in range(num_episodes):
     observation, info = env.reset()
     terminated = False
@@ -106,7 +107,8 @@ def perform_rollouts(
     rewards = 0
     while not terminated and not truncated:
       preprocessed_obs = participant_module.preprocess_observation(
-          observation)
+          observation,
+          time_step_spec=time_step_spec)
 
       action = participant_module.infer_once(
           policy=policy,
@@ -295,6 +297,12 @@ class Submission:
     elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
       # noinspection PyUnresolvedReferences
       from a2perf.domains import quadruped_locomotion
+      motion = kwargs.pop('motion', None)
+      motion_file_path = pkg_resources.resource_filename(
+          'a2perf',
+          f'domains/quadruped_locomotion/motion_imitation/data/motions/{motion}.txt'
+      )
+      kwargs['motion_files'] =[ motion_file_path]
     else:
       raise NotImplementedError(f'Domain {self.domain} not implemented')
 
@@ -472,6 +480,7 @@ class Submission:
       }
 
       print('Finished inference. Now saving')
+      print('Metric results:', metric_results)
       with open(os.path.join(self.metric_values_dir,
                              'inference_metrics_results.json'), 'w') as f:
         json.dump(metric_results, f)
