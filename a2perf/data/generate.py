@@ -254,15 +254,14 @@ def collect_dataset(
         action_space=env.action_space,
     )
 
-  saved_model_path = os.path.join(checkpoint_path, '..', '..', 'policy')
+  saved_model_path = os.path.join(checkpoint_path, '..', '..', 'greedy_policy')
   policy = load_policy(
       saved_model_path=saved_model_path, checkpoint_path=checkpoint_path
   )
 
+  # TODO: wrap the policy so we can use observation and action constraint splitter
   _ = perform_rollouts(policy, data_collector_env, num_episodes)
 
-  # To make a temp dataset id, insert the unique_id right after the -v0
-  # in the supplied dataset id
   temp_dataset_id = f'{_ENV_NAME.value[:-3]}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-{unique_id}-v0'
   dataset = data_collector_env.create_dataset(
       dataset_id=temp_dataset_id,
