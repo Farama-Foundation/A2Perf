@@ -22,8 +22,7 @@ Submission.time_participant_code = True
 ####################################
 #Set up domain##
 #####################################
-Submission.create_domain.netlist = 'toy_macro_stdcell'
-Submission.create_domain.is_eval=True
+Submission.create_domain.is_eval = False
 
 # Set up codecarbon for system metrics
 track_emissions.project_name = 'a2perf_circuit_training_train_inference'
