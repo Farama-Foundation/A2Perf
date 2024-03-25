@@ -9,11 +9,14 @@ import typing
 from contextlib import contextmanager
 
 import gin
-import gymnasium as gym
 import numpy as np
 import pkg_resources
 from absl import flags
 from absl import logging
+from tf_agents.environments import suite_gym
+from tf_agents.environments import wrappers
+from tf_agents.metrics import py_metrics
+from tf_agents.train import actor
 
 from a2perf.metrics.system import codecarbon
 
@@ -92,33 +95,22 @@ def perform_rollouts(
   Returns:
       List of rewards from each episode.
   """
-
   setup_subprocess_env(gin_config_str, absl_flags)
-  print(f'Create domain function: {create_domain_fn}')
   env = create_domain_fn()
-  all_rewards = []
-
   policy, participant_module = _load_policy(module_path, env)
-  time_step_spec = getattr(policy, 'time_step_spec', None)
+  episode_reward_metric = py_metrics.AverageReturnMetric()
+  rollout_actor = actor.Actor(
+      env=env,
+      train_step=policy._train_step_from_last_restored_checkpoint_path,
+      policy=policy,
+      observers=[episode_reward_metric],
+      episodes_per_run=1, )
+
+  all_rewards = []
   for _ in range(num_episodes):
-    observation, info = env.reset()
-    terminated = False
-    truncated = False
-    rewards = 0
-    while not terminated and not truncated:
-      preprocessed_obs = participant_module.preprocess_observation(
-          observation,
-          time_step_spec=time_step_spec)
-
-      action = participant_module.infer_once(
-          policy=policy,
-          preprocessed_observation=preprocessed_obs
-      )
-
-      observation, reward, terminated, truncated, _ = env.step(
-          action)
-      rewards += reward
-    all_rewards.append(rewards)
+    rollout_actor.run()
+    all_rewards.append(episode_reward_metric.result())
+    episode_reward_metric.reset()
 
   if rollout_rewards_queue:
     for reward in all_rewards:
@@ -259,6 +251,7 @@ class Submission:
 
   @gin.configurable('Submission.create_domain')
   def create_domain(self, **kwargs):
+    env_wrappers = None
     if self.domain == BenchmarkDomain.WEB_NAVIGATION:
       # noinspection PyUnresolvedReferences
       from a2perf.domains import web_navigation
@@ -277,37 +270,31 @@ class Submission:
       # noinspection PyUnresolvedReferences
       from a2perf.domains import circuit_training
 
-      netlist_to_use = kwargs.get('netlist', 'ariane')
       kwargs.pop('netlist', None)
-      netlist_file_path = pkg_resources.resource_filename(
-          'a2perf',
-          f'domains/circuit_training/circuit_training/environment/test_data/{netlist_to_use}/netlist.pb.txt')
-
-      init_placement_file_path = pkg_resources.resource_filename(
-          'a2perf',
-          f'domains/circuit_training/circuit_training/environment/test_data/{netlist_to_use}/initial.plc'
-      )
+      netlist_file_path = os.environ.get('NETLIST_PATH', None)
+      seed = int(os.environ.get('SEED', None))
+      init_placement_file_path = os.environ.get('INIT_PLACEMENT_PATH', None)
+      std_cell_placer_mode = os.environ.get('STD_CELL_PLACER_MODE', None)
       kwargs.update({
+          'global_seed': seed,
           'netlist_file': netlist_file_path,
           'init_placement': init_placement_file_path,
           'output_plc_file': os.path.join(self.root_dir,
                                           'inference_output.plc'),
+          'std_cell_placer_mode': std_cell_placer_mode
       })
-
+      env_wrappers = [wrappers.ActionClipWrapper]
     elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
       # noinspection PyUnresolvedReferences
       from a2perf.domains import quadruped_locomotion
-      motion = kwargs.pop('motion', None)
-      motion_file_path = pkg_resources.resource_filename(
-          'a2perf',
-          f'domains/quadruped_locomotion/motion_imitation/data/motions/{motion}.txt'
-      )
-      kwargs['motion_files'] =[ motion_file_path]
+      motion_file_path = os.environ.get('MOTION_FILE_PATH', None)
+      kwargs['motion_files'] = [motion_file_path]
     else:
       raise NotImplementedError(f'Domain {self.domain} not implemented')
 
     logging.info(f'Creating domain {self.domain.value} with kwargs {kwargs}')
-    return gym.make(self.domain.value, **kwargs)
+    return suite_gym.load(environment_name=self.domain.value,
+                          env_wrappers=env_wrappers, gym_kwargs=kwargs)
 
   def _get_observation_data(self, env):
     data = []
