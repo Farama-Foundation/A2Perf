@@ -116,6 +116,7 @@ _TRAIN_CHECKPOINT_INTERVAL = flags.DEFINE_integer(
 _POLICY_CHECKPOINT_INTERVAL = flags.DEFINE_integer(
     'policy_checkpoint_interval', None, 'Policy checkpoint interval.'
 )
+_POLICY_NAME = flags.DEFINE_string('policy_name', None, 'Policy name.')
 _EVAL_INTERVAL = flags.DEFINE_integer('eval_interval', None, 'Eval interval.')
 _LOG_INTERVAL = flags.DEFINE_integer('log_interval', None, 'Log interval.')
 
@@ -246,15 +247,15 @@ def main(_):
     )
     print(f'Changing root dir to {root_dir}')
     print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
-  elif _JOB_TYPE.value == 'inference':
+  elif _JOB_TYPE.value == 'inference' and _MODE.value == 'inference':
     # We leave the root dir alone since we need to load the model produced
     # by the training job
     root_dir = _ROOT_DIR.value
-    print(f'Changing root dir to {root_dir}')
     print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
 
-    # We perform inference with the greedy policy
-    os.environ['POLICY_NAME'] = 'greedy_policy'
+    os.environ['POLICY_NAME'] = _POLICY_NAME.value
+    logging.info('Performing inference with the %s policy.',
+                 _POLICY_NAME.value)
   elif _JOB_TYPE.value == 'train':
     print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value
@@ -286,6 +287,7 @@ def main(_):
 
   os.environ['ROOT_DIR'] = root_dir
   os.environ['ALGO'] = _ALGO.value
+  os.environ['ENV_NAME'] = _ENV_NAME.value
   if _ALGO.value == 'sac':
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   elif _ALGO.value == 'ddqn':
@@ -301,7 +303,7 @@ def main(_):
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
   elif _ALGO.value == 'ddpg':
     os.environ['RB_CAPACITY'] = str(_RB_CAPACITY.value)
-  os.environ['ENV_NAME'] = _ENV_NAME.value
+
   if _DOMAIN.value == 'quadruped_locomotion':
     os.environ['DOMAIN'] = 'quadruped_locomotion'
     os.environ['MOTION_FILE_PATH'] = _MOTION_FILE_PATH.value
