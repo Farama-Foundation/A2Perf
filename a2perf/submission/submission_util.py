@@ -1,4 +1,5 @@
 import enum
+import functools
 import importlib
 import json
 import multiprocessing
@@ -10,14 +11,12 @@ from contextlib import contextmanager
 
 import gin
 import numpy as np
-import pkg_resources
 from absl import flags
 from absl import logging
-from tf_agents.environments import suite_gym
-from tf_agents.environments import wrappers
 from tf_agents.metrics import py_metrics
 from tf_agents.train import actor
 
+from a2perf.domains.utils import suite_gym
 from a2perf.metrics.system import codecarbon
 
 
@@ -249,53 +248,6 @@ class Submission:
       with open(metrics_path, 'r') as f:
         self.metrics_results = json.load(f)
 
-  @gin.configurable('Submission.create_domain')
-  def create_domain(self, **kwargs):
-    env_wrappers = None
-    if self.domain == BenchmarkDomain.WEB_NAVIGATION:
-      # noinspection PyUnresolvedReferences
-      from a2perf.domains import web_navigation
-      from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
-
-      if kwargs.get('reload_vocab', False):
-        global_vocab_dict = np.load(
-            os.path.join(self.root_dir, 'train', 'global_vocab.npy'),
-            allow_pickle=True,
-        ).item()
-        global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
-        global_vocab.restore(dict(global_vocab=global_vocab_dict))
-        kwargs['global_vocabulary'] = global_vocab
-        kwargs.pop('reload_vocab')
-    elif self.domain == BenchmarkDomain.CIRCUIT_TRAINING:
-      # noinspection PyUnresolvedReferences
-      from a2perf.domains import circuit_training
-
-      kwargs.pop('netlist', None)
-      netlist_file_path = os.environ.get('NETLIST_PATH', None)
-      seed = int(os.environ.get('SEED', None))
-      init_placement_file_path = os.environ.get('INIT_PLACEMENT_PATH', None)
-      std_cell_placer_mode = os.environ.get('STD_CELL_PLACER_MODE', None)
-      kwargs.update({
-          'global_seed': seed,
-          'netlist_file': netlist_file_path,
-          'init_placement': init_placement_file_path,
-          'output_plc_file': os.path.join(self.root_dir,
-                                          'inference_output.plc'),
-          'std_cell_placer_mode': std_cell_placer_mode
-      })
-      env_wrappers = [wrappers.ActionClipWrapper]
-    elif self.domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
-      # noinspection PyUnresolvedReferences
-      from a2perf.domains import quadruped_locomotion
-      motion_file_path = os.environ.get('MOTION_FILE_PATH', None)
-      kwargs['motion_files'] = [motion_file_path]
-    else:
-      raise NotImplementedError(f'Domain {self.domain} not implemented')
-
-    logging.info(f'Creating domain {self.domain.value} with kwargs {kwargs}')
-    return suite_gym.load(environment_name=self.domain.value,
-                          env_wrappers=env_wrappers, gym_kwargs=kwargs)
-
   def _get_observation_data(self, env):
     data = []
     for _ in range(self.num_inference_steps):
@@ -345,6 +297,9 @@ class Submission:
     """
     setup_subprocess_env(self.gin_config_str, self.absl_flags)
 
+    create_domain_fn = functools.partial(suite_gym.create_domain,
+                                         env_name=self.domain.value,
+                                         root_dir=self.root_dir)
     if measure_emissions:
       @codecarbon.track_emissions(output_dir=output_dir,
                                   output_file='inference_emissions.csv')
@@ -353,7 +308,7 @@ class Submission:
             target=perform_rollouts,
             args=(
                 self.participant_module_path,
-                self.create_domain,
+                create_domain_fn,
                 num_episodes,
                 self.gin_config_str,
                 self.absl_flags,
@@ -365,7 +320,7 @@ class Submission:
 
       return perform_rollouts_and_track_emissions()
     else:
-      return perform_rollouts(create_domain_fn=self.create_domain,
+      return perform_rollouts(create_domain_fn=create_domain_fn,
                               num_episodes=num_episodes,
                               module_path=self.participant_module_path,
                               gin_config_str=self.gin_config_str,
@@ -399,7 +354,8 @@ class Submission:
 
   def _run_inference_benchmark(self):
     if not self.run_offline_metrics_only:
-      env = self.create_domain()
+      env = suite_gym.create_domain(env_name=self.domain.value,
+                                    root_dir=self.root_dir)
       logging.info('Successfully created domain')
 
       inference_data = self._get_observation_data(env)
@@ -458,16 +414,15 @@ class Submission:
 
       print(f'All rewards: {all_rewards}')
       metric_results['rollout_returns'] = {
-          'values': all_rewards,
-          'mean': np.mean(all_rewards),
-          'std': np.std(all_rewards),
-          'max': np.max(all_rewards),
-          'median': np.median(all_rewards),
-          'min': np.min(all_rewards)
+          'values': [float(reward) for reward in all_rewards],
+          'mean': np.mean(all_rewards).astype(float),
+          'std': np.std(all_rewards).astype(float),
+          'max': np.max(all_rewards).astype(float),
+          'median': np.median(all_rewards).astype(float),
+          'min': np.min(all_rewards).astype(float),
       }
 
-      print('Finished inference. Now saving')
-      print('Metric results:', metric_results)
+      logging.info('Metrics Results: %s', metric_results)
       with open(os.path.join(self.metric_values_dir,
                              'inference_metrics_results.json'), 'w') as f:
         json.dump(metric_results, f)
@@ -490,7 +445,6 @@ class Submission:
         raise FileNotFoundError(
             f'Root directory {self.root_dir} not found. This is necessary for loading the trained model'
         )
-
       self._run_inference_benchmark()
     else:
       raise ValueError('Benchmark mode must be either train or inference')
