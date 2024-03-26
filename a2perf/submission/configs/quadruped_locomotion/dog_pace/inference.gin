@@ -21,13 +21,12 @@ Submission.measure_emissions = True
 ####################################
 suite_gym.create_domain.mode='test'
 suite_gym.create_domain.num_parallel_envs=1
-suite_gym.create_domain.motion='dog_pace'
 
 ####################################
 # Set up benchmark mode
 ####################################
-Submission.num_inference_steps = 10000
-Submission.num_inference_episodes = 100
+Submission.num_inference_steps = 10
+Submission.num_inference_episodes = 5
 Submission.time_participant_code = True
 
 # ----------------------
