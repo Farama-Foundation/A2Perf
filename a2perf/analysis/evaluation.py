@@ -113,38 +113,6 @@ def preprocess_observation(
   )
 
 
-def create_domain(
-    env_name,
-    gym_env_wrappers=(),
-    env_wrappers=(),
-) -> py_environment.PyEnvironment:
-  if env_name == 'CircuitTraining-v0':
-
-    netlist_path = os.environ.get('NETLIST_PATH', None)
-    init_placement_path = os.environ.get('INIT_PLACEMENT_PATH', None)
-    kwargs = {
-        'netlist_file': netlist_path,
-        'init_placement': init_placement_path,
-    }
-  elif env_name == 'QuadrupedLocomotion-v0':
-    motion_file_path = os.environ.get('MOTION_FILE_PATH', None)
-    num_parallel_envs = os.environ.get('NUM_PARALLEL_ENVS', 1)
-    kwargs = {
-        'motion_files': [motion_file_path],
-        'num_parallel_envs': num_parallel_envs,
-    }
-  elif env_name == 'WebNavigation-v0':
-    kwargs = {}
-  else:
-    raise ValueError(f'Unknown environment: {env_name}')
-
-  return suite_gym.load(
-      env_name,
-      gym_kwargs=kwargs,
-      gym_env_wrappers=gym_env_wrappers,
-      env_wrappers=env_wrappers,
-  )
-
 
 def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
   """Loads a policy model from the environment's root directory.
