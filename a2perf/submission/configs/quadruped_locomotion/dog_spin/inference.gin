@@ -2,6 +2,7 @@
 # IMPORTS
 # ----------------------
 import a2perf.submission.submission_util
+import a2perf.domains.utils.suite_gym
 import a2perf.metrics.system.codecarbon
 import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
 import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
@@ -18,9 +19,9 @@ Submission.measure_emissions = True
 ####################################
 # Set up domain
 ####################################
-Submission.create_domain.mode='test'
-Submission.create_domain.num_parallel_envs=1
-Submission.create_domain.motion='dog_spin'
+suite_gym.create_domain.mode='test'
+suite_gym.create_domain.num_parallel_envs=1
+suite_gym.create_domain.motion='dog_spin'
 
 ####################################
 # Set up benchmark mode

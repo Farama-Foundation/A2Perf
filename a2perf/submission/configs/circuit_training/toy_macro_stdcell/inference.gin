@@ -1,4 +1,5 @@
 import a2perf.submission.submission_util
+import a2perf.domains.utils.suite_gym
 import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
 import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
@@ -22,7 +23,7 @@ Submission.time_participant_code = True
 ####################################
 #Set up domain##
 #####################################
-Submission.create_domain.is_eval = False
+suite_gym.create_domain.is_eval = False
 
 # Set up codecarbon for system metrics
 track_emissions.project_name = 'a2perf_circuit_training_train_inference'
