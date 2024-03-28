@@ -139,6 +139,7 @@ def collect_dataset(
                                 gym_env_wrappers=[
                                     DataCollector])
 
+  # checkpoint_path = checkpoint_path.replace('/gcs', os.path.expanduser('~/gcs'))
   saved_model_path = os.path.join(checkpoint_path, '..', '..',
                                   _POLICY_NAME.value)
   policy = load_policy(
