@@ -1,8 +1,7 @@
-import collections
 import logging
+import multiprocessing
 
 import numpy as np
-import pandas as pd
 import scipy
 
 LEFT_TAIL_ALPHA = 0.05
@@ -143,6 +142,63 @@ def compute_eval_points_within_runs(
   return experiment_meta_data
 
 
+def dispersion_within_seed(
+    domain, task, algo, exp_id, seed, data_df,
+    tag,
+    index,
+    experiment_meta_data,
+    dispersion_window_fn=scipy.stats.iqr, ):
+  seed_group = data_df.groupby(
+      ['domain', 'task', 'algo', 'experiment', 'seed']).get_group(
+      (domain, task, algo, exp_id, seed))
+  seed_group[f'{tag}_Value_diff'] = seed_group[f'{tag}_Value'].diff()
+  seed_group = seed_group[[f'{tag}_{index}', f'{tag}_Value_diff']].copy()
+  seed_group = seed_group.dropna()
+  steps, episode_reward_diff = seed_group.to_numpy().T
+
+  window_size = experiment_meta_data[(domain, task, algo, exp_id, seed)][
+    'window_size'
+  ]
+
+  all_iqr_values = []
+  for eval_point in experiment_meta_data[
+    (domain, task, algo, exp_id, seed)
+  ]['eval_points']:
+    low_end = np.ceil(eval_point - (window_size / 2))
+    high_end = np.floor(eval_point + (window_size / 2))
+
+    eval_points_above = steps >= low_end
+    eval_points_below = steps <= high_end
+    eval_points_in_window = np.logical_and(
+        eval_points_above, eval_points_below
+    )
+    valid_eval_points = np.nonzero(eval_points_in_window)[0]
+
+    if len(valid_eval_points) == 0:
+      logging.warning(
+          'No valid eval points for domain: %s, task: %s, algo: %s,'
+          ' exp_id: %s, seed: %s, eval_point: %s',
+          domain, task, algo, exp_id, seed, eval_point)
+
+      continue
+    elif len(valid_eval_points) < 2:
+      # IQR needs at least 2 data points for meaningful calculation
+      logging.warning(
+          'Insufficient data points for IQR calculation for domain: %s,'
+          ' task: %s, algo: %s, exp_id: %s, seed: %s, eval_point: %s',
+          domain, task, algo, exp_id, seed, eval_point
+      )
+      continue
+
+    # Apply window_fn to get the IQR for the current window
+    window_dispersion = dispersion_window_fn(
+        episode_reward_diff[valid_eval_points]
+    )
+    all_iqr_values.append(window_dispersion)
+
+  return all_iqr_values
+
+
 def dispersion_within_runs(
     data_df,
     tag,
@@ -154,52 +210,26 @@ def dispersion_within_runs(
   for (domain, task, algo), group in data_df.groupby(
       ['domain', 'task', 'algo']
   ):
-    print(f'Processing Domain: {domain}, Task: {task}, Algo: {algo}')
+    logging.info('Processing Domain: %s, Task: %s, Algo: %s', domain, task
+                 , algo)
     all_iqr_values = []
-    for exp_id, exp_group in group.groupby('experiment'):
-      for seed, seed_group in exp_group.groupby('seed'):
-        seed_group[f'{tag}_Value_diff'] = seed_group[f'{tag}_Value'].diff()
-        seed_group = seed_group[[f'{tag}_{index}', f'{tag}_Value_diff']].copy()
-        seed_group = seed_group.dropna()
-        steps, episode_reward_diff = seed_group.to_numpy().T
+    experiment_ids_and_seeds = group.groupby(['experiment', 'seed']).groups
+    with multiprocessing.Pool() as pool:
+      results = pool.starmap(
+          dispersion_within_seed,
+          [
+              (
+                  domain, task, algo, exp_id, seed, data_df, tag, index,
+                  experiment_meta_data, dispersion_window_fn
+              ) for (exp_id, seed) in experiment_ids_and_seeds
+          ]
+      )
 
-        window_size = experiment_meta_data[(domain, task, algo, exp_id, seed)][
-          'window_size'
-        ]
-        for eval_point in experiment_meta_data[
-          (domain, task, algo, exp_id, seed)
-        ]['eval_points']:
-          low_end = np.ceil(eval_point - (window_size / 2))
-          high_end = np.floor(eval_point + (window_size / 2))
+      pool.close()
+      pool.join()
 
-          eval_points_above = steps >= low_end
-          eval_points_below = steps <= high_end
-          eval_points_in_window = np.logical_and(
-              eval_points_above, eval_points_below
-          )
-          valid_eval_points = np.nonzero(eval_points_in_window)[0]
-
-          if len(valid_eval_points) == 0:
-            logging.warning(
-                'No valid eval points for domain: %s, task: %s, algo: %s,'
-                ' exp_id: %s, seed: %s, eval_point: %s',
-                domain, task, algo, exp_id, seed, eval_point)
-
-            continue
-          elif len(valid_eval_points) < 2:
-            # IQR needs at least 2 data points for meaningful calculation
-            logging.warning(
-                'Insufficient data points for IQR calculation for domain: %s,'
-                ' task: %s, algo: %s, exp_id: %s, seed: %s, eval_point: %s',
-                domain, task, algo, exp_id, seed, eval_point
-            )
-            continue
-
-          # Apply window_fn to get the IQR for the current window
-          window_dispersion = dispersion_window_fn(
-              episode_reward_diff[valid_eval_points]
-          )
-          all_iqr_values.append(window_dispersion)
+      results = [item for sublist in results for item in sublist]
+      all_iqr_values.extend(results)
     mean_iqr = np.mean(all_iqr_values)
     std_iqr = np.std(all_iqr_values)
     metrics[(
@@ -207,11 +237,8 @@ def dispersion_within_runs(
         algo,
         task,
     )] = dict(mean=mean_iqr, std=std_iqr)
-    print(
-        f'Domain: {domain}, Task: {task}, Algo: {algo}, Mean IQR: {mean_iqr},'
-        f' Std IQR: {std_iqr}'
-    )
-
+    logging.info('Domain: %s, Task: %s, Algo: %s, Mean IQR: %s, Std IQR: %s',
+                 domain, task, algo, mean_iqr, std_iqr)
   return metrics
 
 

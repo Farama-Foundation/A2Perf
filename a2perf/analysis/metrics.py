@@ -205,12 +205,10 @@ def plot_training_reward_data(
       ax1.set_title(f'Step-wise Plot for\n{domain}/{task}/{algo}')
       ax1.legend()
 
-
       # For the duration plot, we need to make some modifications. Let's group
       # all of the data points within a single minute
       # Only include the common duration values
       group[f'{tag}_Duration_minutes'] = group[f'{tag}_Duration'] // 60
-
 
       # Plot using 'Timestamp' as x-axis
       sns.lineplot(
@@ -447,21 +445,21 @@ def main(_):
   _initialize_plotting()
 
   base_dir = os.path.expanduser(_BASE_DIR.value)
-  # training_reward_data_df = load_training_reward_data(
-  #     base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
-  # )
-  # plot_training_reward_data(training_reward_data_df)
-  #
-  # training_reward_metrics = analysis.reliability.get_training_metrics(
-  #     data_df=training_reward_data_df, tag='Metrics/AverageReturn', index='Step'
-  # )
-  # training_system_metrics_df = load_training_system_data(
-  #     base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
-  # )
-  # training_system_metrics = analysis.system.get_training_metrics(
-  #     data_df=training_system_metrics_df
-  # )
-  # training_metrics = dict(**training_reward_metrics, **training_system_metrics)
+  training_reward_data_df = load_training_reward_data(
+      base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
+  )
+  plot_training_reward_data(training_reward_data_df)
+
+  training_reward_metrics = analysis.reliability.get_training_metrics(
+      data_df=training_reward_data_df, tag='Metrics/AverageReturn', index='Step'
+  )
+  training_system_metrics_df = load_training_system_data(
+      base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
+  )
+  training_system_metrics = analysis.system.get_training_metrics(
+      data_df=training_system_metrics_df
+  )
+  training_metrics = dict(**training_reward_metrics, **training_system_metrics)
 
   inference_reward_metrics, inference_reward_metrics_df = load_inference_metric_data(
       base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
@@ -476,23 +474,19 @@ def main(_):
   inference_metrics = dict(**inference_reward_metrics,
                            **inference_system_metrics)
 
-  # # Take rollout_returns from inference_metrics and add it to training_metrics
-  # training_metrics['rollout_returns'] = inference_metrics['rollout_returns']
-  # del inference_metrics['rollout_returns']
+  # Take rollout_returns from inference_metrics and add it to training_metrics
+  training_metrics['rollout_returns'] = inference_metrics['rollout_returns']
+  del inference_metrics['rollout_returns']
 
-  # training_metrics_df = analysis.results.metrics_dict_to_pandas_df(
-  #     training_metrics
-  # )
+  training_metrics_df = analysis.results.metrics_dict_to_pandas_df(
+      training_metrics
+  )
   inference_metrics_df = analysis.results.metrics_dict_to_pandas_df(
       inference_metrics
   )
 
-  # print(analysis.results.df_as_latex(training_metrics_df, mode='train'))
+  print(analysis.results.df_as_latex(training_metrics_df, mode='train'))
   print(analysis.results.df_as_latex(inference_metrics_df, mode='inference'))
-
-  # Save both DataFrames as objects
-  # training_metrics_df.to_csv('all_training_metrics.csv', index=False)
-  inference_metrics_df.to_csv('all_inference_metrics.csv', index=False)
 
 
 if __name__ == '__main__':

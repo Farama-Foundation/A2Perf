@@ -1,14 +1,12 @@
 import pandas as pd
 
 
-
-
 def get_distributed_experiment_metric(
     data_df, metric, tolerance=pd.Timedelta('10sec'), dtype=float
 ):
   data_df['timestamp'] = pd.to_datetime(data_df['timestamp'])
 
-  aggregated_df = pd.DataFrame()
+  dfs_to_concat = []
   for _, group in data_df.groupby(
       ['domain', 'algo', 'task', 'experiment', 'seed']
   ):
@@ -49,8 +47,8 @@ def get_distributed_experiment_metric(
         axis=1
     )
 
-    # Append the merged group to the aggregated DataFrame
-    aggregated_df = pd.concat([aggregated_df, merged_group])
+    dfs_to_concat.append(merged_group)
+  aggregated_df = pd.concat(dfs_to_concat)
   final_columns = [
       'domain',
       'algo',
@@ -151,8 +149,8 @@ def get_wall_clock_time(data_df):
 
   # Compute wall clock time in hours
   wall_clock_time = (
-      latest_shared_timestamp - earliest_shared_timestamp
-  ).dt.total_seconds() / 3600
+                        latest_shared_timestamp - earliest_shared_timestamp
+                    ).dt.total_seconds() / 3600
 
   # Group by 'domain', 'algo', 'task' and calculate mean and std of wall clock time
   metrics = {}
@@ -181,11 +179,12 @@ def get_power_usage(data_df):
   gpu_power_usage = get_gpu_power_usage(data_df)
   cpu_power_usage = get_cpu_power_usage(data_df)
 
-  return {
-      'ram_power_usage': ram_power_usage,
-      'gpu_power_usage': gpu_power_usage,
-      'cpu_power_usage': cpu_power_usage,
-  }
+  return {}
+  # return {
+  #     'ram_power_usage': ram_power_usage,
+  #     'gpu_power_usage': gpu_power_usage,
+  #     'cpu_power_usage': cpu_power_usage,
+  # }
 
 
 def get_training_metrics(data_df):
@@ -200,6 +199,7 @@ def get_training_metrics(data_df):
       'wall_clock_time': wall_clock_time,
       **power_usage,
   }
+
 
 def get_inference_metrics(data_df):
   mean_ram_usage = get_mean_ram_usage(data_df=data_df)
