@@ -2,53 +2,49 @@ import pandas as pd
 
 
 def get_distributed_experiment_metric(
-    data_df, metric, tolerance=pd.Timedelta('10sec'), dtype=float
-):
+    data_df, metric, tolerance=pd.Timedelta('10sec'), dtype=float):
   data_df['timestamp'] = pd.to_datetime(data_df['timestamp'])
+  final_dfs_to_concat = []
 
-  dfs_to_concat = []
   for _, group in data_df.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed']
-  ):
+      ['domain', 'algo', 'task', 'experiment', 'seed']):
     group = group.sort_values('timestamp')
 
-    merged_group = None
+    run_groups = []
     run_ids = group['run_id'].unique()
 
-    for i, run_id in enumerate(run_ids):
+    for run_id in run_ids:
       run_group = group[group['run_id'] == run_id].rename(
           columns={metric: f'{metric}_{run_id}'}
       )
       run_group[f'{metric}_{run_id}'] = run_group[f'{metric}_{run_id}'].astype(
           dtype
       )
-      if merged_group is None:
-        merged_group = run_group
-      else:
-        merged_group = pd.merge_asof(
-            merged_group,
-            run_group,
-            on='timestamp',
-            suffixes=('', f'_{run_id}'),
-            tolerance=tolerance,
-        )
+      run_groups.append(run_group)
 
-        # Check for NaN values in the 'ram_process' columns of all merged run_ids so far.
-        # This ensures we know how much RAM the experiment is using overall.
-        na_check_columns = [f'{metric}_{rid}' for rid in run_ids[: i + 1]]
-        merged_group = merged_group.dropna(subset=na_check_columns)
+    # Merge all groups at once
+    merged_group = run_groups[0]
+    for run_group, run_id in zip(run_groups[1:], run_ids[1:]):
+      merged_group = pd.merge_asof(
+          merged_group,
+          run_group,
+          on='timestamp',
+          suffixes=('', f'_{run_id}'),
+          tolerance=tolerance,
+      )
 
-    # After everything is merged, we can group by 'domain', 'algo', 'task',
-    # 'experiment', 'seed' and aggregate all ram_process columns
-    metric_columns = [
-        col for col in merged_group if col.startswith(f'{metric}_')
-    ]
+    # Check for NaN values in the metric column that we are aggregating
+    na_check_columns = [f'{metric}_{rid}' for rid in run_ids]
+    merged_group = merged_group.dropna(subset=na_check_columns)
+
+    # Aggregate the metric columns
+    metric_columns = [col for col in merged_group if
+                      col.startswith(f'{metric}_')]
     merged_group[f'experiment_{metric}'] = merged_group[metric_columns].sum(
-        axis=1
-    )
+        axis=1)
+    final_dfs_to_concat.append(merged_group)
 
-    dfs_to_concat.append(merged_group)
-  aggregated_df = pd.concat(dfs_to_concat)
+  aggregated_df = pd.concat(final_dfs_to_concat)
   final_columns = [
       'domain',
       'algo',
