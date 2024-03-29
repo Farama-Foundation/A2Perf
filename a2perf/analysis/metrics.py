@@ -110,8 +110,13 @@ def process_tb_event_dir(event_file_path, tags=None):
   )
   data_csv_path = os.path.join(log_base_dir, 'data.csv')
 
-  if 0 == 1 and os.path.exists(data_csv_path):
+  if os.path.exists(data_csv_path):
     data = pd.read_csv(data_csv_path)
+
+    # We can't load timestamp from csv, so we need to convert that column from
+    # string to datetime
+    for tag in tags:
+      data[f'{tag}_Timestamp'] = pd.to_datetime(data[f'{tag}_Timestamp'])
     logging.info(f'Loaded data from {data_csv_path}')
   else:
     data = load_tb_data(event_file_path, tags)
@@ -448,7 +453,6 @@ def main(_):
   training_reward_data_df = load_training_reward_data(
       base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
   )
-  plot_training_reward_data(training_reward_data_df)
 
   training_reward_metrics = analysis.reliability.get_training_metrics(
       data_df=training_reward_data_df, tag='Metrics/AverageReturn', index='Step'
