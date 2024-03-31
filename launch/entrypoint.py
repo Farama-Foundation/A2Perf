@@ -254,8 +254,7 @@ def main(_):
     print(colored(figlet_obj.renderText(_JOB_TYPE.value), 'red'))
 
     os.environ['POLICY_NAME'] = _POLICY_NAME.value
-    logging.info('Performing inference with the %s policy.',
-                 _POLICY_NAME.value)
+    logging.info('Performing inference with the %s policy.', _POLICY_NAME.value)
   elif _JOB_TYPE.value == 'train':
     print(f'Experiment ID: {_EXPERIMENT_ID.value}')
     root_dir = _ROOT_DIR.value
@@ -279,6 +278,11 @@ def main(_):
     # so the root dir should be at the domain level
     root_dir = os.path.join(_ROOT_DIR.value, *(['..'] * 5))
     root_dir = os.path.abspath(root_dir)
+
+    os.environ['POLICY_NAME'] = _POLICY_NAME.value
+    logging.info(
+        'Performing dataset generation with %s policy.', _POLICY_NAME.value
+    )
   else:
     raise ValueError(f'Invalid job type: {_JOB_TYPE.value}')
 
