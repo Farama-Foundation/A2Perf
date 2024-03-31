@@ -7,23 +7,21 @@ from typing import Dict
 from typing import OrderedDict
 from typing import Union
 
-import numpy as np
-import tensorflow as tf
+from a2perf.domains import circuit_training
+from a2perf.domains import quadruped_locomotion
+from a2perf.domains import web_navigation
+from a2perf.domains.utils.suite_gym import create_domain
 from absl import app
 from absl import flags
 from absl import logging
+import numpy as np
+import tensorflow as tf
 from tf_agents.environments import py_environment
+from tf_agents.metrics import py_metrics
 from tf_agents.policies import policy_loader
 from tf_agents.policies.tf_policy import TFPolicy
+from tf_agents.train import actor
 from tf_agents.trajectories import time_step as ts
-
-# noinspection PyUnresolvedReferences
-from a2perf.domains import circuit_training
-# noinspection PyUnresolvedReferences
-from a2perf.domains import quadruped_locomotion
-# noinspection PyUnresolvedReferences
-from a2perf.domains import web_navigation
-from a2perf.domains.utils.suite_gym import create_domain
 
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
@@ -150,20 +148,20 @@ def perform_rollouts(
   Returns:
       The returns for each episode.
   """
+  episode_reward_metric = py_metrics.AverageReturnMetric()
+  rollout_actor = actor.Actor(
+      env=env,
+      train_step=policy._train_step_from_last_restored_checkpoint_path,
+      policy=policy,
+      observers=[episode_reward_metric],
+      episodes_per_run=1,
+  )
 
-  obs = env.reset()
   episode_returns = []
   for _ in range(num_episodes):
-    episode_return = 0
-    while not obs.is_last():
-      obs = preprocess_observation(
-          observation=obs.observation, time_step_spec=policy.time_step_spec
-      )
-      action = policy.action(obs)
-      obs = env.step(action.action)
-      episode_return += obs.reward
-    episode_returns.append(episode_return)
-
+    rollout_actor.run()
+    episode_returns.append(episode_reward_metric.result())
+    episode_reward_metric.reset()
   return np.array(episode_returns)
 
 
@@ -176,21 +174,25 @@ def load_policy_and_perform_rollouts(
 
   eval_dict = {
       checkpoint_path: {
-          'mean': np.mean(episode_returns),
-          'std': np.std(episode_returns),
-          'min': np.min(episode_returns),
-          'max': np.max(episode_returns),
-          'median': np.median(episode_returns),
-          'count': episode_returns.size,
+          'mean': np.mean(episode_returns).astype(float),
+          'std': np.std(episode_returns).astype(float),
+          'min': np.min(episode_returns).astype(float),
+          'max': np.max(episode_returns).astype(float),
+          'median': np.median(episode_returns).astype(float),
+          'count': int(episode_returns.size),
+          'values': [float(v) for v in episode_returns],
       }
   }
-  logging.info(f'Evaluation for {checkpoint_path}: {eval_dict}')
+
+  logging.info('Evaluation results for %s:', checkpoint_path)
+  logging.info('\t%s', eval_dict[checkpoint_path])
   return eval_dict
 
 
 def main(_):
-  saved_model_path = os.path.join(_ROOT_DIR.value, 'policies',
-                                  _POLICY_NAME.value)
+  saved_model_path = os.path.join(
+      _ROOT_DIR.value, 'policies', _POLICY_NAME.value
+  )
   checkpoints_path = os.path.join(_ROOT_DIR.value, 'policies', 'checkpoints')
 
   # Get absolute paths of all checkpoints
@@ -212,7 +214,9 @@ def main(_):
     pool.close()
     pool.join()
 
-  all_episode_returns = {k: v for d in episode_returns for k, v in d.items()}
+  all_episode_returns = {
+      k: v for d in episode_returns for k, v in d.items()
+  }
 
   # Save as JSON
   evaluation_save_path = os.path.join(
