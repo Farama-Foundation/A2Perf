@@ -7,20 +7,23 @@ from typing import Dict
 from typing import OrderedDict
 from typing import Union
 
-from a2perf.domains import circuit_training
-from a2perf.domains import quadruped_locomotion
-from a2perf.domains import web_navigation
+import numpy as np
+import tensorflow as tf
 from absl import app
 from absl import flags
 from absl import logging
-import numpy as np
-import numpy as np
-import tensorflow as tf
 from tf_agents.environments import py_environment
-from tf_agents.environments import suite_gym
 from tf_agents.policies import policy_loader
 from tf_agents.policies.tf_policy import TFPolicy
 from tf_agents.trajectories import time_step as ts
+
+# noinspection PyUnresolvedReferences
+from a2perf.domains import circuit_training
+# noinspection PyUnresolvedReferences
+from a2perf.domains import quadruped_locomotion
+# noinspection PyUnresolvedReferences
+from a2perf.domains import web_navigation
+from a2perf.domains.utils.suite_gym import create_domain
 
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
@@ -38,6 +41,9 @@ _ROOT_DIR = flags.DEFINE_string(
 
 _ENV_NAME = flags.DEFINE_string(
     'env_name', 'CartPole-v0', 'The name of the environment to evaluate.'
+)
+_POLICY_NAME = flags.DEFINE_string(
+    'policy_name', 'policy', 'The name of the policy to evaluate.'
 )
 
 
@@ -113,7 +119,6 @@ def preprocess_observation(
   )
 
 
-
 def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
   """Loads a policy model from the environment's root directory.
 
@@ -184,7 +189,8 @@ def load_policy_and_perform_rollouts(
 
 
 def main(_):
-  saved_model_path = os.path.join(_ROOT_DIR.value, 'policies', 'policy')
+  saved_model_path = os.path.join(_ROOT_DIR.value, 'policies',
+                                  _POLICY_NAME.value)
   checkpoints_path = os.path.join(_ROOT_DIR.value, 'policies', 'checkpoints')
 
   # Get absolute paths of all checkpoints

@@ -1,7 +1,9 @@
 import logging
 import multiprocessing
+import os
 
 import numpy as np
+import pandas as pd
 import scipy
 
 LEFT_TAIL_ALPHA = 0.05
@@ -13,6 +15,19 @@ MIN_NUM_DISPERSION_DATA_POINTS = 2
 def compute_dispersion(curve):
   # Compute the dispersion as the IQR of the curve
   return scipy.stats.iqr(curve)
+
+
+def apply_dispersion_fn_to_groups(groups, data_column, tag):
+  results = []
+  for g in groups:
+    result = compute_dispersion_if_enough_data(g[data_column], tag)
+    g = g.iloc[[0]]
+    g['iqr_dispersion'] = pd.NA
+
+    if result:
+      g.iloc[0, g.columns.get_loc('iqr_dispersion')] = result
+      results.append(g)
+  return pd.concat(results)
 
 
 def compute_drawdown(sequence):
@@ -33,6 +48,15 @@ def compute_drawdown(sequence):
   """
   peak_so_far = np.maximum.accumulate(sequence)
   return peak_so_far - sequence
+
+
+def compute_dispersion_if_enough_data(group, tag):
+  if len(group) > MIN_NUM_DISPERSION_DATA_POINTS:
+    return compute_dispersion(group)
+  else:
+    logging.warning('Insufficient data at step %s for tag %s.', group.index[0],
+                    tag)
+    return None  # or return some default value
 
 
 def lowpass_filter(curve, lowpass_thresh):
@@ -64,33 +88,23 @@ def dispersion_across_runs(data_df, tag, index):
 
   # Group the curves by 'domain', 'algo', 'task', and 'step_col' to compute dispersion
   dispersion_groups = data_df.groupby(['domain', 'algo', 'task', step_col])
+  dispersion_groups = [group for _, group in dispersion_groups]
+  indices = range(len(dispersion_groups))
 
-  # Log all groups just to make sure we're capturing correct data
-  logging.info('Groups: %s', dispersion_groups)
+  num_processes = os.cpu_count() // 2
+  split_indices = np.array_split(indices, num_processes)
+  dispersion_group_batches = [[dispersion_groups[index] for index in batch] for
+                              batch
+                              in split_indices]
 
-  def compute_dispersion_if_enough_data(group):
-    if len(group) > MIN_NUM_DISPERSION_DATA_POINTS:
-      return compute_dispersion(group)
-    else:
-      logging.warning('Insufficient data at step %s for tag %s. Skipping'
-                      ' dispersion calculation.', group.name[-1], tag)
-      return None  # or return some default value
+  with multiprocessing.Pool(num_processes) as pool:
+    results = pool.starmap(apply_dispersion_fn_to_groups,
+                           [(batch, lowpass_value_col, tag) for batch in
+                            dispersion_group_batches])
+    pool.close()
+    pool.join()
 
-  dispersion_df = (
-      dispersion_groups[lowpass_value_col]
-      .apply(compute_dispersion_if_enough_data)
-      .reset_index()
-  )
-
-  # Drop rows where '{tag}_lowpass_Value' column has NaN values
-  lowpass_value_col = f'{tag}_lowpass_Value'
-  dispersion_df = dispersion_df.dropna(subset=[lowpass_value_col])
-
-  # Renaming the column for clarity
-  dispersion_df.rename(
-      columns={lowpass_value_col: 'iqr_dispersion'}, inplace=True
-  )
-
+  dispersion_df = pd.concat(results)
   metrics = {}
   for (domain, algo, task), group in dispersion_df.groupby(
       ['domain', 'algo', 'task']
