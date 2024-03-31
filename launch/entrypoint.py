@@ -267,16 +267,13 @@ def main(_):
     # ALL policies in a given training run. We can use these returns to classify
     # the policies into intermediate, novice, and expert.
     root_dir = _ROOT_DIR.value
+
+    os.environ['POLICY_NAME'] = _POLICY_NAME.value
+    logging.info('Evaluating the policy %s.', _POLICY_NAME.value)
   elif _JOB_TYPE.value == 'generate':
     # For dataset generation, we want the root dir to be at
     # the domain level, so we can load the expertise data
-    # os.path.join(
-    #       a2perf,
-    #         _DOMAIN.value,
-    #         str(exp_id),
-    #         task_name,
-    #         algo,
-    #         exp_name
+    # os.path.join(a2perf, _DOMAIN.value, str(exp_id), task_name, algo, exp_name
     #         work_unit_id,
     #     )
     # so the root dir should be at the domain level
