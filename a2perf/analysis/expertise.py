@@ -25,6 +25,19 @@ _AVERAGE_MEASURE = flags.DEFINE_enum(
     'Measure to use for averaging the episode rewards.',
 )
 
+_SKILL_LEVEL = flags.DEFINE_enum(
+    'skill_level',
+    'novice',
+    ['novice', 'intermediate', 'expert'],
+    'Skill level of the expert.',
+)
+
+_TASK_NAME = flags.DEFINE_string(
+    'task_name',
+    None,
+    'Name of the task to perform. This is used to name the dataset.',
+)
+
 
 def assign_skill_level(row, col_name, bounds):
   """Assign skill level to a row based on episode_reward and predefined bounds."""
@@ -64,6 +77,7 @@ def plot_skill_levels(data_df, col_name, save_path=None):
   fig.legend()
   fig.show()
   if save_path:
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
     fig.savefig(save_path)
 
 
@@ -142,12 +156,22 @@ def main(_):
   plot_skill_levels(
       evaluation_data_df,
       _AVERAGE_MEASURE.value,
-      save_path=os.path.join(root_dir, 'skill_level_distribution.png'),
+      save_path=os.path.join(
+          root_dir,
+          _TASK_NAME.value,
+          _SKILL_LEVEL.value,
+          'skill_level_distribution.png',
+      ),
   )
 
   # Save the data with skill levels so we can load to generate datasets
   evaluation_data_df.to_csv(
-      os.path.join(root_dir, 'evaluation_data_with_skill_levels.csv'),
+      os.path.join(
+          root_dir,
+          _TASK_NAME.value,
+          _SKILL_LEVEL.value,
+          'evaluation_data_with_skill_levels.csv',
+      ),
       index=False,
   )
 

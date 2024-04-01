@@ -3,21 +3,20 @@ import multiprocessing
 import os
 import shutil
 
-import gymnasium as gym
-import minari
-import numpy as np
-import pandas as pd
-import tensorflow as tf
+from a2perf.domains.utils import suite_gym
 from absl import app
 from absl import flags
 from absl import logging
+import gymnasium as gym
+import minari
 from minari import DataCollector
+import numpy as np
+import pandas as pd
+import tensorflow as tf
 from tf_agents.metrics import py_metrics
 from tf_agents.policies import policy_loader
 from tf_agents.policies.tf_policy import TFPolicy
 from tf_agents.train import actor
-
-from a2perf.domains.utils import suite_gym
 
 _ROOT_DIR = flags.DEFINE_string(
     'root_dir',
@@ -106,7 +105,8 @@ def perform_rollouts(
       train_step=policy._train_step_from_last_restored_checkpoint_path,
       policy=policy,
       observers=[episode_reward_metric],
-      episodes_per_run=1, )
+      episodes_per_run=1,
+  )
 
   episode_returns = []
   for _ in range(num_episodes):
@@ -134,16 +134,19 @@ def collect_dataset(
   np.random.seed(seed)
   tf.random.set_seed(seed)
 
-  env = suite_gym.create_domain(env_name=env_name,
-                                root_dir=_ROOT_DIR.value,
-                                gym_env_wrappers=[
-                                    DataCollector])
+  env = suite_gym.create_domain(
+      env_name=env_name,
+      root_dir=_ROOT_DIR.value,
+      gym_env_wrappers=[DataCollector],
+  )
 
   # checkpoint_path = checkpoint_path.replace('/gcs', os.path.expanduser('~/gcs'))
-  saved_model_path = os.path.join(checkpoint_path, '..', '..',
-                                  _POLICY_NAME.value)
+  saved_model_path = os.path.join(
+      checkpoint_path, '..', '..', _POLICY_NAME.value
+  )
   policy = load_policy(
-      saved_model_path=saved_model_path, checkpoint_path=checkpoint_path,
+      saved_model_path=saved_model_path,
+      checkpoint_path=checkpoint_path,
   )
 
   _ = perform_rollouts(policy, env, num_episodes)
@@ -159,9 +162,14 @@ def collect_dataset(
 
 def main(_):
   if _DATASETS_PATH.value is not None:
-    os.environ['MINARI_DATASETS_PATH'] = os.path.expanduser(
-        _DATASETS_PATH.value
+    minari_datasets_path = os.path.join(
+        os.path.expanduser(
+            _DATASETS_PATH.value,
+        ),
+        _TASK_NAME.value,
+        _SKILL_LEVEL.value,
     )
+    os.environ['MINARI_DATASETS_PATH'] = minari_datasets_path
 
   root_dir = os.path.expanduser(_ROOT_DIR.value)
   env_name = _ENV_NAME.value[:-3]
@@ -171,7 +179,12 @@ def main(_):
 
   # Load the dataframe containing evaluation data
   evaluation_df = pd.read_csv(
-      os.path.join(root_dir, 'evaluation_data_with_skill_levels.csv')
+      os.path.join(
+          root_dir,
+          _TASK_NAME.value,
+          _SKILL_LEVEL.value,
+          'evaluation_data_with_skill_levels.csv',
+      )
   )
 
   # Filter the dataframe by the skill level
