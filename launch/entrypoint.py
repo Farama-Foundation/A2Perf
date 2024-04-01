@@ -346,8 +346,9 @@ def main(_):
         'a2perf.analysis.expertise',
         f'--root_dir={root_dir}',
         f'--verbosity={logging.get_verbosity()}',
-        '--average_measure=mean',
+        '--average_measure=median',
         f'--experiment_ids={",".join(_EXPERIMENT_IDS.value)}',
+        f'--task_name={_TASK_NAME.value}',
     ]
 
     print(skill_level_command)
@@ -373,6 +374,7 @@ def main(_):
         f'--task_name={_TASK_NAME.value}',
         f'--seed={_SEED.value}',
         f'--datasets_path={root_dir}',
+        f'--policy_name={_POLICY_NAME.value}',
     ]
 
     print(generate_command)
