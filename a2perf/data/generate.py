@@ -1,3 +1,4 @@
+import functools
 import itertools
 import multiprocessing
 import os
@@ -134,10 +135,21 @@ def collect_dataset(
   np.random.seed(seed)
   tf.random.set_seed(seed)
 
+  # We need to hack the observation space for quadruped_locomotion
+  if env_name == 'QuadrupedLocomotion-v0':
+    observation_space = gym.spaces.Box(
+        low=-np.inf, high=np.inf, shape=(160,), dtype=np.float64
+    )
+    data_collector_call = functools.partial(
+        DataCollector, observation_space=observation_space
+    )
+  else:
+    data_collector_call = DataCollector
+
   env = suite_gym.create_domain(
       env_name=env_name,
       root_dir=_ROOT_DIR.value,
-      gym_env_wrappers=[DataCollector],
+      gym_env_wrappers=[data_collector_call],
   )
 
   # checkpoint_path = checkpoint_path.replace('/gcs', os.path.expanduser('~/gcs'))
@@ -152,8 +164,7 @@ def collect_dataset(
   _ = perform_rollouts(policy, env, num_episodes)
 
   temp_dataset_id = f'{_ENV_NAME.value[:-3]}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-{unique_id}-v0'
-  data_collector_env = env._env.gym
-  dataset = data_collector_env.create_dataset(
+  dataset = env.gym.create_dataset(
       dataset_id=temp_dataset_id,
   )
   env.close()
