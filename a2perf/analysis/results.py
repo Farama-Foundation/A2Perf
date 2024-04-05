@@ -16,7 +16,6 @@ OPTIMAL_METRIC_CRITERIA = dict(
     risk_across_rollouts='max',
     disperion_across_rollouts='min',
 
-
 )
 
 METRIC_TO_DISPLAY_NAME = dict(
@@ -71,6 +70,15 @@ METRIC_TO_UNIT = dict(
 )
 
 
+def format_value(val):
+  """Format the value in scientific notation if its absolute value is below a certain threshold."""
+  threshold = 1e-2  # You can adjust this threshold as needed
+  if abs(val) < threshold:
+    return f'{val:.2e}'  # scientific notation
+  else:
+    return f'{val:.2f}'  # standard decimal format
+
+
 def metrics_dict_to_pandas_df(metrics_dict):
   # Transform the metrics dictionary into a DataFrame
   data_for_df = []
@@ -80,13 +88,18 @@ def metrics_dict_to_pandas_df(metrics_dict):
       category = METRIC_TO_CATEGORY[metric_name]
       display_name = METRIC_TO_DISPLAY_NAME[metric_name]
       unit = METRIC_TO_UNIT[metric_name]
+
+      # Within your existing code block
       if isinstance(values, dict):
         mean = values['mean']
         std = values['std']
-        display_val = f'{mean:.2f} ± {std:.2f}'
+        display_mean = format_value(mean)
+        display_std = format_value(std)
+        display_val = f'{display_mean} \\pm {display_std}'
       else:
         value_to_compare = values
-        display_val = f'{value_to_compare:.2f}'
+        display_val = format_value(value_to_compare)
+
       data_for_df.append(
           (domain, task, algo, category, display_name, unit, display_val)
       )
@@ -121,7 +134,8 @@ def metrics_dict_to_pandas_df(metrics_dict):
         best_value = value_to_compare
 
       # Check for equality for the case where it's as good as the best_value (and best_value is not None)
-      parameters_to_add =(domain, task, algo, category, display_name, unit, display_val)
+      parameters_to_add = (
+          domain, task, algo, category, display_name, unit, display_val)
       if best_value is not None and value_to_compare == best_value:
         best_exps.append(
             parameters_to_add)
