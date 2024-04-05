@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+import matplotlib.ticker as ticker
 
 _SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
 _BASE_DIR = flags.DEFINE_string(
@@ -27,21 +28,58 @@ _EXPERIMENT_IDS = flags.DEFINE_list(
     'experiment_ids', [94408569], 'Experiment IDs to process.'
 )
 
+DOMAIN_DISPLAY_NAME = {
+    'quadruped_locomotion': 'Quadruped Locomotion',
+    'circuit_training': 'Circuit Training',
+    'web_navigation': 'Web Navigation',
+}
+
+TASK_DISPLAY_NAME = {
+    'dog_pace': 'Dog Pace',
+    'dog_trot': 'Dog Trot',
+    'dog_spin': 'Dog Spin',
+}
+
+ALGO_DISPLAY_NAME = {
+    'sac': 'SAC',
+    'ppo': 'PPO',
+    'dqn': 'DQN',
+    'ddqn': 'DDQN',
+}
+
+METRIC_DISPLAY_NAME = {
+    'Metrics/AverageReturn': 'Episode Return',
+}
+
+
+def format_func(value, tick_number):
+  # Convert to integer if the value is effectively a whole number
+  if value.is_integer():
+    return f'{int(value)}'
+  else:
+    return f'{value}'
+
 
 def _initialize_plotting():
+  base_font_size = 14
   sns.set_style('whitegrid')
-  plt.rcParams['figure.figsize'] = (12, 6)
-  plt.rcParams['font.size'] = 14
-  plt.rcParams['axes.labelsize'] = 14
-  plt.rcParams['axes.titlesize'] = 16
-  plt.rcParams['legend.fontsize'] = 12
-  plt.rcParams['xtick.labelsize'] = 12
-  plt.rcParams['ytick.labelsize'] = 12
-  plt.rcParams['figure.titlesize'] = 16
-  plt.rcParams['figure.dpi'] = 100
-  plt.rcParams['savefig.dpi'] = 100
-  plt.rcParams['savefig.format'] = 'png'
-  plt.rcParams['savefig.bbox'] = 'tight'
+  plt.rcParams.update({
+      'figure.figsize': (12, 6),
+      'font.size': base_font_size - 2,
+      'axes.labelsize': base_font_size - 2,
+      'axes.titlesize': base_font_size,
+      'axes.labelweight': 'bold',  # Bold font for the axes labels
+      'legend.fontsize': base_font_size - 4,
+      'xtick.labelsize': base_font_size - 4,
+      'ytick.labelsize': base_font_size - 4,
+      'figure.titlesize': base_font_size,
+      'figure.dpi': 100,
+      'savefig.dpi': 100,
+      'savefig.format': 'png',
+      'savefig.bbox': 'tight',
+      'grid.linewidth': 0.5,
+      'grid.alpha': 0.5  # Lighter grid lines
+  })
 
 
 def load_tb_data(log_file, tags=None):
@@ -178,57 +216,83 @@ def process_codecarbon_csv(csv_file_path):
   return df
 
 
-def plot_training_reward_data(
-    metrics_df, event_file_tags=('Metrics/AverageReturn',)
-):
-  # Plot each event_file_tag once using "Step" as the x-axis
-  # then "duration" as the x-axis
+def format_func(value, tick_number):
+  # Function to format tick labels
+  if value.is_integer():
+    return f'{int(value)}'
+  else:
+    return f'{value}'
+
+
+def downsample_steps(group, tag, n_steps=1000):
+  """ Select a subset of steps at regular intervals that have sufficient data points across seeds """
+  # Count the number of values at each step
+  step_counts = group.groupby(f'{tag}_Step').size()
+
+  # Filter steps with more than 3 values (for mean and std calculation)
+  valid_steps = step_counts[step_counts > 2].index
+
+  # Calculate the interval at which to select steps
+  interval = max(1, len(valid_steps) // n_steps)
+
+  # Select steps at regular intervals
+  selected_steps = valid_steps[::interval]
+
+  # Return the filtered group
+  return group[group[f'{tag}_Step'].isin(selected_steps)]
+
+
+def plot_training_reward_data(metrics_df,
+    event_file_tags=('Metrics/AverageReturn',)):
   for tag in event_file_tags:
-    # Group by domain/task/algo and plot the tag
+    tag_display_val = METRIC_DISPLAY_NAME.get(tag, tag)
     plot_df = metrics_df.groupby(['domain', 'task', 'algo'])
 
     for (domain, task, algo), group in plot_df:
-      fig, (ax1, ax2) = plt.subplots(
-          1, 2, figsize=(15, 5)
-      )  # Create subplots: one row, two columns
+      # Downsample the group
+      group = downsample_steps(group=group, n_steps=2000, tag=tag)
 
-      # For circuit_training, we need to cut off
-      # the first few steps since they are all 0
-      if domain == 'circuit_training':
-        group = group[group[f'{tag}_Value'] < 0]
-
-      # Plot using 'Step' as x-axis
+      # Create first plot for 'Step'
+      plt.figure(figsize=(8, 5))
       sns.lineplot(
-          ax=ax1,
           x=f'{tag}_Step',
           y=f'{tag}_Value',
           data=group,
-          label=f'{domain}/{task}/{algo}',
+          label=f'{algo}',
       )
-      ax1.set_xlabel('Step')
-      ax1.set_ylabel(tag)
-      ax1.set_title(f'Step-wise Plot for\n{domain}/{task}/{algo}')
-      ax1.legend()
+      plt.xlabel('Train Step')
+      plt.ylabel(tag_display_val)
+      plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+      plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
 
-      # For the duration plot, we need to make some modifications. Let's group
-      # all of the data points within a single minute
-      # Only include the common duration values
+      title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
+              f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
+              f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Train Steps)'
+      plt.title(title)
+      plt.legend()
+      plt.tight_layout()
+      plt.show()
+
+      # Create second plot for 'Duration'
+      plt.figure(figsize=(8, 5))
       group[f'{tag}_Duration_minutes'] = group[f'{tag}_Duration'] // 60
-
-      # Plot using 'Timestamp' as x-axis
       sns.lineplot(
-          ax=ax2,
           x=f'{tag}_Duration_minutes',
           y=f'{tag}_Value',
           data=group,
-          label=f'{domain}/{task}/{algo}',
+          label=f'{algo}',
       )
-      ax2.set_xlabel('Duration (minutes)')
-      ax2.set_ylabel(tag)
-      ax2.set_title(f'Duration-wise Plot for\n{domain}/{task}/{algo}')
-      ax2.legend()
+      plt.xlabel('Duration (minutes)')
+      plt.ylabel(tag_display_val)
+      plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+      plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
 
-      plt.tight_layout()  # Adjust subplots to fit into figure area.
+      title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
+              f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
+              f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Duration)'
+      plt.title(title)
+      plt.legend()
+      plt.tight_layout()
       plt.show()
 
 
@@ -453,6 +517,9 @@ def main(_):
   training_reward_data_df = load_training_reward_data(
       base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
   )
+
+  plot_training_reward_data(training_reward_data_df,
+                            event_file_tags=['Metrics/AverageReturn'])
 
   training_reward_metrics = analysis.reliability.get_training_metrics(
       data_df=training_reward_data_df, tag='Metrics/AverageReturn', index='Step'
