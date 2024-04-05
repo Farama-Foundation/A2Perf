@@ -187,6 +187,7 @@ def create_domain(env_name, root_dir=None, env_wrappers=(),
       global_vocab.restore(dict(global_vocab=global_vocab_dict))
       env_kwargs['global_vocabulary'] = global_vocab
       env_kwargs.pop('reload_vocab')
+      env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
   elif env_name == CIRCUIT_TRAINING:
     # noinspection PyUnresolvedReferences
     from a2perf.domains import circuit_training
@@ -204,7 +205,7 @@ def create_domain(env_name, root_dir=None, env_wrappers=(),
                                         'output.plc'),
         'std_cell_placer_mode': std_cell_placer_mode
     })
-    env_wrappers = [wrappers.ActionClipWrapper]
+    env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
   elif env_name == QUADRUPED_LOCOMOTION:
     # noinspection PyUnresolvedReferences
     from a2perf.domains import quadruped_locomotion
