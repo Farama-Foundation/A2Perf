@@ -121,14 +121,14 @@ setup(
         ],
         'web-navigation': [
             'selenium',
-            'webdriver-manager',
-            'regex'
+            'regex',
+            'chromedriver-py'
         ],
         'quadruped-locomotion': ['pybullet'],
         'all': [
             'torch==1.13.1',
             'selenium',
-            'webdriver-manager',
+            'chromedriver-py'
             'pybullet',
             'tensorflow',
             'regex'
