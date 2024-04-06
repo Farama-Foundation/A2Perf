@@ -190,6 +190,7 @@ def load_policy_and_perform_rollouts(
 
 
 def main(_):
+  multiprocessing.set_start_method('spawn', force=False)
   saved_model_path = os.path.join(
       _ROOT_DIR.value, 'policies', _POLICY_NAME.value
   )
@@ -214,9 +215,7 @@ def main(_):
     pool.close()
     pool.join()
 
-  all_episode_returns = {
-      k: v for d in episode_returns for k, v in d.items()
-  }
+  all_episode_returns = {k: v for d in episode_returns for k, v in d.items()}
 
   # Save as JSON
   evaluation_save_path = os.path.join(
