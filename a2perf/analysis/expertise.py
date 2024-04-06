@@ -20,14 +20,14 @@ _ROOT_DIR = flags.DEFINE_string(
 
 _AVERAGE_MEASURE = flags.DEFINE_enum(
     'average_measure',
-    'median',
+    None,
     ['mean', 'median'],
     'Measure to use for averaging the episode rewards.',
 )
 
 _SKILL_LEVEL = flags.DEFINE_enum(
     'skill_level',
-    'novice',
+    None,
     ['novice', 'intermediate', 'expert'],
     'Skill level of the expert.',
 )
