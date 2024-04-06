@@ -106,7 +106,11 @@ _NUM_EPISODES_PER_ITERATION = flags.DEFINE_integer(
 _MAX_SEQUENCE_LENGTH = flags.DEFINE_integer(
     'max_sequence_length', -1, 'Max sequence length.'
 )
-
+_NUM_COLLECT_MACHINES = flags.DEFINE_integer(
+    'num_collect_machines',
+    -1,
+    'Number of machines used to generate the dataset.',
+)
 _NUM_COLLECT_JOBS_PER_MACHINE = flags.DEFINE_integer(
     'num_collect_jobs_per_machine', None, 'Number of collect jobs per machine.'
 )
@@ -340,26 +344,31 @@ def main(_):
     # the policies into novice, intermediate, and expert. We can then use these
     # classifications to generate datasets.
 
-    skill_level_command = [
-        'python',
-        '-m',
-        'a2perf.analysis.expertise',
-        f'--root_dir={root_dir}',
-        f'--verbosity={logging.get_verbosity()}',
-        '--average_measure=median',
-        f'--experiment_ids={",".join(_EXPERIMENT_IDS.value)}',
-        f'--task_name={_TASK_NAME.value}',
-    ]
+    # Only the leading worker determines skill level
+    job_completion_index = int(os.environ.get('JOB_COMPLETION_INDEX', -1))
+    is_leading_worker = job_completion_index == 0
+    if is_leading_worker:
+      skill_level_command = [
+          'python',
+          '-m',
+          'a2perf.analysis.expertise',
+          f'--root_dir={root_dir}',
+          f'--verbosity={logging.get_verbosity()}',
+          '--average_measure=median',
+          f'--experiment_ids={",".join(_EXPERIMENT_IDS.value)}',
+          f'--task_name={_TASK_NAME.value}',
+          f'--skill_level={_SKILL_LEVEL.value}',
+      ]
 
-    print(skill_level_command)
-    skill_level_process = subprocess.Popen(
-        skill_level_command, env=os.environ.copy(), text=True
-    )
-    skill_level_process.wait()
-    if skill_level_process.returncode != 0:
-      raise ValueError(f'Error running the command: {skill_level_command}')
-    else:
-      print('Finished running the command successfully.')
+      print(skill_level_command)
+      skill_level_process = subprocess.Popen(
+          skill_level_command, env=os.environ.copy(), text=True
+      )
+      skill_level_process.wait()
+      if skill_level_process.returncode != 0:
+        raise ValueError(f'Error running the command: {skill_level_command}')
+      else:
+        print('Finished running the command successfully.')
 
     generate_command = [
         'python',
@@ -375,6 +384,8 @@ def main(_):
         f'--seed={_SEED.value}',
         f'--datasets_path={root_dir}',
         f'--policy_name={_POLICY_NAME.value}',
+        f'--num_machines={_NUM_COLLECT_MACHINES.value}',
+        f'--replica_id={job_completion_index}',
     ]
 
     print(generate_command)
