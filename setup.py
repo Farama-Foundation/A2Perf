@@ -128,7 +128,7 @@ setup(
         'all': [
             'torch==1.13.1',
             'selenium',
-            'chromedriver-py'
+            'chromedriver-py',
             'pybullet',
             'tensorflow',
             'regex'
