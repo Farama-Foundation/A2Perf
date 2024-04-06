@@ -167,19 +167,19 @@ def _get_docker_instructions(uid, user, env_name):
           """,
           # Set up user with the specified ID
           f"""
-          RUN if ! getent passwd {uid}; then \
-                useradd -m -u {uid} {user}; \
-              else \
-                existing_user=$(getent passwd {uid} | cut -d: -f1); \
-                if [ "{user}" != "$existing_user" ]; then \
-                  usermod -l {user} $existing_user; \
-                  usermod -d /home/{user} -m {user}; \
-                fi; \
-              fi
-          """,
+            RUN if ! getent passwd {uid}; then \
+                  useradd -m -u {uid} {user}; \
+                else \
+                  existing_user=$(getent passwd {uid} | cut -d: -f1); \
+                  if [ "{user}" != "$existing_user" ]; then \
+                    usermod -l {user} $existing_user; \
+                    usermod -d /home/{user} -m {user}; \
+                  fi; \
+                fi
+            """,
           f"""
-          RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-          """,
+            RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+            """,
           # Set up python3.9 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -190,13 +190,13 @@ def _get_docker_instructions(uid, user, env_name):
           """,
           f'COPY {repo_dir} .',
           f"""
-          RUN chown -R {uid}:root /workdir && \
-           /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-              conda activate py39 && \
-              python setup.py install && \
-              pip install /workdir[quadruped-locomotion]"
-        """,
-          'ENV CONDA_DEFAULT_ENV=py39',
+            RUN chown -R {uid}:root /workdir && \
+             /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+                conda activate py39 && \
+                python /workdir/setup.py install && \
+                pip install /workdir[all] seaborn matplotlib && \
+                pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"       
+          """,
           'ENV LD_LIBRARY_PATH="/opt/conda/envs/py39/lib:$LD_LIBRARY_PATH"',
       ],
       'web_navigation': [
@@ -223,36 +223,19 @@ def _get_docker_instructions(uid, user, env_name):
           """,
           # Set up user with the specified ID
           f"""
-          RUN if getent passwd {uid}; then \
-                existing_user=$(getent passwd {uid} | cut -d: -f1); \
-                if [ "{user}" != "$existing_user" ]; then \
-                  userdel -r $existing_user; \
-                fi; \
-              fi; \
-              if getent passwd {user}; then \
-                userdel -r {user}; \
-              fi; \
-              useradd -m -u {uid} {user};
-          """,
+            RUN if ! getent passwd {uid}; then \
+                  useradd -m -u {uid} {user}; \
+                else \
+                  existing_user=$(getent passwd {uid} | cut -d: -f1); \
+                  if [ "{user}" != "$existing_user" ]; then \
+                    usermod -l {user} $existing_user; \
+                    usermod -d /home/{user} -m {user}; \
+                  fi; \
+                fi
+            """,
           f"""
-          RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-          """,
-          # Set up chromedriver installation and caching for user
-          (
-              'RUN TODAYS_DATE=$(date +%Y-%m-%d) && '
-              'wget --no-verbose -O /tmp/chromedriver-linux64.zip '
-              'https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip && '
-              'unzip -o /tmp/chromedriver-linux64.zip -d /tmp/ && '
-              'mv /tmp/chromedriver-linux64/chromedriver /tmp/chromedriver && '
-              'mkdir -p'
-              ' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION && '
-              'mv /tmp/chromedriver'
-              ' /home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION/ && '
-              'rm /tmp/chromedriver-linux64.zip && '
-              """printf '{{"linux64_chromedriver_%s_for_%s": {{"timestamp": "%s", "binary_path": "/home/{user}/.wdm/drivers/chromedriver/linux64/%s/chromedriver"}}}}' """
-              """$CHROMEDRIVER_VERSION $CHROME_VERSION $TODAYS_DATE $CHROMEDRIVER_VERSION"""
-              '> /home/{user}/.wdm/drivers.json'
-          ).format(user=user),
+            RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+            """,
           # Set up python3.10 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -263,16 +246,13 @@ def _get_docker_instructions(uid, user, env_name):
           """,
           f'COPY {repo_dir} .',
           f"""
-          RUN chown -R {uid}:root /home/{user}/.wdm && \
-           chown -R {uid}:root /workdir && \
-           /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
-              conda activate py310 && \
-              python setup.py install && \
-              pip install /workdir[web-navigation]"
-          """,
-          (
-              'ENV PATH="/home/{user}/.wdm/drivers/chromedriver/linux64/$CHROMEDRIVER_VERSION:$PATH"'
-          ).format(user=user),
+            RUN chown -R {uid}:root /workdir && \ 
+              /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+                conda activate py310 && \
+                python /workdir/setup.py install && \
+                pip install /workdir[all] seaborn matplotlib chromedriver-py==$CHROMEDRIVER_VERSION && \
+                pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
+            """,
           'ENV CONDA_DEFAULT_ENV=py310',
           'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
       ],
@@ -281,25 +261,23 @@ def _get_docker_instructions(uid, user, env_name):
           ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
             --no-install-recommends -y"
           """,
-          'ARG dreamplace_version="dreamplace_python3.10.tar.gz"',
-          'ARG placement_cost_binary="plc_wrapper_main"',
           'ENV DEBIAN_FRONTEND=noninteractive',
           'ENV TZ=America/New_York',
           # Set up user with the specified ID
           f"""
-          RUN if ! getent passwd {uid}; then \
-                useradd -m -u {uid} {user}; \
-              else \
-                existing_user=$(getent passwd {uid} | cut -d: -f1); \
-                if [ "{user}" != "$existing_user" ]; then \
-                  usermod -l {user} $existing_user; \
-                  usermod -d /home/{user} -m {user}; \
-                fi; \
-              fi
-          """,
+            RUN if ! getent passwd {uid}; then \
+                  useradd -m -u {uid} {user}; \
+                else \
+                  existing_user=$(getent passwd {uid} | cut -d: -f1); \
+                  if [ "{user}" != "$existing_user" ]; then \
+                    usermod -l {user} $existing_user; \
+                    usermod -d /home/{user} -m {user}; \
+                  fi; \
+                fi
+            """,
           f"""
-          RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-          """,
+            RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+            """,
           # Install basic system dependencies
           """
           RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
@@ -321,19 +299,6 @@ def _get_docker_instructions(uid, user, env_name):
             libboost-all-dev && \
             rm -rf /var/lib/apt/lists/*
           """,
-          'RUN mkdir -p /dreamplace',
-          """
-          RUN curl https://storage.googleapis.com/rl-infra-public/circuit-training/dreamplace/${dreamplace_version} \
-            -o /dreamplace/dreamplace.tar.gz
-          """,
-          'RUN tar xzf /dreamplace/dreamplace.tar.gz -C /dreamplace/',
-          'ENV PYTHONPATH "${PYTHONPATH}:/dreamplace:/dreamplace/dreamplace"',
-          # Download the placement cost utility binary
-          """
-          RUN curl https://storage.googleapis.com/rl-infra-public/circuit-training/placement_cost/${placement_cost_binary} \
-            -o  /usr/local/bin/plc_wrapper_main
-          """,
-          'RUN chmod 555 /usr/local/bin/plc_wrapper_main',
           # Set up python3.10 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -346,8 +311,9 @@ def _get_docker_instructions(uid, user, env_name):
           """
           RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
-              python setup.py install && \
-              pip install /workdir[circuit-training]"
+              python /workdir/setup.py install && \
+              pip install /workdir[all] seaborn matplotlib && \
+              pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
           """,
           'ENV CONDA_DEFAULT_ENV=py310',
           'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
@@ -371,15 +337,16 @@ EOF
           'echo',
       ]),
       'web_navigation': xm.CommandList([
+          'echo $@',
           'service dbus start',
-          f"""
-        su {_USER.value} -c /bin/bash <<EOF
-source /opt/conda/etc/profile.d/conda.sh &&
-conda activate py310 &&
-python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-EOF
-        """,
-          'echo',
+#           f"""
+#         su {_USER.value} -c /bin/bash <<EOF
+# source /opt/conda/etc/profile.d/conda.sh &&
+# conda activate py310 &&
+# python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+# EOF
+#         """,
+#           'echo',
       ]),
       'circuit_training': xm.CommandList([
           f"""
@@ -456,169 +423,498 @@ def create_experiment_name(hparams):
   )
 
 
-def get_hparam_sweeps(domain, **kwargs):
+def get_web_navigation_hparam_sweeps(**kwargs):
   algos = kwargs['algos']
+  mode = kwargs['mode']
+  difficulty_levels = kwargs['difficulty_levels']
+  num_websites = kwargs['num_websites']
+  task_names = [
+      f'difficulty_level_{difficulty_level}_num_websites_{sites}'
+      for difficulty_level in difficulty_levels
+      for sites in num_websites
+  ]
+  general_hyperparameters = {
+      'env_name': ['WebNavigation-v0'],
+  }
+
+  latent_dim = kwargs['latent_dim']
+  embedding_dim = kwargs['embedding_dim']
+  profile_value_dropout = kwargs['profile_value_dropout']
+  max_vocab_size = kwargs['max_vocab_size']
+  use_xvfb = kwargs['use_xvfb']
+
+  if mode == 'inference':
+    general_hyperparameters['gin_config'] = [
+        os.path.join(
+            '/workdir/a2perf/submission/configs/web_navigation',
+            task_name,
+            'inference.gin',
+        )
+        for task_name in task_names
+    ]
+  elif mode == 'train':
+    general_hyperparameters['gin_config'] = [
+        '/workdir/a2perf/submission/configs/web_navigation/train.gin'
+    ]
+  elif mode in ['generate', 'evaluate']:
+    # gin file does not matter for these modes since we are not running
+    # a2perf/submission/main_submission.py
+    general_hyperparameters['gin_config'] = ['']
+  else:
+    raise ValueError(f'Unknown mode: {mode}')
+
+  general_keys, general_values = zip(*general_hyperparameters.items())
+  general_hyperparameters = [
+      dict(zip(general_keys, v)) for v in
+      itertools.product(*general_values)
+  ]
+
+  task_hyperparameters = {
+      'difficulty_level_1_num_websites_1': {
+          'task_name': ['difficulty_level_1_num_websites_1'],
+          'difficulty_level': [1, ],
+          'num_websites': [1],
+      },
+      'difficulty_level_1_num_websites_10': {
+          'task_name': ['difficulty_level_1_num_websites_10'],
+          'difficulty_level': [1],
+          'num_websites': [10],
+      },
+      'difficulty_level_1_num_websites_100': {
+          'task_name': ['difficulty_level_1_num_websites_100'],
+          'difficulty_level': [1],
+          'num_websites': [100],
+      },
+  }
+
+  task_sweeps = []
+  for task_name, hparams in task_hyperparameters.items():
+    if task_name in task_names:
+      for params in itertools.product(*hparams.values()):
+        task_sweeps.append(
+            dict(zip(hparams.keys(), params))
+        )
+  task_hyperparameters = task_sweeps
+
+  algo_hyperparameters = {
+      'ppo': {
+          'algo': ['ppo'],
+          'batch_size': [128],
+          'entropy_regularization': [1e-2],
+          'env_batch_size': [512],
+          'eval_interval': [8],
+          'learning_rate': [1e-5],
+          'log_interval': [8],
+          'num_episodes_per_iteration': [512],
+          'num_epochs': [4],
+          'num_iterations': [8000],
+          'policy_checkpoint_interval': [80],
+          'train_checkpoint_interval': [80],
+          'max_vocab_size': [max_vocab_size],
+          'latent_dim': [latent_dim],
+          'embedding_dim': [embedding_dim],
+          'profile_value_dropout': [profile_value_dropout],
+          'use_gae': [False],
+      },
+      'ddqn': {
+          'algo': ['ddqn'],
+          'batch_size': [256],
+          'learning_rate': [4e-5],
+          'epsilon_greedy': [0.3],
+          'num_iterations': [100000],
+          'rb_capacity': [10000000],
+          'env_batch_size': [512],
+          'eval_interval': [1000],
+          'log_interval': [1000],
+          'policy_checkpoint_interval': [10000],
+          'train_checkpoint_interval': [10000],
+          'max_vocab_size': [max_vocab_size],
+          'latent_dim': [latent_dim],
+          'embedding_dim': [embedding_dim],
+          'profile_value_dropout': [profile_value_dropout],
+      },
+  }
+
+  algo_sweeps = []
+  for algo, hparams in algo_hyperparameters.items():
+    if algo in algos:
+      for params in itertools.product(*hparams.values()):
+        algo_sweeps.append(
+            dict(zip(hparams.keys(), params))
+        )
+  algo_hyperparameters = algo_sweeps
+
+  hyperparameters = []
+  for params in itertools.product(
+      general_hyperparameters, task_hyperparameters, algo_hyperparameters
+  ):
+    combined_dict = {
+        **params[0],
+        **params[1],
+        **params[2],
+    }
+    hyperparameters.append(combined_dict)
+  return hyperparameters
+
+
+def get_quadruped_locomotion_hparam_sweeps(**kwargs):
+  algos = kwargs['algos']
+  mode = kwargs['mode']
+  motion_files = kwargs['motion_files']
+  task_names = [motion_file for motion_file in motion_files]
+  general_hyperparameters = {
+      'env_name': ['QuadrupedLocomotion-v0'],
+  }
+  if mode == 'inference':
+    general_hyperparameters['gin_config'] = [
+        os.path.join(
+            '/workdir/a2perf/submission/configs/quadruped_locomotion',
+            motion_file,
+            'inference.gin',
+        )
+        for motion_file in motion_files
+    ]
+  elif mode == 'train':
+    general_hyperparameters['gin_config'] = [
+        '/workdir/a2perf/submission/configs/quadruped_locomotion/train.gin'
+    ]
+  elif mode in ['generate', 'evaluate']:
+    # gin file does not matter for these modes since we are not running
+    # a2perf/submission/main_submission.py
+    general_hyperparameters['gin_config'] = ['']
+  else:
+    raise ValueError(f'Unknown mode: {mode}')
+
+  general_hyperparameters = hyper.product([
+      hyper.sweep(key, values)
+      for key, values in general_hyperparameters.items()
+  ])
+
+  task_hyperparameters = {
+      'dog_pace': {
+          'task_name': ['dog_pace'],
+          'motion_file_path': [
+              '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt'
+          ],
+      },
+      'dog_trot': {
+          'task_name': ['dog_trot'],
+          'motion_file_path': [
+              '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_trot.txt'
+          ],
+      },
+      'dog_spin': {
+          'task_name': ['dog_spin'],
+          'motion_file_path': [
+              '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_spin.txt'
+          ],
+      },
+  }
+
+  task_sweeps = []
+  for task_name, hparams in task_hyperparameters.items():
+    if task_name in task_names:
+      task_sweeps.append(
+          hyper.product(
+              [hyper.sweep(key, values) for key, values in hparams.items()]
+          )
+      )
+  task_hyperparameters = hyper.chainit(task_sweeps)
+
+  algo_hyperparameters = {
+      'ppo': {
+          'algo': ['ppo'],
+          'batch_size': [128],
+          'entropy_regularization': [1e-2],
+          'env_batch_size': [512],
+          'eval_interval': [8],
+          'learning_rate': [1e-5],
+          'log_interval': [8],
+          'num_episodes_per_iteration': [512],
+          'num_epochs': [4],
+          'num_iterations': [8000],
+          'policy_checkpoint_interval': [80],
+          'train_checkpoint_interval': [80],
+          'use_gae': [False],
+      },
+      'sac': {
+          'algo': ['sac'],
+          'batch_size': [256],
+          'learning_rate': [3e-4],
+          'num_iterations': [2000000],
+          'rb_capacity': [2000000],
+          'env_batch_size': [512],
+          'eval_interval': [2000],
+          'log_interval': [2000],
+          'policy_checkpoint_interval': [20000],
+          'train_checkpoint_interval': [20000],
+      },
+      'td3': {
+          'algo': ['td3'],
+          'batch_size': [256],
+          'learning_rate': [3e-4],
+          'num_iterations': [50000],
+          'rb_capacity': [1000000],
+          'env_batch_size': [512],
+          'eval_interval': [50],
+          'log_interval': [50],
+          'policy_checkpoint_interval': [500],
+          'train_checkpoint_interval': [500],
+      },
+      'ddpg': {
+          'algo': ['ddpg'],
+          'batch_size': [256],
+          'learning_rate': [4e-4],
+          'num_iterations': [50000],
+          'rb_capacity': [1000000],
+          'env_batch_size': [512],
+          'eval_interval': [50],
+          'log_interval': [50],
+          'policy_checkpoint_interval': [500],
+          'train_checkpoint_interval': [500],
+      },
+  }
+
+  algo_sweeps = []
+  for algo, hparams in algo_hyperparameters.items():
+    if algo in algos:
+      algo_sweeps.append(
+          hyper.product(
+              [hyper.sweep(key, values) for key, values in hparams.items()]
+          )
+      )
+  algo_hyperparameters = hyper.chainit(algo_sweeps)
+  return hyper.product(
+      [general_hyperparameters, algo_hyperparameters, task_hyperparameters]
+  )
+
+
+def get_circuit_training_hparam_sweeps(**kwargs):
+  algos = kwargs['algos']
+  mode = kwargs['mode']
+  netlists = kwargs['netlists']
+  std_cell_placer_mode = _STD_CELL_PLACER_MODE.value
+  task_names = [
+      f'netlist_{netlist}_std_cell_placer_mode_{std_cell_placer_mode}'
+      for netlist in netlists
+  ]
+
+  general_hyperparameters = {
+      'env_name': ['CircuitTraining-v0'],
+  }
+
+  if mode == 'inference':
+    general_hyperparameters['gin_config'] = [
+        os.path.join(
+            '/workdir/a2perf/submission/configs/circuit_training',
+            netlist,
+            'inference.gin',
+        )
+        for netlist in netlists
+    ]
+  elif mode == 'train':
+    general_hyperparameters['gin_config'] = [
+        '/workdir/a2perf/submission/configs/circuit_training/train.gin'
+    ]
+
+  elif mode in ['generate', 'evaluate']:
+    # gin file doesn't really matter for these modes since we are not running
+    # a2perf/submission/main_submission.py
+    general_hyperparameters['gin_config'] = ['']
+  else:
+    raise ValueError(f'Unknown mode: {mode}')
+
+  general_hyperparameters = hyper.product([
+      hyper.sweep(key, values)
+      for key, values in general_hyperparameters.items()
+  ])
+  task_hyperparameters = {
+      'netlist_toy_macro_stdcell_std_cell_placer_mode_dreamplace': {
+          'task_name': [
+              'netlist_toy_macro_stdcell_std_cell_placer_mode_dreamplace'
+          ],
+          'netlist_path': [
+              os.path.join(
+                  '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
+                  'toy_macro_stdcell',
+                  'netlist.pb.txt',
+              ),
+          ],
+          'std_cell_placer_mode': ['dreamplace'],
+          'init_placement_path': [
+              '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'
+          ],
+      },
+      'netlist_toy_macro_stdcell_std_cell_placer_mode_fd': {
+          'task_name': ['netlist_toy_macro_stdcell_std_cell_placer_mode_fd'],
+          'netlist_path': [
+              os.path.join(
+                  '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
+                  'toy_macro_stdcell',
+                  'netlist.pb.txt',
+              )
+          ],
+          'std_cell_placer_mode': ['fd'],
+          'init_placement_path': [
+              '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc'
+          ],
+      },
+      'netlist_ariane_std_cell_placer_mode_dreamplace': {
+          'task_name': ['netlist_ariane_std_cell_placer_mode_dreamplace'],
+          'netlist_path': [
+              os.path.join(
+                  '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
+                  'ariane',
+                  'netlist.pb.txt',
+              )
+          ],
+          'std_cell_placer_mode': ['dreamplace'],
+          'init_placement_path': [
+              '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'
+          ],
+      },
+      'netlist_ariane_std_cell_placer_mode_fd': {
+          'task_name': ['netlist_ariane_std_cell_placer_mode_fd'],
+          'netlist_path': [
+              os.path.join(
+                  '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
+                  'ariane',
+                  'netlist.pb.txt',
+              )
+          ],
+          'std_cell_placer_mode': ['dreamplace'],
+          'init_placement_path': [
+              '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc'
+          ],
+      },
+  }
+
+  task_sweeps = []
+  for task_name, hparams in task_hyperparameters.items():
+    if task_name in task_names:
+      task_sweeps.append(
+          hyper.product(
+              [hyper.sweep(key, values) for key, values in hparams.items()]
+          )
+      )
+  task_hyperparameters = hyper.chainit(task_sweeps)
+
+  # Different tasks may have different hparams for the same algo
+  algo_hyperparameters = {
+      'netlist_toy_macro_stdcell': {
+          'ppo': {
+              'algo': ['ppo'],
+              'batch_size': [128],
+              'entropy_regularization': [1e-2],
+              'env_batch_size': [512],
+              'eval_interval': [5],
+              'learning_rate': [4e-4],
+              'log_interval': [5],
+              'num_episodes_per_iteration': [32],
+              'num_epochs': [6],
+              'num_iterations': [5000],
+              'policy_checkpoint_interval': [50],
+              'train_checkpoint_interval': [50],
+              'use_gae': [False],
+          },
+          'ddqn': {
+              'algo': ['ddqn'],
+              'batch_size': [256],
+              'env_batch_size': [512],
+              'epsilon_greedy': [0.3],
+              'eval_interval': [10],
+              'learning_rate': [4e-5],
+              'log_interval': [10],
+              'num_iterations': [10000],
+              'policy_checkpoint_interval': [100],
+              'rb_capacity': [1000000],
+              'train_checkpoint_interval': [100],
+          },
+      },
+      'netlist_ariane': {
+          'ppo': {
+              'algo': ['ppo'],
+              'batch_size': [128],
+              'entropy_regularization': [1e-2],
+              'env_batch_size': [512],
+              'eval_interval': [1],
+              'learning_rate': [4e-4],
+              'log_interval': [1],
+              'num_episodes_per_iteration': [1024],
+              'num_epochs': [4],
+              'num_iterations': [250],
+              'policy_checkpoint_interval': [25],
+              'train_checkpoint_interval': [25],
+              'use_gae': [False],
+          },
+          'ddqn': {
+              'algo': ['ddqn'],
+              'batch_size': [256],
+              'learning_rate': [4e-5],
+              'epsilon_greedy': [0.3],
+              'num_iterations': [100000],
+              'rb_capacity': [10000000],
+              'env_batch_size': [512],
+              'eval_interval': [1000],
+              'log_interval': [1000],
+              'policy_checkpoint_interval': [10000],
+              'train_checkpoint_interval': [10000],
+          },
+      },
+  }
+
+  algo_sweeps = []
+  for netlist_name, algo_dict in algo_hyperparameters.items():
+    if any(netlist_name in task_name for task_name in task_names):
+      for algo, hparams in algo_dict.items():
+        if algo in algos:
+          algo_sweeps.append(
+              hyper.product(
+                  [hyper.sweep(key, values) for key, values in hparams.items()]
+              )
+          )
+
+  algo_hyperparameters = hyper.chainit(algo_sweeps)
+  return hyper.product(
+      [general_hyperparameters, algo_hyperparameters, task_hyperparameters]
+  )
+
+
+def get_hparam_sweeps(domain, **kwargs):
   skill_levels = kwargs['skill_levels']
   seeds = kwargs['seeds']
   debug = kwargs['debug']
   mode = kwargs['mode']
 
   if domain == 'quadruped_locomotion':
-    motion_files = kwargs['motion_files']
-    general_hyperparameters = {
-        'eval_interval': [1],
-        'log_interval': [1],
-        'env_name': ['QuadrupedLocomotion-v0'],
-        'motion_file': motion_files,
-        'env_batch_size': [100],
-        'train_checkpoint_interval': [10],
-        'policy_checkpoint_interval': [10],
-    }
-
-    algo_hyperparameters = {
-        'ppo': {
-            'batch_size': [64],
-            'algo': ['ppo'],
-            'use_gae': [False],
-            'entropy_regularization': [1e-2],
-            'learning_rate': [3e-4],
-            'num_epochs': [4],
-        },
-        'sac': {
-            'batch_size': [64],
-            'algo': ['sac'],
-            'learning_rate': [3e-4],
-            'rb_capacity': [10000000],
-        },
-        'td3': {
-            'batch_size': [64],
-            'algo': ['td3'],
-            'learning_rate': [3e-4],
-            'rb_capacity': [10000000],
-            'exploration_noise_std': [0.1],
-        },
-        'ddpg': {
-            'batch_size': [64],
-            'algo': ['ddpg'],
-            'learning_rate': [3e-4],
-            'rb_capacity': [10000000],
-        },
-    }
+    hparam_sweeps = get_quadruped_locomotion_hparam_sweeps(**kwargs)
   elif domain == 'web_navigation':
-    num_websites = kwargs['num_websites']
-    difficulty_levels = kwargs['difficulty_levels']
-    latent_dim = kwargs['latent_dim']
-    embedding_dim = kwargs['embedding_dim']
-    profile_value_dropout = kwargs['profile_value_dropout']
-    max_vocab_size = kwargs['max_vocab_size']
-    use_xvfb = kwargs['use_xvfb']
-    general_hyperparameters = {
-        'eval_interval': [1000],
-        'log_interval': [1000],
-        'env_name': ['WebNavigation-v0'],
-        'num_websites': num_websites,
-        'difficulty_level': difficulty_levels,
-        'max_vocab_size': [max_vocab_size],
-        'latent_dim': [latent_dim],
-        'embedding_dim': [embedding_dim],
-        'profile_value_dropout': [profile_value_dropout],
-        'use_xvfb': [use_xvfb],
-        'env_batch_size': [100],
-        'train_checkpoint_interval': [1000000],
-        'policy_checkpoint_interval': [1000000],
-    }
-
-    algo_hyperparameters = {
-        'ppo': {
-            'use_gae': [True],
-            'algo': ['ppo'],
-            'batch_size': [64],
-            'entropy_regularization': [1e-4],
-            'learning_rate': [3e-4],
-            'num_epochs': [4],
-        },
-        'ddqn': {
-            'algo': ['ddqn'],
-            'batch_size': [64],
-            'learning_rate': [3e-4],
-            'epsilon_greedy': [0.1],
-            'rb_capacity': [10000000],
-        },
-    }
+    hparam_sweeps = get_web_navigation_hparam_sweeps(**kwargs)
   elif domain == 'circuit_training':
-    netlists = kwargs['netlists']
-    general_hyperparameters = {
-        'eval_interval': [1000],
-        'log_interval': [1000],
-        'env_name': ['CircuitTraining-v0'],
-        'netlist': netlists,
-        'env_batch_size': [100],
-        'train_checkpoint_interval': [1000000],
-        'policy_checkpoint_interval': [1000000],
-    }
-
-    algo_hyperparameters = {
-        'ppo': {
-            'batch_size': [64],
-            'algo': ['ppo'],
-            'use_gae': [True],
-            'entropy_regularization': [1e-4],
-            'learning_rate': [3e-4],
-            'num_epochs': [4],
-        },
-        'sac': {
-            'batch_size': [64],
-            'algo': ['sac'],
-            'learning_rate': [3e-4],
-            'rb_capacity': [10000000],
-        },
-        'td3': {
-            'batch_size': [64],
-            'algo': ['td3'],
-            'learning_rate': [3e-4],
-            'rb_capacity': [10000000],
-            'exploration_noise_std': [0.1],
-        },
-        'ddpg': {
-            'batch_size': [64],
-            'algo': ['ddpg'],
-            'learning_rate': [3e-4],
-            'rb_capacity': [10000000],
-        },
-    }
+    hparam_sweeps = get_circuit_training_hparam_sweeps(**kwargs)
   else:
     raise ValueError(f'Unknown domain: {domain}')
 
-  algo_hparam_combinations = []
-  for algo in algos:
-    if algo in algo_hyperparameters:
-      keys, values = zip(*algo_hyperparameters[algo].items())
-      algo_hparam_combinations.extend(
-          [dict(zip(keys, v)) for v in itertools.product(*values)]
-      )
+  hyperparameters = dict(
+      domain=[domain],
+      debug=[debug],
+      skill_level=skill_levels,
+      seed=seeds,
+      mode=[mode],
+  )
+  hyperparameter_sweeps = []
+  for param in itertools.product(*hyperparameters.values()):
+    hyperparameter_sweeps.append(dict(zip(hyperparameters.keys(), param)))
 
-  general_hyperparameters.update({
-      'skill_level': skill_levels,
-      'seed': seeds,
-      'debug': [debug],
-      'mode': [mode],
-      'domain': [domain],
-  })
-
-  # Generate combinations of general hyperparameters
-  general_keys, general_values = zip(*general_hyperparameters.items())
-  general_hparam_combinations = [
-      dict(zip(general_keys, v)) for v in itertools.product(*general_values)
-  ]
-
-  # Combine algorithm-specific hyperparameters with general hyperparameters
-  hparam_sweeps = []
-  for algo_hparam in algo_hparam_combinations:
-    for general_hparam in general_hparam_combinations:
-      combined_hparam = {**general_hparam, **algo_hparam}
-      hparam_sweeps.append(combined_hparam)
-
-  return hparam_sweeps
+  # Now combine the hyperparameters with the hparam_sweeps for final sweeps
+  final_sweeps = []
+  for params in itertools.product(hyperparameter_sweeps, hparam_sweeps):
+    combined_dict = {
+        **params[0],
+        **params[1],
+    }
+    final_sweeps.append(combined_dict)
+  return final_sweeps
 
 
 def main(_):
