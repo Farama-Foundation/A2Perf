@@ -1,5 +1,5 @@
 import a2perf.submission.submission_util
-import a2perf.domains.utils.suite_gym
+import a2perf.domains.tfa.suite_gym
 import a2perf.metrics.reliability.rl_reliability_metrics.evaluation.eval_metrics
 import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_online
 import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline

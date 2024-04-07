@@ -2,7 +2,6 @@
 # IMPORTS
 # ----------------------
 import a2perf.submission.submission_util
-import a2perf.domains.utils.suite_gym
 import a2perf.metrics.system.codecarbon
 
 # ----------------------
