@@ -211,6 +211,7 @@ def create_domain(env_name, root_dir=None, env_wrappers=(),
     from a2perf.domains import quadruped_locomotion
     motion_file_path = os.environ.get('MOTION_FILE_PATH', None)
     env_kwargs['motion_files'] = [motion_file_path]
+    env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
   else:
     raise NotImplementedError(f'Unknown environment: {env_name}')
 
