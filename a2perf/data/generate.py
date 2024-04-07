@@ -4,20 +4,19 @@ import multiprocessing
 import os
 import shutil
 
-from a2perf.domains.tfa import suite_gym
-from absl import app
-from absl import flags
-from absl import logging
 import gymnasium as gym
 import minari
-from minari import DataCollector
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tf_agents.metrics import py_metrics
-from tf_agents.policies import policy_loader
-from tf_agents.policies.tf_policy import TFPolicy
-from tf_agents.train import actor
+from absl import app
+from absl import flags
+from absl import logging
+from minari import DataCollector
+
+from a2perf.domains.tfa import suite_gym
+from a2perf.domains.tfa.utils import load_policy
+from a2perf.domains.tfa.utils import perform_rollouts
 
 _ROOT_DIR = flags.DEFINE_string(
     'root_dir',
@@ -67,54 +66,6 @@ def delete_dataset_wrapper(unique_id):
       unique_id,
   )
   shutil.rmtree(dataset_path)
-
-
-def load_policy(saved_model_path: str, checkpoint_path: str) -> TFPolicy:
-  """Loads a policy model from the environment's root directory.
-
-  Args:
-      saved_model_path: The path of a directory containing a full saved model.
-      checkpoint_path: The path to a directory that contains variable
-        checkpoints (as opposed to full saved models) for the policy.
-
-  Returns:
-      The loaded policy.
-  """
-  policy = policy_loader.load(
-      saved_model_path=saved_model_path,
-      checkpoint_path=checkpoint_path,
-  )
-  return policy
-
-
-def perform_rollouts(
-    policy: TFPolicy, env: gym.Env, num_episodes: int
-) -> np.ndarray:
-  """Perform rollouts using the policy and environment.
-
-  Args:
-      policy: The policy to use.
-      env: The environment to use.
-      num_episodes: The number of episodes to perform.
-
-  Returns:
-      The returns for each episode.
-  """
-  episode_reward_metric = py_metrics.AverageReturnMetric()
-  rollout_actor = actor.Actor(
-      env=env,
-      train_step=policy._train_step_from_last_restored_checkpoint_path,
-      policy=policy,
-      observers=[episode_reward_metric],
-      episodes_per_run=1,
-  )
-
-  episode_returns = []
-  for _ in range(num_episodes):
-    rollout_actor.run()
-    episode_returns.append(episode_reward_metric.result())
-    episode_reward_metric.reset()
-  return np.array(episode_returns)
 
 
 def collect_dataset(
