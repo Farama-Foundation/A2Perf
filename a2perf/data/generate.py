@@ -4,7 +4,7 @@ import multiprocessing
 import os
 import shutil
 
-from a2perf.domains.utils import suite_gym
+from a2perf.domains.tfa import suite_gym
 from absl import app
 from absl import flags
 from absl import logging

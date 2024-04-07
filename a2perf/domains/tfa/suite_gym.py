@@ -42,7 +42,7 @@ from tf_agents.environments import py_environment
 from tf_agents.environments import wrappers
 from tf_agents.typing import types
 
-from a2perf.domains.utils import gym_wrapper
+from a2perf.domains.tfa import gym_wrapper
 
 TimeLimitWrapperType = Callable[
   [py_environment.PyEnvironment, int], py_environment.PyEnvironment

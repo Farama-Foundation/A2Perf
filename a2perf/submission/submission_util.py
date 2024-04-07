@@ -16,7 +16,7 @@ from absl import logging
 from tf_agents.metrics import py_metrics
 from tf_agents.train import actor
 
-from a2perf.domains.utils import suite_gym
+from a2perf.domains.tfa import suite_gym
 from a2perf.metrics.system import codecarbon
 
 
