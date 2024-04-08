@@ -6,9 +6,9 @@ import shutil
 import subprocess
 import time
 
+from a2perf.domains.tfa import suite_gym
 from a2perf.domains.tfa.utils import load_policy
 from a2perf.domains.tfa.utils import perform_rollouts
-from a2perf.domains.utils import suite_gym
 from absl import app
 from absl import flags
 from absl import logging
