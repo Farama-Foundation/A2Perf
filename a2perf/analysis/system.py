@@ -175,12 +175,9 @@ def get_power_usage(data_df):
   gpu_power_usage = get_gpu_power_usage(data_df)
   cpu_power_usage = get_cpu_power_usage(data_df)
 
-  return {}
-  # return {
-  #     'ram_power_usage': ram_power_usage,
-  #     'gpu_power_usage': gpu_power_usage,
-  #     'cpu_power_usage': cpu_power_usage,
-  # }
+  return {
+      'gpu_power_usage': gpu_power_usage,
+  }
 
 
 def get_training_metrics(data_df):
