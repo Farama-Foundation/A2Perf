@@ -31,6 +31,12 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum('std_cell_placer_mode', None,
                                           ['dreamplace', 'plc'],
                                           'Standard cell placer mode for the circuit_training domain')
 
+_SKILL_LEVEL = flags.DEFINE_enum(
+    'skill_level',
+    None,
+    ['novice', 'intermediate', 'expert'],
+    'Skill level to use for behavior cloning.',
+)
 
 def generate_commands():
   if _MODE.value == 'inference' and not _EXPERIMENT_ID.value:
@@ -76,6 +82,7 @@ def generate_commands():
         f"--user_id={_USER_ID.value} \\\n"
         f"--user={_USER.value} \\\n"
         f"--debug={_DEBUG.value} \\\n"
+        f"--skill_levels={_SKILL_LEVEL.value} \\\n"
     )
 
     train_command = common_command + (
