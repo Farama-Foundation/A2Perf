@@ -69,6 +69,11 @@ _DOMAIN = flags.DEFINE_enum(
     ['quadruped_locomotion', 'web_navigation', 'circuit_training'],
     'Domain to run',
 )
+_DATASETS_PATH = flags.DEFINE_string(
+    'datasets_path',
+    None,
+    'Path for Minari datasets',
+)
 _USER_ID = flags.DEFINE_integer('user_id', None, 'User ID')
 _USER = flags.DEFINE_string('user', None, 'User')
 _USE_XVFB = flags.DEFINE_bool('use_xvfb', False, 'Use xvfb')
@@ -326,37 +331,39 @@ def _get_docker_instructions(uid, user, env_name):
 def _get_entrypoint(domain):
   entrypoints = {
       'quadruped_locomotion': xm.CommandList([
-          f"""
-/bin/bash <<EOF
-source /opt/conda/etc/profile.d/conda.sh &&
-conda activate py39 &&
-python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-EOF
-        """,
-          # Waste the trailing "$@" argument
-          'echo',
+          'echo $@',
+          #           f"""
+          # /bin/bash <<EOF
+          # source /opt/conda/etc/profile.d/conda.sh &&
+          # conda activate py39 &&
+          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          # EOF
+          #         """,
+          #           # Waste the trailing "$@" argument
+          #           'echo',
       ]),
       'web_navigation': xm.CommandList([
           'echo $@',
-          'service dbus start',
-#           f"""
-#         su {_USER.value} -c /bin/bash <<EOF
-# source /opt/conda/etc/profile.d/conda.sh &&
-# conda activate py310 &&
-# python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-# EOF
-#         """,
-#           'echo',
+          #           'service dbus start',
+          #           f"""
+          #                   su {_USER.value} -c /bin/bash <<EOF
+          # source /opt/conda/etc/profile.d/conda.sh &&
+          # conda activate py310 &&
+          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          # EOF
+          #           """,
+          #           'echo',
       ]),
       'circuit_training': xm.CommandList([
-          f"""
-/bin/bash <<EOF
-source /opt/conda/etc/profile.d/conda.sh &&
-conda activate py310 &&
-python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-EOF
-""",
-          'echo',
+          'echo $@',
+          #           f"""
+          # /bin/bash <<EOF
+          # source /opt/conda/etc/profile.d/conda.sh &&
+          # conda activate py310 &&
+          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          # EOF
+          # """,
+          #           'echo',
       ]),
   }
   return entrypoints[domain]
@@ -564,6 +571,7 @@ def get_quadruped_locomotion_hparam_sweeps(**kwargs):
   task_names = [motion_file for motion_file in motion_files]
   general_hyperparameters = {
       'env_name': ['QuadrupedLocomotion-v0'],
+      'motion_file': motion_files,
   }
   if mode == 'inference':
     general_hyperparameters['gin_config'] = [
@@ -585,10 +593,11 @@ def get_quadruped_locomotion_hparam_sweeps(**kwargs):
   else:
     raise ValueError(f'Unknown mode: {mode}')
 
-  general_hyperparameters = hyper.product([
-      hyper.sweep(key, values)
-      for key, values in general_hyperparameters.items()
-  ])
+  general_keys, general_values = zip(*general_hyperparameters.items())
+  general_hyperparameters = [
+      dict(zip(general_keys, v)) for v in
+      itertools.product(*general_values)
+  ]
 
   task_hyperparameters = {
       'dog_pace': {
@@ -614,14 +623,26 @@ def get_quadruped_locomotion_hparam_sweeps(**kwargs):
   task_sweeps = []
   for task_name, hparams in task_hyperparameters.items():
     if task_name in task_names:
-      task_sweeps.append(
-          hyper.product(
-              [hyper.sweep(key, values) for key, values in hparams.items()]
-          )
-      )
-  task_hyperparameters = hyper.chainit(task_sweeps)
+      for params in itertools.product(*hparams.values()):
+        task_sweeps.append(
+            dict(zip(hparams.keys(), params))
+        )
+  task_hyperparameters = task_sweeps
 
   algo_hyperparameters = {
+      'bc':
+        {
+            'algo': ['bc'],
+            'batch_size': [64],
+            'learning_rate': [1e-4],
+            'env_batch_size': [0],
+            'num_epochs': [0],
+            'num_iterations': [1000],
+            'train_checkpoint_interval': [10],
+            'policy_checkpoint_interval': [10],
+            'log_interval': [1],
+            'eval_interval': [1],
+        },
       'ppo': {
           'algo': ['ppo'],
           'batch_size': [128],
@@ -678,15 +699,25 @@ def get_quadruped_locomotion_hparam_sweeps(**kwargs):
   algo_sweeps = []
   for algo, hparams in algo_hyperparameters.items():
     if algo in algos:
-      algo_sweeps.append(
-          hyper.product(
-              [hyper.sweep(key, values) for key, values in hparams.items()]
-          )
-      )
-  algo_hyperparameters = hyper.chainit(algo_sweeps)
-  return hyper.product(
-      [general_hyperparameters, algo_hyperparameters, task_hyperparameters]
-  )
+      for params in itertools.product(*hparams.values()):
+        algo_sweeps.append(
+            dict(zip(hparams.keys(), params))
+        )
+  algo_hyperparameters = algo_sweeps
+
+  print(f'The algo_hyperparameters are: {algo_hyperparameters}')
+  print(f'the task_hyperparameters are: {task_hyperparameters}')
+  hyperparameters = []
+  for params in itertools.product(
+      general_hyperparameters, task_hyperparameters, algo_hyperparameters
+  ):
+    combined_dict = {
+        **params[0],
+        **params[1],
+        **params[2],
+    }
+    hyperparameters.append(combined_dict)
+  return hyperparameters
 
 
 def get_circuit_training_hparam_sweeps(**kwargs):
@@ -724,10 +755,12 @@ def get_circuit_training_hparam_sweeps(**kwargs):
   else:
     raise ValueError(f'Unknown mode: {mode}')
 
-  general_hyperparameters = hyper.product([
-      hyper.sweep(key, values)
-      for key, values in general_hyperparameters.items()
-  ])
+  general_keys, general_values = zip(*general_hyperparameters.items())
+  general_hyperparameters = [
+      dict(zip(general_keys, v)) for v in
+      itertools.product(*general_values)
+  ]
+
   task_hyperparameters = {
       'netlist_toy_macro_stdcell_std_cell_placer_mode_dreamplace': {
           'task_name': [
@@ -792,12 +825,11 @@ def get_circuit_training_hparam_sweeps(**kwargs):
   task_sweeps = []
   for task_name, hparams in task_hyperparameters.items():
     if task_name in task_names:
-      task_sweeps.append(
-          hyper.product(
-              [hyper.sweep(key, values) for key, values in hparams.items()]
-          )
-      )
-  task_hyperparameters = hyper.chainit(task_sweeps)
+      for params in itertools.product(*hparams.values()):
+        task_sweeps.append(
+            dict(zip(hparams.keys(), params))
+        )
+  task_hyperparameters = task_sweeps
 
   # Different tasks may have different hparams for the same algo
   algo_hyperparameters = {
@@ -864,20 +896,25 @@ def get_circuit_training_hparam_sweeps(**kwargs):
   }
 
   algo_sweeps = []
-  for netlist_name, algo_dict in algo_hyperparameters.items():
-    if any(netlist_name in task_name for task_name in task_names):
-      for algo, hparams in algo_dict.items():
-        if algo in algos:
-          algo_sweeps.append(
-              hyper.product(
-                  [hyper.sweep(key, values) for key, values in hparams.items()]
-              )
-          )
+  for algo, hparams in algo_hyperparameters.items():
+    if algo in algos:
+      for params in itertools.product(*hparams.values()):
+        algo_sweeps.append(
+            dict(zip(hparams.keys(), params))
+        )
+  algo_hyperparameters = algo_sweeps
 
-  algo_hyperparameters = hyper.chainit(algo_sweeps)
-  return hyper.product(
-      [general_hyperparameters, algo_hyperparameters, task_hyperparameters]
-  )
+  hyperparameters = []
+  for params in itertools.product(
+      general_hyperparameters, task_hyperparameters, algo_hyperparameters
+  ):
+    combined_dict = {
+        **params[0],
+        **params[1],
+        **params[2],
+    }
+    hyperparameters.append(combined_dict)
+  return hyperparameters
 
 
 def get_hparam_sweeps(domain, **kwargs):
@@ -1006,6 +1043,7 @@ def main(_):
       with open(hparam_config_path, 'w') as f:
         f.write(str(hparams))
 
+    print('hellow')
     hparam_sweeps = get_hparam_sweeps(
         debug=_DEBUG.value,
         tasks=_TASKS.value,
@@ -1024,7 +1062,7 @@ def main(_):
         profile_value_dropout=_PROFILE_VALUE_DROPOUT.value,
         max_vocab_size=_MAX_VOCAB_SIZE.value,
     )
-
+    print(f'The hparam sweeps are: {hparam_sweeps}')
     for hparams in hparam_sweeps:
       if _DOMAIN.value == 'quadruped_locomotion':
         task_name = hparams['motion_file']
@@ -1067,6 +1105,8 @@ def main(_):
       mode = hparams['mode']
       env_name = ENV_NAMES[domain][:-3]
       dataset_id = f'{env_name}-{task_name}-{skill_level}-v0'
+
+      print(dataset_id)
       hparams.update(
           dict(
               num_iterations=_NUM_ITERATIONS.value,
@@ -1082,6 +1122,7 @@ def main(_):
               vocabulary_server_port=_VOCABULARY_SERVER_PORT.value,
               run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
               dataset_id=dataset_id,
+              datasets_path=_DATASETS_PATH.value,
               gin_config=os.path.join(
                   '/workdir/a2perf/submission/configs',
                   domain,
@@ -1093,8 +1134,7 @@ def main(_):
           )
       )
 
-    for hparam_config in hparam_sweeps:
-      experiment.add(make_job, args=hparam_config)
+      experiment.add(make_job, args=hparams)
 
 
 if __name__ == '__main__':
