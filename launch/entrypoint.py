@@ -211,6 +211,7 @@ def main(_):
   os.environ['EVAL_INTERVAL'] = str(_EVAL_INTERVAL.value)
   os.environ['LOG_INTERVAL'] = str(_LOG_INTERVAL.value)
   os.environ['DATASET_ID'] = _DATASET_ID.value
+  os.environ['MINARI_DATASETS_PATH'] = _DATASETS_PATH.value
   os.environ['DEBUG'] = str(_DEBUG.value)
   os.environ['NUM_EPISODES_PER_ITERATION'] = str(
       _NUM_EPISODES_PER_ITERATION.value
