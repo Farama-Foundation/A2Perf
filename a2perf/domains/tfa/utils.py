@@ -67,7 +67,7 @@ def apply_action_mask(policy: TFPolicy, mask_fn: callable, ) -> TFPolicy:
 
 
 def create_random_py_policy(env: py_environment.PyEnvironment,
-    observation_and_action_constraint_splitter: callable = None) -> RandomPyPolicy:
+    obs_and_action_constraint_splitter_fn: callable = None) -> RandomPyPolicy:
   """Creates a random policy for the given environment.
 
   Args:
@@ -80,19 +80,7 @@ def create_random_py_policy(env: py_environment.PyEnvironment,
   action_spec = env.action_spec()
 
   return random_py_policy.RandomPyPolicy(time_step_spec, action_spec,
-                                         observation_and_action_constraint_splitter=observation_and_action_constraint_splitter)
-
-
-def create_tf_policy(policy: TFPolicy,
-    observation_and_action_constraint_splitter: callable = None) -> TFPyPolicy:
-  """Wraps an existing TFPolicy as a TFPyPolicy with an optional observation and action constraint splitter."""
-
-  new_policy = TFPyPolicy(policy=policy,
-
-                          )
-
-  return TFPyPolicy(policy,
-                    observation_and_action_constraint_splitter=observation_and_action_constraint_splitter)
+                                         observation_and_action_constraint_splitter=obs_and_action_constraint_splitter_fn)
 
 
 def mask_circuit_training_actions(circuit_env, observation):
