@@ -339,6 +339,7 @@ def main(_):
         f'--env_name={_ENV_NAME.value}',
         f'--max_parallel_envs={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
         f'--verbosity={logging.get_verbosity()}',
+        f'--policy_name={_POLICY_NAME.value}',
     ]
   elif _JOB_TYPE.value == 'generate':
     # Before generating datasets, we must use the evaluation data to classify
