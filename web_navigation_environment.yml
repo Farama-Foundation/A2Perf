@@ -2,6 +2,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - gcc
+  - gxx
+  - gxx_linux-64
+  - gcc_linux-64
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_gnu
   - abseil-cpp=20230802.0=h6a678d5_2
@@ -38,7 +42,6 @@ dependencies:
   - idna=3.6=pyhd8ed1ab_0
   - ld_impl_linux-64=2.38=h1181459_1
   - libcrc32c=1.1.2=h9c3ff4c_0
-  - libffi=3.4.4=h6a678d5_0
   - libgcc-ng=13.2.0=h807b86a_5
   - libgomp=13.2.0=h807b86a_5
   - libprotobuf=3.20.3=he621ea3_0
