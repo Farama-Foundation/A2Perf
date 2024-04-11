@@ -202,7 +202,6 @@ def _get_docker_instructions(uid, user, env_name):
                 pip install /workdir[all] seaborn matplotlib && \
                 pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"       
           """,
-          'ENV LD_LIBRARY_PATH="/opt/conda/envs/py39/lib:$LD_LIBRARY_PATH"',
       ],
       'web_navigation': [
           """
@@ -259,7 +258,6 @@ def _get_docker_instructions(uid, user, env_name):
                 pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
             """,
           'ENV CONDA_DEFAULT_ENV=py310',
-          'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
       ],
       'circuit_training': [
           """
@@ -321,7 +319,6 @@ def _get_docker_instructions(uid, user, env_name):
               pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
           """,
           'ENV CONDA_DEFAULT_ENV=py310',
-          'ENV LD_LIBRARY_PATH="/opt/conda/envs/py310/lib:$LD_LIBRARY_PATH"',
       ],
   }
 
