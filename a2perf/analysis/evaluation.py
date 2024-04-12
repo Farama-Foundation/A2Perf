@@ -6,21 +6,17 @@ from typing import Any
 from typing import Dict
 from typing import Tuple
 
-import numpy as np
-from absl import app
-from absl import flags
-from absl import logging
-
 from a2perf.analysis.metrics_lib import load_training_system_data
-# noinspection PyUnresolvedReferences
 from a2perf.domains import circuit_training
-# noinspection PyUnresolvedReferences
 from a2perf.domains import quadruped_locomotion
-# noinspection PyUnresolvedReferences
 from a2perf.domains import web_navigation
 from a2perf.domains.tfa.suite_gym import create_domain
 from a2perf.domains.tfa.utils import load_policy
 from a2perf.domains.tfa.utils import perform_rollouts
+from absl import app
+from absl import flags
+from absl import logging
+import numpy as np
 
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     'num_eval_episodes', 100, 'Number of episodes to evaluate the policy.'
@@ -45,41 +41,57 @@ _POLICY_NAME = flags.DEFINE_string(
 
 
 def load_policy_and_perform_rollouts(
-    checkpoint_path: str, env_name: str, policy_path: str, num_episodes: int
+    checkpoint_path: str,
+    env_name: str,
+    policy_path: str,
+    num_episodes: int,
+    root_dir: str = None,
 ) -> Dict[str, Any]:
-  policy = load_policy(policy_path, checkpoint_path)
-  env = create_domain(env_name)
-  episode_returns = perform_rollouts(policy, env, num_episodes)
+  try:
+    policy = load_policy(policy_path, checkpoint_path)
+    if env_name == 'CircuitTraining-v0' or env_name == 'WebNavigation-v0':
+      env = create_domain(env_name, root_dir=root_dir)
+    else:
+      env = create_domain(env_name)
+    episode_returns = perform_rollouts(policy, env, num_episodes)
 
-  eval_dict = {
-      checkpoint_path: {
-          'mean': np.mean(episode_returns).astype(float),
-          'std': np.std(episode_returns).astype(float),
-          'min': np.min(episode_returns).astype(float),
-          'max': np.max(episode_returns).astype(float),
-          'median': np.median(episode_returns).astype(float),
-          'count': int(episode_returns.size),
-          'rollout_returns': [float(v) for v in episode_returns],
-      }
-  }
+    eval_dict = {
+        checkpoint_path: {
+            'mean': np.mean(episode_returns).astype(float),
+            'std': np.std(episode_returns).astype(float),
+            'min': np.min(episode_returns).astype(float),
+            'max': np.max(episode_returns).astype(float),
+            'median': np.median(episode_returns).astype(float),
+            'count': int(episode_returns.size),
+            'rollout_returns': [float(v) for v in episode_returns],
+        }
+    }
 
-  logging.info('Evaluation results for %s:', checkpoint_path)
-  logging.info('\t%s', eval_dict[checkpoint_path])
-  return eval_dict
+    logging.info('Evaluation results for %s:', checkpoint_path)
+    logging.info('\t%s', eval_dict[checkpoint_path])
+    return eval_dict
+  except Exception as e:
+    import traceback
+
+    logging.error('Error evaluating checkpoint %s: %s', checkpoint_path, e)
+    traceback.print_exc()
+    return {}
 
 
-def add_training_energy_cost(checkpoint_item: Tuple[str, Dict[str, Any]],
-    total_energy_kwh) -> Tuple[str, Dict[str, Any]]:
+def add_training_energy_cost(
+    checkpoint_item: Tuple[str, Dict[str, Any]], total_energy_kwh
+) -> Tuple[str, Dict[str, Any]]:
   checkpoint_path = checkpoint_item[0]
   checkpoint_dict = checkpoint_item[1]
 
   policy_checkpoint_name = os.path.basename(checkpoint_path)
   policy_checkpoint_number = int(policy_checkpoint_name.split('_')[-1])
 
-  checkpoint_dict.update(
-      {'total_training_energy_kwh': total_energy_kwh,
-       'training_energy_kwh': total_energy_kwh * policy_checkpoint_number,
-       'checkpoint_number': policy_checkpoint_number})
+  checkpoint_dict.update({
+      'total_training_energy_kwh': total_energy_kwh,
+      'training_energy_kwh': total_energy_kwh * policy_checkpoint_number,
+      'checkpoint_number': policy_checkpoint_number,
+  })
   return checkpoint_path, checkpoint_dict
 
 
@@ -99,6 +111,7 @@ def main(_):
   # Create a partial function that has all the fixed parameters set
   partial_func = functools.partial(
       load_policy_and_perform_rollouts,
+      root_dir=_ROOT_DIR.value,
       env_name=_ENV_NAME.value,
       policy_path=saved_model_path,
       num_episodes=_NUM_EVAL_EPISODES.value,
@@ -113,23 +126,30 @@ def main(_):
 
   # Use the experiment path to get the system metrics for this training run
   experiment_path = os.path.abspath(
-      os.path.join(_ROOT_DIR.value, os.pardir, os.pardir, os.pardir, os.pardir))
+      os.path.join(_ROOT_DIR.value, os.pardir, os.pardir, os.pardir, os.pardir)
+  )
   logging.debug('Experiment path: %s', experiment_path)
   training_system_df = load_training_system_data(
       base_dir=os.path.abspath(os.path.join(experiment_path, os.pardir)),
-      experiment_ids=[os.path.basename(experiment_path)])
+      experiment_ids=[os.path.basename(experiment_path)],
+  )
 
   # For each run-id, take the last `energy_consumed` entry and sum them together
-  total_training_energy_kwh = training_system_df.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed']
-  )['energy_consumed'].last().sum()
+  total_training_energy_kwh = (
+      training_system_df.groupby(
+          ['domain', 'algo', 'task', 'experiment', 'seed']
+      )['energy_consumed']
+      .last()
+      .sum()
+  )
 
   # Add the training sample cost to the evaluation results
   with multiprocessing.Pool(_MAX_PARALLEL_ENVS.value) as pool:
     all_episode_returns = pool.map(
-        functools.partial(add_training_energy_cost,
-                          total_energy_kwh=total_training_energy_kwh),
-        all_episode_returns.items()
+        functools.partial(
+            add_training_energy_cost, total_energy_kwh=total_training_energy_kwh
+        ),
+        all_episode_returns.items(),
     )
     pool.close()
     pool.join()
@@ -145,8 +165,9 @@ def main(_):
   for checkpoint_path, checkpoint_dict in all_episode_returns.items():
     # Adjusting the training energy cost such that earlier checkpoints are
     # associated with less energy usage
-    checkpoint_dict['training_energy_kwh'] = checkpoint_dict[
-                                               'training_energy_kwh'] / maximum_checkpoint_number
+    checkpoint_dict['training_energy_kwh'] = (
+        checkpoint_dict['training_energy_kwh'] / maximum_checkpoint_number
+    )
 
     # Make sure that the energy usage for the final checkpoint is the same as
     # the total energy usage
