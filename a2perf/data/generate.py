@@ -222,6 +222,11 @@ def main(_):
   if job_completion_index < remainder:
     num_episodes_to_generate += 1
 
+  # For policies of the target skill level, get the average cost
+  average_energy_kwh = evaluation_df['training_energy_kwh'].mean()
+  logging.info('Average energy cost of policies at skill level: %s',
+               average_energy_kwh)
+
   evaluation_df = evaluation_df.sample(
       random_state=_SEED.value, n=_NUM_PROCESSES.value, replace=True
   )
@@ -372,6 +377,12 @@ def main(_):
       pool.starmap(delete_dataset, tasks)
       pool.close()
       pool.join()
+
+    # Leader should save the training sample cost
+    with open(os.path.join(os.path.expanduser(base_path), _TASK_NAME.value,
+                           _SKILL_LEVEL.value, 'training_sample_cost.txt'),
+              'w') as f:
+      f.write(str(average_energy_kwh))
 
 
 if __name__ == '__main__':
