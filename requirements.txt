@@ -8,8 +8,17 @@ scipy
 regex
 gym
 
-# reliabiility
--r rl_perf/metrics/reliability/requirements.txt
+# reliability
+# -r a2perf/metrics/reliability/requirements.txt
 
 # codecarbon
--r rl_perf/metrics/system/codecarbon/requirements-dev.txt
+-r a2perf/metrics/system/codecarbon/requirements-dev.txt
+
+# quadruped
+-r a2perf/domains/quadruped_locomotion/requirements.txt
+
+# web_nav
+-r a2perf/domains/web_navigation/requirements.txt
+
+# circuit_training
+-r a2perf/domains/circuit_training/requirements.txt
