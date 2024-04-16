@@ -35,7 +35,9 @@ def get_distributed_experiment_metric(
 
     # Check for NaN values in the metric column that we are aggregating
     na_check_columns = [f'{metric}_{rid}' for rid in run_ids]
-    merged_group = merged_group.dropna(subset=na_check_columns)
+    # merged_group = merged_group.dropna(subset=na_check_columns)
+    # Instead of dropping Nan values, fill them with 0, but only for the metric columns
+    merged_group = merged_group.fillna(0)
 
     # Aggregate the metric columns
     metric_columns = [col for col in merged_group if
