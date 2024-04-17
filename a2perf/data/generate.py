@@ -377,6 +377,13 @@ def main(_):
       pool.starmap(delete_dataset, tasks)
       pool.close()
       pool.join()
+    logging.info('Finished cleaning up temporary datasets.')
+
+    logging.info('Cleaning up replica datasets on network drive...')
+    for replica_dataset_path in replica_dataset_paths:
+      subprocess.run(
+          ['rm', '-r', replica_dataset_path], check=True
+      )
 
     # Leader should save the training sample cost
     with open(os.path.join(os.path.expanduser(base_path), _TASK_NAME.value,
