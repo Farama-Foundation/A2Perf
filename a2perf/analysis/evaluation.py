@@ -158,7 +158,7 @@ def main(_):
   all_episode_returns = {k: v for (k, v) in all_episode_returns}
 
   maximum_checkpoint_number = max(
-      [v['checkpoint_number'] for v in all_episode_returns.values()]
+      [int(v['checkpoint_number']) for v in all_episode_returns.values()]
   )
   logging.info('Maximum checkpoint number: %d', maximum_checkpoint_number)
 
