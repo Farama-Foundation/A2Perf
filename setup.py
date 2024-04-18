@@ -4,7 +4,9 @@ import shutil
 import site
 import sys
 import urllib.request
+from zipfile import ZipFile
 
+import pkg_resources
 from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
@@ -65,6 +67,35 @@ def set_executable_permissions():
     raise FileNotFoundError('plc_wrapper_main not found at expected path.')
 
 
+def unzip_web_navigation_difficulty_levels():
+  """Unzip the difficulty levels for the web navigation domain and move to ~/.web_navigation."""
+
+  difficulty_level_zip_path = pkg_resources.resource_filename(
+      'a2perf',
+      'domains/web_navigation/environment_generation/data/difficulty_levels.zip')
+
+  if not os.path.exists(difficulty_level_zip_path):
+    raise FileNotFoundError(
+        f'Web navigation difficulty levels not found at {difficulty_level_zip_path}')
+
+  # Simply unzip the file where pkg_resources.resource_filename() points to
+  target_directory = os.path.abspath(
+      os.path.join(difficulty_level_zip_path, os.path.pardir)
+  )
+
+  if not os.path.exists(target_directory):
+    os.makedirs(target_directory)
+  logging.info('Saving difficulty levels to %s', target_directory)
+
+  try:
+    with ZipFile(difficulty_level_zip_path, 'r') as zip_ref:
+      zip_ref.extractall(target_directory)
+    logging.info(
+        f'Unzipped web navigation difficulty levels to {target_directory}')
+  except Exception as e:
+    logging.error('Failed to unzip file: %s', e)
+
+
 class CustomInstall(install):
   """Custom installation script to include Dreamplace and plc_wrapper_main installation."""
 
@@ -72,6 +103,7 @@ class CustomInstall(install):
     install.run(self)
     install_dreamplace()
     set_executable_permissions()
+    unzip_web_navigation_difficulty_levels()
 
 
 setup(
