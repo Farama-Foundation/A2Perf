@@ -67,35 +67,6 @@ def set_executable_permissions():
     raise FileNotFoundError('plc_wrapper_main not found at expected path.')
 
 
-def unzip_web_navigation_difficulty_levels():
-  """Unzip the difficulty levels for the web navigation domain and move to ~/.web_navigation."""
-
-  difficulty_level_zip_path = pkg_resources.resource_filename(
-      'a2perf',
-      'domains/web_navigation/environment_generation/data/difficulty_levels.zip')
-
-  if not os.path.exists(difficulty_level_zip_path):
-    raise FileNotFoundError(
-        f'Web navigation difficulty levels not found at {difficulty_level_zip_path}')
-
-  # Simply unzip the file where pkg_resources.resource_filename() points to
-  target_directory = os.path.abspath(
-      os.path.join(difficulty_level_zip_path, os.path.pardir)
-  )
-
-  if not os.path.exists(target_directory):
-    os.makedirs(target_directory)
-  logging.info('Saving difficulty levels to %s', target_directory)
-
-  try:
-    with ZipFile(difficulty_level_zip_path, 'r') as zip_ref:
-      zip_ref.extractall(target_directory)
-    logging.info(
-        f'Unzipped web navigation difficulty levels to {target_directory}')
-  except Exception as e:
-    logging.error('Failed to unzip file: %s', e)
-
-
 class CustomInstall(install):
   """Custom installation script to include Dreamplace and plc_wrapper_main installation."""
 
@@ -103,7 +74,6 @@ class CustomInstall(install):
     install.run(self)
     install_dreamplace()
     set_executable_permissions()
-    unzip_web_navigation_difficulty_levels()
 
 
 setup(
@@ -118,28 +88,28 @@ setup(
         'minari',
         'absl-py',
         # codecarbon
-        "arrow",
-        "dash",
-        "dash_bootstrap_components",
-        "dataclasses",
-        "fire",
-        "flake8",
-        "fuzzywuzzy",
-        "isort",
-        "mypy",
-        "pandas",
-        "plotly",
-        "psutil",
-        "py-cpuinfo",
-        "pynvml",
-        "requests",
-        "responses",
-        "sphinx",
-        "sphinx-rtd-theme",
+        'arrow',
+        'dash',
+        'dash_bootstrap_components',
+        'dataclasses',
+        'fire',
+        'flake8',
+        'fuzzywuzzy',
+        'isort',
+        'mypy',
+        'pandas',
+        'plotly',
+        'psutil',
+        'py-cpuinfo',
+        'pynvml',
+        'requests',
+        'responses',
+        'sphinx',
+        'sphinx-rtd-theme',
         'fuzzywuzzy',
         'pandas',
         'pyfiglet',
-        'scipy'
+        'scipy',
     ],
     extras_require={
         'circuit-training': [
@@ -151,11 +121,7 @@ setup(
             'cairocffi',
             'shapely',
         ],
-        'web-navigation': [
-            'selenium',
-            'regex',
-            'chromedriver-py'
-        ],
+        'web-navigation': ['selenium', 'regex', 'chromedriver-py'],
         'quadruped-locomotion': ['pybullet'],
         'all': [
             'torch==1.13.1',
@@ -163,7 +129,7 @@ setup(
             'chromedriver-py',
             'pybullet',
             'tensorflow',
-            'regex'
+            'regex',
         ],
     },
     cmdclass={
@@ -181,7 +147,7 @@ setup(
             'domains/quadruped_locomotion/motion_imitation/configs/envdesign.gin',
             'domains/circuit_training/circuit_training/configs/envdesign.gin',
             # Include designs for creating web navigation environments
-            'domains/web_navigation/environment_generation/data/difficulty_levels.zip',
+            'domains/web_navigation/environment_generation/data/*.json',
             # Include gminiwob files for displaying web navigation environments
             'domains/web_navigation/**/*.html',
             'domains/web_navigation/**/*.css',
