@@ -153,6 +153,24 @@ def collect_dataset(
     return None
 
 
+def combine_minari_datasets(dataset_a, dataset_b, dataset_id):
+  """Combines two minari datasets.
+
+  Args:
+      dataset_a: The first dataset to combine.
+      dataset_b: The second dataset to combine.
+      dataset_id: The ID of the combined dataset.
+
+  Returns:
+      The combined dataset.
+  """
+  combined_dataset = minari.combine_datasets(
+      datasets_to_combine=[dataset_a, dataset_b],
+      new_dataset_id=dataset_id,
+  )
+  return combined_dataset
+
+
 def main(_):
   np.random.seed(_SEED.value)
   tf.random.set_seed(_SEED.value)
@@ -224,8 +242,9 @@ def main(_):
 
   # For policies of the target skill level, get the average cost
   average_energy_kwh = evaluation_df['training_energy_kwh'].mean()
-  logging.info('Average energy cost of policies at skill level: %s',
-               average_energy_kwh)
+  logging.info(
+      'Average energy cost of policies at skill level: %s', average_energy_kwh
+  )
 
   evaluation_df = evaluation_df.sample(
       random_state=_SEED.value, n=_NUM_PROCESSES.value, replace=True
@@ -321,6 +340,7 @@ def main(_):
       while not os.path.exists(path):
         logging.info('Waiting for dataset %s to be available.', path)
         time.sleep(10)
+    time.sleep(30)
     logging.info('All datasets are now available for combination.')
 
     # To use the replica datasets, we'll have to copy them to our local machine
@@ -346,27 +366,60 @@ def main(_):
       )
       logging.info('Finished copying replica dataset %s.', i)
 
-    # Multiprocessing won't work with h5 operations, so we need to sequentially
-    # load
-    with multiprocessing.Pool(processes=1) as pool:
-      replica_datasets = pool.starmap(
-          load_dataset, zip(local_replica_dataset_paths, replica_dataset_ids)
-      )
-      pool.close()
-      pool.join()
+    # Wait after copying the datasets
+    time.sleep(10)
 
+    # Multiprocessing is unreliable with h5, so sequentially load
+    replica_datasets = []
+    for local_replica_dataset_path, replica_dataset_id in zip(
+        local_replica_dataset_paths, replica_dataset_ids
+    ):
+      replica_datasets.append(
+          load_dataset(local_replica_dataset_path, replica_dataset_id)
+      )
     logging.info('Finished loading all datasets.')
 
     logging.info('Combining datasets...')
-    os.environ['MINARI_DATASETS_PATH'] = os.path.join(
+    final_dataset_path = os.path.join(
         os.path.expanduser(base_path),
         _TASK_NAME.value,
         _SKILL_LEVEL.value,
+        f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',
     )
-    full_dataset = minari.combine_datasets(
-        datasets_to_combine=replica_datasets,
-        new_dataset_id=f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',
+    replica_datasets_combine_path = os.path.join(
+        '/tmp', _TASK_NAME.value, _SKILL_LEVEL.value, 'replicas'
     )
+    # Use a tmp path for combining the replica datasets
+    os.environ['MINARI_DATASETS_PATH'] = replica_datasets_combine_path
+
+    # Multiprocessing version
+    datasets_to_combine = replica_datasets[:]
+    all_combined_dataset_ids = []
+    j = 0
+    while len(datasets_to_combine) > 2:
+      dataset_a_list = datasets_to_combine[::2]
+      dataset_b_list = datasets_to_combine[1::2]
+      combined_dataset_ids = []
+      for i in range(len(dataset_a_list)):
+        comb_dataset_id = f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-final-merge-{j:03d}-v0'
+        combined_dataset_ids.append(comb_dataset_id)
+        all_combined_dataset_ids.append(comb_dataset_id)
+        j += 1
+      tasks = zip(dataset_a_list, dataset_b_list, combined_dataset_ids)
+      with multiprocessing.Pool(processes=_NUM_PROCESSES.value) as pool:
+        datasets_to_combine = pool.starmap(combine_minari_datasets, tasks)
+        pool.close()
+        pool.join()
+        logging.info('Combined datasets %s.', combined_dataset_ids)
+
+    # Combine the final two datasets with the proper name
+    os.environ['MINARI_DATASETS_PATH'] = final_dataset_path
+    full_dataset = combine_minari_datasets(
+        datasets_to_combine[0],
+        datasets_to_combine[1],
+        f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',
+    )
+
     logging.info('Successfully combined datasets from each replica.')
     logging.info('\tTotal steps: %s', full_dataset.total_steps)
     logging.info('\tTotal episodes: %s', full_dataset.total_episodes)
@@ -377,18 +430,31 @@ def main(_):
       pool.starmap(delete_dataset, tasks)
       pool.close()
       pool.join()
-    logging.info('Finished cleaning up temporary datasets.')
+    logging.info('Finished cleaning up temporary replica datasets.')
+
+    logging.info('Cleaning up combined datasets...')
+    for combined_dataset_id in all_combined_dataset_ids:
+      subprocess.run(
+          ['rm', '-r', os.path.join(final_dataset_path, combined_dataset_id)],
+          check=True,
+      )
+    logging.info('Finished cleaning up combined datasets.')
 
     logging.info('Cleaning up replica datasets on network drive...')
     for replica_dataset_path in replica_dataset_paths:
-      subprocess.run(
-          ['rm', '-r', replica_dataset_path], check=True
-      )
+      subprocess.run(['rm', '-r', replica_dataset_path], check=True)
+    logging.info('Finished cleaning up replica datasets on network drive.')
 
     # Leader should save the training sample cost
-    with open(os.path.join(os.path.expanduser(base_path), _TASK_NAME.value,
-                           _SKILL_LEVEL.value, 'training_sample_cost.txt'),
-              'w') as f:
+    with open(
+        os.path.join(
+            os.path.expanduser(base_path),
+            _TASK_NAME.value,
+            _SKILL_LEVEL.value,
+            'training_sample_cost.txt',
+        ),
+        'w',
+    ) as f:
       f.write(str(average_energy_kwh))
 
 
