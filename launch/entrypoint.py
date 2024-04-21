@@ -175,6 +175,9 @@ _STD_CELL_PLACER_MODE = flags.DEFINE_enum(
     ['dreamplace', 'fd'],
     'Mode for the standard cell placer.',
 )
+_DEFAULT_CPU_TDP = flags.DEFINE_integer(
+    'default_cpu_tdp', 0, 'Default CPU TDP.'
+)
 
 _MODE = flags.DEFINE_enum(
     'mode',
@@ -408,6 +411,7 @@ def main(_):
         f'--metric_values_dir={root_dir}/metrics',
         f'--run_offline_metrics_only={_RUN_OFFLINE_METRICS_ONLY.value}',
         f'--verbosity={logging.get_verbosity()}',
+        f'--extra_gin_bindings=track_emissions.default_cpu_tdp={_DEFAULT_CPU_TDP.value}',
     ]
 
   if _USE_XVFB.value:
