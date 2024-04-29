@@ -74,7 +74,7 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
 _JOB_TYPE = flags.DEFINE_enum(
     'job_type',
     None,
-    ['train', 'collect', 'inference', 'evaluate', 'generate'],
+    ['train', 'collect', 'inference', 'evaluate', 'generate', 'combine'],
     'Type of job',
 )
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
@@ -277,7 +277,7 @@ def main(_):
 
     os.environ['POLICY_NAME'] = _POLICY_NAME.value
     logging.info('Evaluating the policy %s.', _POLICY_NAME.value)
-  elif _JOB_TYPE.value == 'generate':
+  elif _JOB_TYPE.value == 'generate' or _JOB_TYPE.value == 'combine':
     # For dataset generation, we want the root dir to be at
     # the domain level, so we can load the expertise data
     # os.path.join(a2perf, _DOMAIN.value, str(exp_id), task_name, algo, exp_name
@@ -344,37 +344,57 @@ def main(_):
         f'--verbosity={logging.get_verbosity()}',
         f'--policy_name={_POLICY_NAME.value}',
     ]
-  elif _JOB_TYPE.value == 'generate':
+  elif _JOB_TYPE.value == 'combine':
     # Before generating datasets, we must use the evaluation data to classify
     # the policies into novice, intermediate, and expert. We can then use these
     # classifications to generate datasets.
+    skill_level_command = [
+        'python',
+        '-m',
+        'a2perf.analysis.expertise',
+        f'--root_dir={root_dir}',
+        f'--verbosity={logging.get_verbosity()}',
+        '--average_measure=median',
+        f'--experiment_ids={",".join(_EXPERIMENT_IDS.value)}',
+        f'--task_name={_TASK_NAME.value}',
+        f'--skill_level={_SKILL_LEVEL.value}',
+    ]
 
-    # Only the leading worker determines skill level
+    print(skill_level_command)
+    skill_level_process = subprocess.Popen(
+        skill_level_command, env=os.environ.copy(), text=True
+    )
+    skill_level_process.wait()
+    if skill_level_process.returncode != 0:
+      raise ValueError(f'Error running the command: {skill_level_command}')
+    else:
+      print('Finished running the command successfully.')
+
+    generate_command = [
+        'python',
+        '-m',
+        'a2perf.data.combine',
+        f'--env_name={_ENV_NAME.value}',
+        f'--root_dir={root_dir}',
+        f'--verbosity={logging.get_verbosity()}',
+        f'--num_episodes={_NUM_EPISODES_TO_GENERATE.value}',
+        f'--num_processes={_NUM_COLLECT_JOBS_PER_MACHINE.value}',
+        f'--skill_level={_SKILL_LEVEL.value}',
+        f'--task_name={_TASK_NAME.value}',
+        f'--seed={_SEED.value}',
+        f'--datasets_path={root_dir}',
+        f'--policy_name={_POLICY_NAME.value}',
+        f'--num_machines={_NUM_COLLECT_MACHINES.value}',
+    ]
+
+    print(generate_command)
+    subprocess.run(
+        generate_command, env=os.environ.copy(), text=True, check=True
+    )
+    return
+  elif _JOB_TYPE.value == 'generate':
+    # Add one since the combine job is the first job
     job_completion_index = int(os.environ.get('JOB_COMPLETION_INDEX', -1))
-    is_leading_worker = job_completion_index == 0
-    if is_leading_worker:
-      skill_level_command = [
-          'python',
-          '-m',
-          'a2perf.analysis.expertise',
-          f'--root_dir={root_dir}',
-          f'--verbosity={logging.get_verbosity()}',
-          '--average_measure=median',
-          f'--experiment_ids={",".join(_EXPERIMENT_IDS.value)}',
-          f'--task_name={_TASK_NAME.value}',
-          f'--skill_level={_SKILL_LEVEL.value}',
-      ]
-
-      print(skill_level_command)
-      skill_level_process = subprocess.Popen(
-          skill_level_command, env=os.environ.copy(), text=True
-      )
-      skill_level_process.wait()
-      if skill_level_process.returncode != 0:
-        raise ValueError(f'Error running the command: {skill_level_command}')
-      else:
-        print('Finished running the command successfully.')
-
     generate_command = [
         'python',
         '-m',
