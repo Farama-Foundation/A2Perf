@@ -26,6 +26,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import json
 import os
 from typing import Any
 from typing import Callable
@@ -177,17 +178,37 @@ def create_domain(env_name, root_dir=None, env_wrappers=(),
     # noinspection PyUnresolvedReferences
     from a2perf.domains import web_navigation
     from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
+    save_vocab_dir = os.path.join(root_dir, 'vocabulary')
+    global_vocab = vocabulary_node.LockedThreadedVocabulary()
+    reload_vocab = env_kwargs.pop('reload_vocab', True)
+    if os.path.exists(save_vocab_dir) and reload_vocab:
+      vocab_files = os.listdir(save_vocab_dir)
+      if vocab_files:
+        vocab_files.sort()
+        latest_vocab_file = vocab_files[-1]
+        with open(os.path.join(save_vocab_dir, latest_vocab_file), 'r') as f:
+          global_vocab_dict = json.load(f)
+          global_vocab.restore(state=global_vocab_dict)
+    seed = int(os.environ.get('SEED', None))
+    num_websites = int(os.environ.get('NUM_WEBSITES', None))
+    difficulty = int(os.environ.get('DIFFICULTY_LEVEL', None))
 
-    if env_kwargs.get('reload_vocab', False):
-      global_vocab_dict = np.load(
-          os.path.join(root_dir, 'train', 'global_vocab.npy'),
-          allow_pickle=True,
-      ).item()
-      global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
-      global_vocab.restore(dict(global_vocab=global_vocab_dict))
-      env_kwargs['global_vocabulary'] = global_vocab
-      env_kwargs.pop('reload_vocab')
-      env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
+    env_kwargs.update({
+        'global_vocabulary': global_vocab,
+        'seed': seed,
+        'num_websites': num_websites,
+        'difficulty': difficulty,
+        'browser_args': dict(
+            threading=False,
+            chrome_options={
+                '--headless',
+                '--no-sandbox',
+                '--disable-gpu',
+                '--disable-dev-shm-usage',
+            },
+        ),
+    })
+    env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
   elif env_name == CIRCUIT_TRAINING:
     # noinspection PyUnresolvedReferences
     from a2perf.domains import circuit_training

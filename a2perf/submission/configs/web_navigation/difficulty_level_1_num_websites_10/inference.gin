@@ -13,14 +13,12 @@ import a2perf.metrics.reliability.rl_reliability_metrics.metrics.metrics_offline
 # Set up submission object
 Submission.mode = %BenchmarkMode.INFERENCE
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-Submission.run_offline_metrics_only = False
+#Submission.run_offline_metrics_only = True
 Submission.measure_emissions = True
 
 ####################################
 # Set up domain
 ####################################
-
-Submission.domain_config_paths = '/a2perf/a2perf/submission/configs/web_navigation/debug/domain_configs/difficulty_01.gin'
 
 ####################################
 # Set up benchmark mode
@@ -29,12 +27,11 @@ Submission.num_inference_steps = 10000
 Submission.num_inference_episodes = 100
 Submission.time_participant_code = True
 
-
 # ----------------------
 # SYSTEM METRICS SETUP
 # ----------------------
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'a2perf_web_nav_inference'
+track_emissions.project_name = 'a2perf_web_navigation_inference_debug'
 track_emissions.measure_power_secs = 1
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
@@ -44,7 +41,6 @@ track_emissions.log_level = 'info'  # Log level set to 'info'
 track_emissions.country_iso_code = 'USA'
 track_emissions.region = 'Massachusetts'
 track_emissions.baseline_measure_sec = 10
-track_emissions.default_cpu_tdp = 125  # If your CPU cannot be detected, set it manually
 
 OfflineEmissionsTracker.country_2letter_iso_code = 'US'
 OfflineEmissionsTracker.on_csv_write = 'append'
