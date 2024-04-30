@@ -152,8 +152,9 @@ def main(_):
       os.path.expanduser(base_path),
       _TASK_NAME.value,
       _SKILL_LEVEL.value,
-      f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',
   )
+  final_dataset_id = (f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',)
+
   replica_datasets_combine_path = os.path.join(
       '/tmp', _TASK_NAME.value, _SKILL_LEVEL.value, 'replicas'
   )
@@ -185,7 +186,7 @@ def main(_):
   full_dataset = combine_minari_datasets(
       datasets_to_combine[0],
       datasets_to_combine[1],
-      f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',
+      final_dataset_id,
   )
 
   logging.info('Successfully combined datasets from each replica.')
