@@ -172,6 +172,28 @@ def get_cpu_power_usage(data_df):
   return {}
 
 
+def get_total_energy(data_df):
+  energy_consumed_all = data_df.groupby(
+      ['domain', 'algo', 'task', 'experiment', 'seed', 'run_id']
+  )['energy_consumed'].last().astype(float)
+
+  total_energy_consumed = energy_consumed_all.groupby(
+      ['domain', 'algo', 'task', 'experiment', 'seed']
+  ).sum()
+
+  # Group by 'domain', 'algo', 'task' and calculate mean and std of total energy
+  metrics = {}
+  grouped_total_energy = total_energy_consumed.groupby(
+      ['domain', 'algo', 'task'])
+  for (domain, algo, task), group_data in grouped_total_energy:
+    metrics[(domain, algo, task)] = {
+        'mean': group_data.mean(),
+        'std': group_data.std(),
+    }
+
+  return metrics
+
+
 def get_power_usage(data_df):
   ram_power_usage = get_ram_power_usage(data_df)
   gpu_power_usage = get_gpu_power_usage(data_df)
@@ -187,11 +209,12 @@ def get_training_metrics(data_df):
   mean_ram_usage = get_mean_ram_usage(data_df=data_df)
   peak_ram_usage = get_peak_ram_usage(data_df=data_df)
   power_usage = get_power_usage(data_df=data_df)
-
+  energy_consumed = get_total_energy(data_df=data_df)
   return {
       'mean_ram_usage': mean_ram_usage,
       'peak_ram_usage': peak_ram_usage,
       'wall_clock_time': wall_clock_time,
+      'energy_consumed': energy_consumed,
       **power_usage,
   }
 

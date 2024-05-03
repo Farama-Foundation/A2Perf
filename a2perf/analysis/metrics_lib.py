@@ -35,7 +35,7 @@ ALGO_DISPLAY_NAME = {
 }
 
 METRIC_DISPLAY_NAME = {
-    'Metrics/AverageReturn': 'Episode Return',
+    'Metrics/AverageReturn': 'Episodic Returns',
 }
 
 
@@ -113,7 +113,7 @@ def process_tb_event_dir(event_file_path, tags=None):
   )
   data_csv_path = os.path.join(log_base_dir, 'data.csv')
 
-  if os.path.exists(data_csv_path):
+  if 1 == 0 and os.path.exists(data_csv_path):
     data = pd.read_csv(data_csv_path)
 
     # We can't load timestamp from csv, so we need to convert that column from
@@ -123,19 +123,19 @@ def process_tb_event_dir(event_file_path, tags=None):
     logging.info(f'Loaded data from {data_csv_path}')
   else:
     data = load_tb_data(event_file_path, tags)
-    if data.empty:
-      logging.warning(f'No data found in {event_file_path}')
-      return None
+  if data.empty:
+    logging.warning(f'No data found in {event_file_path}')
+    return None
 
-    # Add the experiment details to the DataFrame
-    data['domain'] = domain
-    data['task'] = task
-    data['algo'] = algo
-    data['experiment'] = experiment_number
-    data['seed'] = seed
-    data['skill_level'] = skill_level
-    data.to_csv(data_csv_path)
-    logging.info(f'Saved data to {data_csv_path}')
+  # Add the experiment details to the DataFrame
+  data['domain'] = domain
+  data['task'] = task
+  data['algo'] = algo
+  data['experiment'] = experiment_number
+  data['seed'] = seed
+  data['skill_level'] = skill_level
+  data.to_csv(data_csv_path)
+  logging.info(f'Saved data to {data_csv_path}')
   return data
 
 
@@ -210,55 +210,123 @@ def downsample_steps(group, tag, n_steps=1000):
 def plot_training_reward_data(metrics_df,
     event_file_tags=('Metrics/AverageReturn',)):
   for tag in event_file_tags:
+    metrics_df[f'{tag}_Duration_minutes'] = metrics_df[f'{tag}_Duration'] // 60
     tag_display_val = METRIC_DISPLAY_NAME.get(tag, tag)
-    plot_df = metrics_df.groupby(['domain', 'task', 'algo'])
+    plot_df = metrics_df.groupby(['domain', 'task'])
 
-    for (domain, task, algo), group in plot_df:
-      # Downsample the group
-      group = downsample_steps(group=group, n_steps=2000, tag=tag)
+    for (domain, task), group_df in plot_df:
+      fig, ax = plt.subplots(1, 1, figsize=(16, 10))
+      for algo in group_df['algo'].unique():
+        group = group_df[group_df['algo'] == algo]
+        group = downsample_steps(group=group, n_steps=750, tag=tag)
 
-      # Create first plot for 'Step'
-      plt.figure(figsize=(8, 5))
-      sns.lineplot(
-          x=f'{tag}_Step',
-          y=f'{tag}_Value',
-          data=group,
-          label=f'{algo}',
-      )
-      plt.xlabel('Train Step')
-      plt.ylabel(tag_display_val)
-      plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-      plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
+        # Plot for 'Step'
+        sns.lineplot(
+            x=f'{tag}_Step',
+            y=f'{tag}_Value',
+            data=group,
+            label=f'{ALGO_DISPLAY_NAME.get(algo, algo)}'
+        )
 
-      title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
-              f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
-              f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Train Steps)'
-      plt.title(title)
-      plt.legend()
+      min_max_steps = group_df.groupby('algo')[f'{tag}_Step'].agg(
+          ['min', 'max'])
+      common_max_step = min_max_steps[
+        'max'].min()  # Use the minimum of the maximum steps across algos
+
+      ax.set_xlim(0, common_max_step)
+      ax.set_xlabel('Train Step')
+      ax.set_ylabel(tag_display_val)
+      ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+      ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
+      title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - {TASK_DISPLAY_NAME.get(task, task)} (Train Steps)'
+      ax.set_title(title)
+      ax.legend()
       plt.tight_layout()
       plt.show()
 
-      # Create second plot for 'Duration'
-      plt.figure(figsize=(8, 5))
-      group[f'{tag}_Duration_minutes'] = group[f'{tag}_Duration'] // 60
-      sns.lineplot(
-          x=f'{tag}_Duration_minutes',
-          y=f'{tag}_Value',
-          data=group,
-          label=f'{algo}',
-      )
-      plt.xlabel('Duration (minutes)')
-      plt.ylabel(tag_display_val)
-      plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-      plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
+      fig, ax = plt.subplots(1, 1, figsize=(16, 10))
+      for algo in group_df['algo'].unique():
+        group = group_df[group_df['algo'] == algo]
+        group = downsample_steps(group=group, n_steps=750, tag=tag)
 
-      title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
-              f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
-              f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Duration)'
-      plt.title(title)
-      plt.legend()
+        sns.lineplot(
+            x=f'{tag}_Duration_minutes',
+            y=f'{tag}_Value',
+            data=group,
+            label=f'{ALGO_DISPLAY_NAME.get(algo, algo)}'
+        )
+
+      min_max_durations = group_df.groupby('algo')[
+        f'{tag}_Duration_minutes'].agg(
+          ['min', 'max'])
+      common_max_duration = min_max_durations[
+        'max'].min()  # Use the minimum of the maximum durations across algos
+
+      ax.set_xlim(0, common_max_duration)
+      ax.set_xlabel('Duration (minutes)')
+      ax.set_ylabel(tag_display_val)
+      ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+      ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
+      title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - {TASK_DISPLAY_NAME.get(task, task)} (Duration)'
+      ax.set_title(title)
+      ax.legend()
       plt.tight_layout()
       plt.show()
+
+
+#
+# def plot_training_reward_data(metrics_df,
+#     event_file_tags=('Metrics/
+#   for tag in event_file_tags:
+#     tag_display_val = METRIC_DISPLAY_NAME.get(tag, tag)
+#     plot_df = metrics_df.groupby(['domain', 'task', 'algo'])
+#
+#     for (domain, task, algo), group in plot_df:
+#       # Downsample the group
+#       group = downsample_steps(group=group, n_steps=2000, tag=tag)
+#
+#       # Create first plot for 'Step'
+#       plt.figure(figsize=(8, 5))
+#       sns.lineplot(
+#           x=f'{tag}_Step',
+#           y=f'{tag}_Value',
+#           data=group,
+#           label=f'{algo}',
+#       )
+#       plt.xlabel('Train Step')
+#       plt.ylabel(tag_display_val)
+#       plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+#       plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
+#
+#       title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
+#               f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
+#               f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Train Steps)'
+#       plt.title(title)
+#       plt.legend()
+#       plt.tight_layout()
+#       plt.show()
+#
+#       # Create second plot for 'Duration'
+#       plt.figure(figsize=(8, 5))
+#       group[f'{tag}_Duration_minutes'] = group[f'{tag}_Duration'] // 60
+#       sns.lineplot(
+#           x=f'{tag}_Duration_minutes',
+#           y=f'{tag}_Value',
+#           data=group,
+#           label=f'{algo}',
+#       )
+#       plt.xlabel('Duration (minutes)')
+#       plt.ylabel(tag_display_val)
+#       plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+#       plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
+#
+#       title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
+#               f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
+#               f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Duration)'
+#       plt.title(title)
+#       plt.legend()
+#       plt.tight_layout()
+#       plt.show()
 
 
 def glob_path(path):

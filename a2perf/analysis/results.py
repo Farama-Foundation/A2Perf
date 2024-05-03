@@ -33,6 +33,7 @@ METRIC_TO_DISPLAY_NAME = dict(
     gpu_power_usage='GPU Power Usage',
     risk_across_rollouts='Risk Across Rollouts',
     disperion_across_rollouts='Dispersion Across Rollouts',
+    energy_consumed='Energy Consumed',
 )
 
 METRIC_TO_CATEGORY = dict(
@@ -50,6 +51,7 @@ METRIC_TO_CATEGORY = dict(
     gpu_power_usage='System',
     risk_across_rollouts='Reliability',
     disperion_across_rollouts='Reliability',
+    energy_consumed='System',
 )
 
 METRIC_TO_UNIT = dict(
@@ -67,6 +69,7 @@ METRIC_TO_UNIT = dict(
     gpu_power_usage='W',
     risk_across_rollouts='CVaR',
     disperion_across_rollouts='IQR',
+    energy_consumed='kWh',
 )
 
 
