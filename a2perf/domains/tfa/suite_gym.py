@@ -179,8 +179,17 @@ def create_domain(env_name, root_dir=None, env_wrappers=(),
     from a2perf.domains import web_navigation
     from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
     save_vocab_dir = os.path.join(root_dir, 'vocabulary')
-    global_vocab = vocabulary_node.LockedThreadedVocabulary()
     reload_vocab = env_kwargs.pop('reload_vocab', True)
+    vocab_type = env_kwargs.pop('vocab_type', 'threaded')
+    if vocab_type == 'threaded':
+      global_vocab = vocabulary_node.LockedThreadedVocabulary()
+    elif vocab_type == 'unlocked':
+      global_vocab = vocabulary_node.UnlockedVocabulary()
+    elif vocab_type == 'multiprocessing':
+      global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
+    else:
+      raise ValueError(f'Unknown vocabulary type: {vocab_type}')
+
     if os.path.exists(save_vocab_dir) and reload_vocab:
       vocab_files = os.listdir(save_vocab_dir)
       if vocab_files:
