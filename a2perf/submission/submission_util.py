@@ -354,18 +354,23 @@ class Submission:
 
   def _run_inference_benchmark(self):
     if not self.run_offline_metrics_only:
+      logging.info('Creating Gymnasium domain...')
       env = suite_gym.create_domain(env_name=self.domain.value,
                                     root_dir=self.root_dir)
       logging.info('Successfully created domain')
 
+
+      logging.info('Generating inference data...')
       inference_data = self._get_observation_data(env)
       logging.info('Successfully generated inference data')
 
       metric_results = {}
 
+      logging.info('Loading the policy for inference...')
       participant_policy, participant_module = _load_policy(
           module_path=self.participant_module_path,
           env=env)
+
       # Only include time_step_spec if the participant policy has it as an
       # attribute. This will be useful for participants using TF agents.
       time_step_spec = getattr(participant_policy, 'time_step_spec', None)
@@ -377,6 +382,7 @@ class Submission:
       logging.info('Finished preprocessing the observation data')
 
       if self.time_inference_steps:
+        logging.info('Timing inference steps...')
         inference_times = []
         for i in range(self.num_inference_steps):
           inference_step = lambda: participant_module.infer_once(
