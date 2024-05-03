@@ -31,7 +31,7 @@ Submission.time_participant_code = True
 # SYSTEM METRICS SETUP
 # ----------------------
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'a2perf_web_navigation_inference_debug'
+track_emissions.project_name = 'a2perf_web_navigation_inference'
 track_emissions.measure_power_secs = 1
 track_emissions.save_to_file = True  # Save data to file
 track_emissions.save_to_logger = False  # Do not save data to logger
