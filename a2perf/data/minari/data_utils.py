@@ -42,7 +42,7 @@ def collect_dataset(
     elif env_name == 'WebNavigation-v0':
       data_collector_call = DataCollector
       env_kwargs = {
-          'relaod_vocab': True,
+          'reload_vocab': True,
           'vocab_type': 'unlocked',
       }
     else:

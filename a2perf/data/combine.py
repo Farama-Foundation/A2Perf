@@ -153,7 +153,7 @@ def main(_):
       _TASK_NAME.value,
       _SKILL_LEVEL.value,
   )
-  final_dataset_id = (f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0',)
+  final_dataset_id = f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-v0'
 
   replica_datasets_combine_path = os.path.join(
       '/tmp', _TASK_NAME.value, _SKILL_LEVEL.value, 'replicas'
