@@ -53,15 +53,7 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
     'Authentication key for the manager server.',
 )
 _NUM_GPUS = flags.DEFINE_integer('num_gpus', 1, 'Number of GPUs to use')
-_NUM_EPISODES_PER_ITERATION = flags.DEFINE_integer(
-    'num_episodes_per_iteration',
-    256,
-    'Total number of episodes to collect per iteration',
-)
 
-_NUM_ITERATIONS = flags.DEFINE_integer(
-    'num_iterations', 100, 'Total number of iterations to run'
-)
 _DEBUG = flags.DEFINE_bool('debug', False, 'Debug mode')
 _DOMAIN = flags.DEFINE_enum(
     'domain',
@@ -73,6 +65,12 @@ _DATASETS_PATH = flags.DEFINE_string(
     'datasets_path',
     None,
     'Path for Minari datasets',
+)
+_POLICY_NAME = flags.DEFINE_string(
+    'policy_name',
+    'policy',
+    'Name of the policy to use for inference',
+
 )
 _USER_ID = flags.DEFINE_integer('user_id', None, 'User ID')
 _USER = flags.DEFINE_string('user', None, 'User')
@@ -105,6 +103,9 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
     'experiment_name', 'quadruped_locomotion', 'Name of experiment'
 )
 _EXPERIMENT_ID = flags.DEFINE_string('experiment_id', None, 'Experiment number')
+_EXPERIMENT_IDS = flags.DEFINE_list(
+    'experiment_ids', None, 'Experiment ids to use for inference'
+)
 _INTERACTIVE = flags.DEFINE_bool(
     'interactive', False, 'Whether to run in interactive mode'
 )
@@ -113,7 +114,7 @@ _MODE = flags.DEFINE_enum(
     'mode', 'train', ['train', 'inference'], 'Mode of execution'
 )
 _JOB_TYPE = flags.DEFINE_enum(
-    'job_type', None, ['train', 'collect', 'reverb'], 'Type of job'
+    'job_type', None, ['train', 'collect', 'inference', 'reverb'], 'Type of job'
 )
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run train or inference.'
@@ -158,33 +159,52 @@ _VOCABULARY_SERVER_PORT = flags.DEFINE_integer(
 
 def _get_docker_instructions(uid, user, env_name):
   repo_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+
+  common_setup = [
+      """
+      ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
+        --no-install-recommends -y"
+      """,
+      'ENV DEBIAN_FRONTEND=noninteractive',
+      'ENV TZ=America/New_York',
+      # Install basic system dependencies
+      """
+      RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
+        ${APT_COMMAND} install sudo \
+        wget \
+        software-properties-common \
+        curl \
+        tmux \
+        telnet \
+        net-tools \
+        vim \
+        less \
+        unzip && \
+        rm -rf /var/lib/apt/lists/*
+        """,
+      """
+      RUN add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+        ${APT_COMMAND} install -y g++-11
+      """,
+      # Set up user with the specified ID
+      f"""
+       RUN if ! getent passwd {uid}; then \
+             useradd -m -u {uid} {user}; \
+           else \
+             existing_user=$(getent passwd {uid} | cut -d: -f1); \
+             if [ "{user}" != "$existing_user" ]; then \
+               usermod -l {user} $existing_user; \
+               usermod -d /home/{user} -m {user}; \
+             fi; \
+           fi
+       """,
+      f"""
+       RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+       """,
+  ]
+
   docker_instructions = {
-      'quadruped_locomotion': [
-          """
-          ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
-            --no-install-recommends -y"
-          """,
-          'ENV DEBIAN_FRONTEND=noninteractive',
-          """
-          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
-            ${APT_COMMAND} install sudo wget unzip && \
-            rm -rf /var/lib/apt/lists/*
-          """,
-          # Set up user with the specified ID
-          f"""
-            RUN if ! getent passwd {uid}; then \
-                  useradd -m -u {uid} {user}; \
-                else \
-                  existing_user=$(getent passwd {uid} | cut -d: -f1); \
-                  if [ "{user}" != "$existing_user" ]; then \
-                    usermod -l {user} $existing_user; \
-                    usermod -d /home/{user} -m {user}; \
-                  fi; \
-                fi
-            """,
-          f"""
-            RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            """,
+      'quadruped_locomotion': common_setup + [
           # Set up python3.9 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -198,22 +218,12 @@ def _get_docker_instructions(uid, user, env_name):
             RUN chown -R {uid}:root /workdir && \
              /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
                 conda activate py39 && \
+                pip install -e /workdir[all] seaborn matplotlib minari==0.4.3 && \
                 python /workdir/setup.py install && \
-                pip install /workdir[all] seaborn matplotlib && \
                 pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"       
           """,
       ],
-      'web_navigation': [
-          """
-          ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
-            --no-install-recommends -y"
-          """,
-          'ENV DEBIAN_FRONTEND=noninteractive',
-          """
-          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
-            ${APT_COMMAND} install sudo wget unzip && \
-            rm -rf /var/lib/apt/lists/*
-          """,
+      'web_navigation': common_setup + [
           # Install Google Chrome
           'ARG CHROME_VERSION="120.0.6099.109-1"',
           'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
@@ -225,21 +235,6 @@ def _get_docker_instructions(uid, user, env_name):
             rm /tmp/chrome.deb && \
             rm -rf /var/lib/apt/lists/*
           """,
-          # Set up user with the specified ID
-          f"""
-            RUN if ! getent passwd {uid}; then \
-                  useradd -m -u {uid} {user}; \
-                else \
-                  existing_user=$(getent passwd {uid} | cut -d: -f1); \
-                  if [ "{user}" != "$existing_user" ]; then \
-                    usermod -l {user} $existing_user; \
-                    usermod -d /home/{user} -m {user}; \
-                  fi; \
-                fi
-            """,
-          f"""
-            RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            """,
           # Set up python3.10 and install requirements for A2perf
           'RUN mkdir -p /workdir',
           'WORKDIR /workdir',
@@ -250,50 +245,17 @@ def _get_docker_instructions(uid, user, env_name):
           """,
           f'COPY {repo_dir} .',
           f"""
-            RUN chown -R {uid}:root /workdir && \ 
-              /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
+            RUN chown -R {uid}:root /workdir && \
+             /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
                 conda activate py310 && \
+                pip install -e /workdir[all] seaborn matplotlib chromedriver-py==$CHROMEDRIVER_VERSION minari==0.4.3 && \
                 python /workdir/setup.py install && \
-                pip install /workdir[all] seaborn matplotlib chromedriver-py==$CHROMEDRIVER_VERSION && \
                 pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
             """,
+          f'RUN mkdir -p /var/run/dbus && chown -R {uid}:root /var/run/dbus',
           'ENV CONDA_DEFAULT_ENV=py310',
       ],
-      'circuit_training': [
-          """
-          ARG APT_COMMAND="apt-get -o Acquire::Retries=3 \
-            --no-install-recommends -y"
-          """,
-          'ENV DEBIAN_FRONTEND=noninteractive',
-          'ENV TZ=America/New_York',
-          # Set up user with the specified ID
-          f"""
-            RUN if ! getent passwd {uid}; then \
-                  useradd -m -u {uid} {user}; \
-                else \
-                  existing_user=$(getent passwd {uid} | cut -d: -f1); \
-                  if [ "{user}" != "$existing_user" ]; then \
-                    usermod -l {user} $existing_user; \
-                    usermod -d /home/{user} -m {user}; \
-                  fi; \
-                fi
-            """,
-          f"""
-            RUN echo "{user} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            """,
-          # Install basic system dependencies
-          """
-          RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
-            ${APT_COMMAND} install sudo \
-            wget \
-            software-properties-common \
-            curl \
-            tmux \
-            vim \
-            less \
-            unzip && \
-            rm -rf /var/lib/apt/lists/*
-            """,
+      'circuit_training': common_setup + [
           # Install dreamplace dependencies
           """
           RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
@@ -314,8 +276,8 @@ def _get_docker_instructions(uid, user, env_name):
           """
           RUN /bin/bash -c "source /opt/conda/etc/profile.d/conda.sh && \
               conda activate py310 && \
+              pip install -e /workdir[all] seaborn matplotlib minari==0.4.3 && \
               python /workdir/setup.py install && \
-              pip install /workdir[all] seaborn matplotlib && \
               pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
           """,
           'ENV CONDA_DEFAULT_ENV=py310',
@@ -341,26 +303,26 @@ def _get_entrypoint(domain):
       ]),
       'web_navigation': xm.CommandList([
           'echo $@',
-          #           'service dbus start',
-          #           f"""
-          #                   su {_USER.value} -c /bin/bash <<EOF
-          # source /opt/conda/etc/profile.d/conda.sh &&
-          # conda activate py310 &&
-          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-          # EOF
-          #           """,
-          #           'echo',
+          'service dbus start',
+          f"""
+                            su {_USER.value} -c /bin/bash <<EOF
+          source /opt/conda/etc/profile.d/conda.sh &&
+          conda activate py310 &&
+          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          EOF
+                    """,
+          'echo',
       ]),
       'circuit_training': xm.CommandList([
           'echo $@',
-          #           f"""
-          # /bin/bash <<EOF
-          # source /opt/conda/etc/profile.d/conda.sh &&
-          # conda activate py310 &&
-          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-          # EOF
-          # """,
-          #           'echo',
+          f"""
+          /bin/bash <<EOF
+          source /opt/conda/etc/profile.d/conda.sh &&
+          conda activate py310 &&
+          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          EOF
+          """,
+          'echo',
       ]),
   }
   return entrypoints[domain]
@@ -412,6 +374,7 @@ TASK_TO_MAX_SEQUENCE_LENGTH = dict(
     ),
     web_navigation=dict(
         difficulty_level_1_num_websites_1=25,
+        difficulty_level_1_num_websites_5=25,
         difficulty_level_1_num_websites_10=25,
         difficulty_level_1_num_websites_100=25,
     ),
@@ -479,6 +442,11 @@ def get_web_navigation_hparam_sweeps(**kwargs):
           'difficulty_level': [1, ],
           'num_websites': [1],
       },
+      'difficulty_level_1_num_websites_5': {
+          'task_name': ['difficulty_level_1_num_websites_5'],
+          'difficulty_level': [1],
+          'num_websites': [5],
+      },
       'difficulty_level_1_num_websites_10': {
           'task_name': ['difficulty_level_1_num_websites_10'],
           'difficulty_level': [1],
@@ -501,6 +469,22 @@ def get_web_navigation_hparam_sweeps(**kwargs):
   task_hyperparameters = task_sweeps
 
   algo_hyperparameters = {
+      'bc': {
+          'algo': ['bc'],
+          'batch_size': [128],
+          'learning_rate': [1e-4],
+          'env_batch_size': [1],  # still need this to init locomotion env
+          'num_epochs': [0],
+          'num_iterations': [5000],
+          'train_checkpoint_interval': [500],
+          'policy_checkpoint_interval': [500],
+          'log_interval': [50],
+          'eval_interval': [50],
+          'max_vocab_size': [max_vocab_size],
+          'latent_dim': [latent_dim],
+          'embedding_dim': [embedding_dim],
+          'profile_value_dropout': [profile_value_dropout],
+      },
       'ppo': {
           'algo': ['ppo'],
           'batch_size': [128],
@@ -830,7 +814,20 @@ def get_circuit_training_hparam_sweeps(**kwargs):
 
   # Different tasks may have different hparams for the same algo
   algo_hyperparameters = {
-      'netlist_toy_macro_stdcell': {
+      'netlist_toy_macro_stdcell_std_cell_placer_mode_dreamplace': {
+          'bc': {
+              'algo': ['bc'],
+              'batch_size': [128],
+              'learning_rate': [1e-3],
+              'env_batch_size': [1],  # still need this to init locomotion env
+              'num_epochs': [0],
+              'num_iterations': [1000],
+              # 'num_iterations': [10],
+              'train_checkpoint_interval': [100],
+              'policy_checkpoint_interval': [100],
+              'log_interval': [10],
+              'eval_interval': [10],
+          },
           'ppo': {
               'algo': ['ppo'],
               'batch_size': [128],
@@ -860,7 +857,19 @@ def get_circuit_training_hparam_sweeps(**kwargs):
               'train_checkpoint_interval': [100],
           },
       },
-      'netlist_ariane': {
+      'netlist_ariane_std_cell_placer_mode_dreamplace': {
+          'bc': {
+              'algo': ['bc'],
+              'batch_size': [128],
+              'learning_rate': [1e-3],
+              'env_batch_size': [1],  # still need this to init locomotion env
+              'num_epochs': [0],
+              'num_iterations': [5000],
+              'train_checkpoint_interval': [500],
+              'policy_checkpoint_interval': [500],
+              'log_interval': [50],
+              'eval_interval': [50],
+          },
           'ppo': {
               'algo': ['ppo'],
               'batch_size': [128],
@@ -893,12 +902,14 @@ def get_circuit_training_hparam_sweeps(**kwargs):
   }
 
   algo_sweeps = []
-  for algo, hparams in algo_hyperparameters.items():
-    if algo in algos:
-      for params in itertools.product(*hparams.values()):
-        algo_sweeps.append(
-            dict(zip(hparams.keys(), params))
-        )
+  for task, algo_hparams in algo_hyperparameters.items():
+    if task in task_names:
+      for algo, hparams in algo_hparams.items():
+        if algo in algos:
+          for params in itertools.product(*hparams.values()):
+            algo_sweeps.append(
+                dict(zip(hparams.keys(), params))
+            )
   algo_hyperparameters = algo_sweeps
 
   hyperparameters = []
@@ -962,6 +973,7 @@ def main(_):
     base_root_dir = os.path.join(
         '/gcs',
         'a2perf',
+        'experiments',
         _DOMAIN.value,
         str(experiment_id),
     )
@@ -1040,7 +1052,6 @@ def main(_):
       with open(hparam_config_path, 'w') as f:
         f.write(str(hparams))
 
-    print('hellow')
     hparam_sweeps = get_hparam_sweeps(
         debug=_DEBUG.value,
         tasks=_TASKS.value,
@@ -1061,38 +1072,8 @@ def main(_):
     )
     print(f'The hparam sweeps are: {hparam_sweeps}')
     for hparams in hparam_sweeps:
-      if _DOMAIN.value == 'quadruped_locomotion':
-        task_name = hparams['motion_file']
-        hparams.pop('motion_file')
-        hparams['motion_file_path'] = os.path.join(
-            '/workdir/a2perf/domains/quadruped_locomotion/motion_imitation/data/motions/',
-            task_name + '.txt',
-        )
-      elif _DOMAIN.value == 'web_navigation':
-        difficulty_level = hparams['difficulty_level']
-        num_websites = hparams['num_websites']
-        task_name = (
-            f'difficulty_level_{difficulty_level}_num_websites_{num_websites}'
-        )
-      elif _DOMAIN.value == 'circuit_training':
-        netlist = hparams['netlist']
-        del hparams['netlist']
-        hparams['netlist_path'] = os.path.join(
-            '/workdir/a2perf/domains/circuit_training/circuit_training/environment/test_data',
-            netlist,
-            'netlist.pb.txt',
-        )
-        hparams['init_placement_path'] = os.path.join(
-            os.path.dirname(hparams['netlist_path']),
-            'initial.plc',
-        )
-        hparams['std_cell_placer_mode'] = _STD_CELL_PLACER_MODE.value
-        task_name = f'netlist_{netlist}_std_cell_placer_mode_{_STD_CELL_PLACER_MODE.value}'
-      else:
-        raise ValueError(f'Unknown domain: {_DOMAIN.value}')
-      # Set up the root directory for the experiment
-      hparams['task_name'] = task_name
       experiment_name = create_experiment_name(hparams)
+      task_name = hparams['task_name']
       hparams['root_dir'] = os.path.join(
           base_root_dir, task_name, hparams['algo'], experiment_name
       )
@@ -1106,8 +1087,7 @@ def main(_):
       print(dataset_id)
       hparams.update(
           dict(
-              num_iterations=_NUM_ITERATIONS.value,
-              num_episodes_per_iteration=_NUM_EPISODES_PER_ITERATION.value,
+              policy_name=_POLICY_NAME.value,
               vocabulary_manager_auth_key=_VOCABULARY_MANAGER_AUTH_KEY.value,
               job_type=_JOB_TYPE.value,
               experiment_id=experiment_id,
@@ -1120,11 +1100,6 @@ def main(_):
               run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
               dataset_id=dataset_id,
               datasets_path=_DATASETS_PATH.value,
-              gin_config=os.path.join(
-                  '/workdir/a2perf/submission/configs',
-                  domain,
-                  f'{mode}.gin',
-              ),
               participant_module_path=os.path.join(
                   '/workdir/a2perf/a2perf_benchmark_submission',
               ),
