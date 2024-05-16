@@ -1,5 +1,3 @@
-import collections
-
 import minari
 import tensorflow as tf
 import tf_agents
@@ -17,55 +15,59 @@ def minari_bc_dataset_iterator(
   Returns:
       An iterator for the given MinariDataset.
   """
-  for episode in dataset:
-    for i in range(episode.total_timesteps - 1):
-      if i == 0:
-        obs_step_type = tf_agents.trajectories.StepType.FIRST
-      elif i == len(episode.observations) - 1:
-        obs_step_type = tf_agents.trajectories.StepType.LAST
-      else:
-        obs_step_type = tf_agents.trajectories.StepType.MID
 
-      next_obs_step_type = tf_agents.trajectories.StepType.LAST if i == len(
-          episode.observations) - 1 else tf_agents.trajectories.StepType.MID
+  while True:
+    for episode in dataset:
+      for i in range(episode.total_timesteps):
+        if i == 0:
+          obs_step_type = tf_agents.trajectories.StepType.FIRST
+        elif i == len(episode.observations) - 1:
+          obs_step_type = tf_agents.trajectories.StepType.LAST
+        else:
+          obs_step_type = tf_agents.trajectories.StepType.MID
 
-      # episode.observations may be a dictionary if the environment uses a dict
-      # observation space.
-      if isinstance(episode.observations, dict):
-        transition = Trajectory(
-            step_type=obs_step_type,
-            observation=DictWrapper(
-                {k: tf.convert_to_tensor(v[i], dtype=v[i].dtype) for k, v in
-                 episode.observations.items()}),
-            action=tf.convert_to_tensor(episode.actions[i],
-                                        dtype=episode.actions[i].dtype),
-            policy_info=(),
-            next_step_type=next_obs_step_type,
-            reward=tf.convert_to_tensor(episode.rewards[i],
-                                        dtype=episode.rewards[i].dtype),
-            discount=tf.constant(0.0,
-                                 dtype=tf.float32) if obs_step_type == tf_agents.trajectories.StepType.LAST else tf.constant(
-                1.0, dtype=tf.float32),
-        )
-      else:
-        transition = Trajectory(
-            step_type=obs_step_type,
-            observation=episode.observations[i],
-            action=episode.actions[i],
-            policy_info=(),
-            next_step_type=next_obs_step_type,
-            reward=episode.rewards[i],
-            discount=tf.constant(0.0,
-                                 dtype=tf.float32) if obs_step_type == tf_agents.trajectories.StepType.LAST else tf.constant(
-                1.0, dtype=tf.float32),
-        )
+        next_obs_step_type = tf_agents.trajectories.StepType.LAST if i == len(
+            episode.observations) - 2 else tf_agents.trajectories.StepType.MID
 
-      constant_tf_string = tf.constant("", dtype=tf.string)
-      yield transition, constant_tf_string
+        # episode.observations may be a dictionary if the environment uses a dict
+        # observation space.
+        if isinstance(episode.observations, dict):
+          transition = Trajectory(
+              step_type=obs_step_type,
+              observation=DictWrapper(
+                  {k: tf.convert_to_tensor(v[i], dtype=v[i].dtype) for k, v in
+                   episode.observations.items()}),
+              action=tf.convert_to_tensor(episode.actions[i],
+                                          dtype=episode.actions[i].dtype),
+              policy_info=(),
+              next_step_type=next_obs_step_type,
+              reward=tf.convert_to_tensor(episode.rewards[i],
+                                          dtype=episode.rewards[i].dtype),
+              discount=tf.constant(0.0,
+                                   dtype=tf.float32) if obs_step_type == tf_agents.trajectories.StepType.LAST else tf.constant(
+                  1.0, dtype=tf.float32),
+          )
+        else:
+          transition = Trajectory(
+              step_type=obs_step_type,
+              observation=episode.observations[i],
+              action=episode.actions[i],
+              policy_info=(),
+              next_step_type=next_obs_step_type,
+              reward=episode.rewards[i],
+              discount=tf.constant(0.0,
+                                   dtype=tf.float32) if obs_step_type == tf_agents.trajectories.StepType.LAST else tf.constant(
+                  1.0, dtype=tf.float32),
+          )
+
+        expect_string = tf.constant("_", dtype=tf.string)
+        yield transition, expect_string
 
 
 def convert_to_tf_dataset(dataset: minari.MinariDataset,
     minari_dataset_iterator: callable = minari_bc_dataset_iterator,
+    observation_spec: tf.TensorSpec = None,
+    action_spec: tf.TensorSpec = None,
     batch_size: int = 32,
     shuffle_buffer_size: int = 1000,
 ) -> tf.data.Dataset:
@@ -82,10 +84,18 @@ def convert_to_tf_dataset(dataset: minari.MinariDataset,
   """
   iterator = minari_dataset_iterator(dataset)
   dataset = tf.data.Dataset.from_generator(
-      iterator,
+      lambda: iterator,
       output_signature=(
-          tf.TensorSpec(shape=(None, None), dtype=tf.float32),
-          tf.TensorSpec(shape=(None,), dtype=tf.int32),
+          tf_agents.trajectories.Trajectory(
+              step_type=tf.TensorSpec(shape=(), dtype=tf.int32),
+              observation=observation_spec,
+              action=action_spec,
+              policy_info=(),
+              next_step_type=tf.TensorSpec(shape=(), dtype=tf.int32),
+              reward=tf.TensorSpec(shape=(), dtype=tf.float32),
+              discount=tf.TensorSpec(shape=(), dtype=tf.float32),
+          ),
+          tf.TensorSpec(shape=(), dtype=tf.string),
       ),
   )
   dataset = dataset.shuffle(shuffle_buffer_size)

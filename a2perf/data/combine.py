@@ -3,9 +3,9 @@ import os
 import subprocess
 import time
 
-from a2perf.data.minari.data_utils import combine_minari_datasets
-from a2perf.data.minari.data_utils import delete_dataset
-from a2perf.data.minari.data_utils import load_dataset
+from a2perf.data.minari_dataset.data_utils import combine_minari_datasets
+from a2perf.data.minari_dataset.data_utils import delete_dataset
+from a2perf.data.minari_dataset.data_utils import load_dataset
 from absl import app
 from absl import flags
 from absl import logging

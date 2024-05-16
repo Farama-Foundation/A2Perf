@@ -4,15 +4,16 @@ import os
 import subprocess
 import time
 
-from a2perf.data.minari.data_utils import collect_dataset
-from a2perf.data.minari.data_utils import delete_dataset
-from absl import app
-from absl import flags
-from absl import logging
 import minari
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from absl import app
+from absl import flags
+from absl import logging
+
+from a2perf.data.minari_dataset.data_utils import collect_dataset
+from a2perf.data.minari_dataset.data_utils import delete_dataset
 
 _ROOT_DIR = flags.DEFINE_string(
     'root_dir',
@@ -43,6 +44,12 @@ _NUM_MACHINES = flags.DEFINE_integer(
     'Number of machines used to generate the dataset. This is used to '
     'distribute the dataset generation across multiple machines.',
 )
+_NUM_TASKS = flags.DEFINE_integer(
+    'num_tasks',
+    1,
+    'Number of tasks to perform. This is used to distribute the dataset '
+    'generation across multiple tasks.',
+)
 _SEED = flags.DEFINE_integer('seed', None, 'Seed to use.')
 _DATASETS_PATH = flags.DEFINE_string(
     'datasets_path',
@@ -66,6 +73,7 @@ _POLICY_NAME = flags.DEFINE_string('policy_name', None, 'Name of the policy.')
 
 
 def main(_):
+  multiprocessing.set_start_method('spawn', force=True)
   np.random.seed(_SEED.value)
   tf.random.set_seed(_SEED.value)
 
@@ -134,9 +142,8 @@ def main(_):
   if job_completion_index < remainder:
     num_episodes_to_generate += 1
 
-
   evaluation_df = evaluation_df.sample(
-      random_state=_SEED.value, n=_NUM_PROCESSES.value, replace=True
+      random_state=_SEED.value, n=_NUM_TASKS.value, replace=True
   )
 
   if num_episodes_to_generate == 0 or evaluation_df.empty:
@@ -158,9 +165,9 @@ def main(_):
   dataset_paths = []
   dataset_ids = []
   env_name = _ENV_NAME.value[:-3]
-  for i in range(_NUM_PROCESSES.value):
+  for i in range(_NUM_TASKS.value):
     tmp_dataset_id = f'{env_name}-{_TASK_NAME.value}-{_SKILL_LEVEL.value}-{job_completion_index:03d}-{i:03d}-v0'
-    dataset_paths.append(os.path.join(tmp_minari_datasets_path, tmp_dataset_id))
+    dataset_paths.append(tmp_minari_datasets_path)
     dataset_ids.append(tmp_dataset_id)
 
   with multiprocessing.Pool(_NUM_PROCESSES.value) as pool:

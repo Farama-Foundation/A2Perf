@@ -2,15 +2,16 @@ import functools
 import os
 import shutil
 
-from a2perf.domains.tfa import suite_gym
-from a2perf.domains.tfa.utils import load_policy
-from a2perf.domains.tfa.utils import perform_rollouts
+import gymnasium as gym
 import minari
 import numpy as np
 import tensorflow as tf
-import gymnasium as gym
-from minari import DataCollector
 from absl import logging
+from minari import DataCollector
+
+from a2perf.domains.tfa import suite_gym
+from a2perf.domains.tfa.utils import load_policy
+from a2perf.domains.tfa.utils import perform_rollouts
 
 
 def collect_dataset(
@@ -40,7 +41,22 @@ def collect_dataset(
           'mode': 'test',
       }
     elif env_name == 'WebNavigation-v0':
-      data_collector_call = DataCollector
+      # Make observation space Boxes of infinite bounds dictionary infinite
+      keys = ['dom_attribute_mask', 'dom_elements', 'dom_elements_mask',
+              'dom_features', 'dom_profile_joint_mask', 'profile_key',
+              'profile_key_mask', 'profile_value', 'profile_value_mask',
+              'time_step']
+      shapes = [(250, 5, 10), (250, 5, 10), (250,), (250, 8), (25, 250),
+                (25, 10), (25, 10), (25, 10), (25, 10), (1,)]
+
+      observation_space = gym.spaces.Dict({
+          key: gym.spaces.Box(low=-np.inf, high=np.inf, shape=shape,
+                              dtype=np.float64)
+          for key, shape in zip(keys, shapes)
+      })
+      data_collector_call = functools.partial(
+          DataCollector, observation_space=observation_space
+      )
       env_kwargs = {
           'reload_vocab': True,
           'vocab_type': 'unlocked',
@@ -57,6 +73,13 @@ def collect_dataset(
     )
 
     # checkpoint_path = checkpoint_path.replace('/gcs', os.path.expanduser('~/gcs'))
+    checkpoint_path = checkpoint_path.replace(
+        '/gcs/xcloud-shared/ikechukwuu/a2perf',
+        os.path.expanduser('~/workspace/a2perf/repo/experiments'))
+    # E
+    # checkpoint_path = checkpoint_path.replace(
+    #     '/gcs/xcloud-shared/ikechukwuu/a2perf',
+    #     '/n/holyscratch01/janapa_reddi_lab/Lab/iuchendu/experiments')
     saved_model_path = os.path.join(
         checkpoint_path, '..', '..', policy_name
     )
