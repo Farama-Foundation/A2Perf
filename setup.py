@@ -130,6 +130,11 @@ setup(
             'pybullet',
             'tensorflow',
             'regex',
+            'tf-agents',
+            'timeout-decorator',
+            'matplotlib',
+            'cairocffi',
+            'shapely',
         ],
     },
     cmdclass={
