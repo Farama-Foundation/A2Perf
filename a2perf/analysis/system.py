@@ -1,8 +1,10 @@
+from functools import reduce
+
 import pandas as pd
 
 
-def get_distributed_experiment_metric(
-    data_df, metric, tolerance=pd.Timedelta('10sec'), dtype=float):
+def get_distributed_experiment_metric(data_df, metric,
+    tolerance=pd.Timedelta('10sec'), dtype=float):
   data_df['timestamp'] = pd.to_datetime(data_df['timestamp'])
   final_dfs_to_concat = []
 
@@ -10,53 +12,38 @@ def get_distributed_experiment_metric(
       ['domain', 'algo', 'task', 'experiment', 'seed']):
     group = group.sort_values('timestamp')
 
+    # Initialize list to hold data frames for each run_id
     run_groups = []
     run_ids = group['run_id'].unique()
 
+    # Create a separate DataFrame for each run_id with the specific metric column renamed
     for run_id in run_ids:
-      run_group = group[group['run_id'] == run_id].rename(
+      run_group = group[group['run_id'] == run_id][
+        ['timestamp', 'domain', 'algo', 'task', 'experiment', 'seed',
+         metric]].rename(
           columns={metric: f'{metric}_{run_id}'}
-      )
-      run_group[f'{metric}_{run_id}'] = run_group[f'{metric}_{run_id}'].astype(
-          dtype
-      )
+      ).astype({f'{metric}_{run_id}': dtype})
       run_groups.append(run_group)
 
-    # Merge all groups at once
-    merged_group = run_groups[0]
-    for run_group, run_id in zip(run_groups[1:], run_ids[1:]):
-      merged_group = pd.merge_asof(
-          merged_group,
-          run_group,
-          on='timestamp',
-          suffixes=('', f'_{run_id}'),
-          tolerance=tolerance,
-      )
+    # Use functools.reduce to merge all DataFrame objects at once
+    merged_group = reduce(
+        lambda left, right: pd.merge_asof(
+            left, right, on='timestamp', tolerance=tolerance,
+            suffixes=('', f'_{right.columns[-1]}')
+        ), run_groups
+    )
 
-    # Check for NaN values in the metric column that we are aggregating
-    na_check_columns = [f'{metric}_{rid}' for rid in run_ids]
-    # merged_group = merged_group.dropna(subset=na_check_columns)
-    # Instead of dropping Nan values, fill them with 0, but only for the metric columns
-    merged_group = merged_group.fillna(0)
-
-    # Aggregate the metric columns
-    metric_columns = [col for col in merged_group if
-                      col.startswith(f'{metric}_')]
+    metric_columns = [col for col in merged_group.columns if
+                      col.startswith(metric)]
     merged_group[f'experiment_{metric}'] = merged_group[metric_columns].sum(
         axis=1)
-    final_dfs_to_concat.append(merged_group)
+    final_dfs_to_concat.append(merged_group[
+                                 ['domain', 'algo', 'task', 'experiment',
+                                  'seed', 'timestamp', f'experiment_{metric}']])
 
-  aggregated_df = pd.concat(final_dfs_to_concat)
-  final_columns = [
-      'domain',
-      'algo',
-      'task',
-      'experiment',
-      'seed',
-      'run_id',
-      f'experiment_{metric}',
-  ]
-  return aggregated_df[final_columns]
+  # Concatenate all final DataFrames
+  aggregated_df = pd.concat(final_dfs_to_concat, ignore_index=True)
+  return aggregated_df
 
 
 def get_metric(data_df, metric, tolerance=pd.Timedelta('10sec')):

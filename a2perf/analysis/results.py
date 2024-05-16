@@ -1,6 +1,7 @@
 import pandas as pd
 
 OPTIMAL_METRIC_CRITERIA = dict(
+    energy_consumed='min',
     rollout_returns='max',
     dispersion_across_runs='min',
     dispersion_within_runs='min',

@@ -96,7 +96,13 @@ def process_tb_event_dir(event_file_path, tags=None):
   exp_split = event_file_path.split('/')
 
   if 'collect' in event_file_path:
-    indices = [-7, -8, -9, -10, -11]
+    # Single collect job output
+    if exp_split[-3] == 'summaries':
+      indices = [-7, -8, -9, -10, -11]
+
+    # Some jobs have multiple collect job outputs, so increase the indices
+    if exp_split[-4] == 'summaries':
+      indices = [-8, -9, -10, -11, -12]
   else:
     indices = [-4, -5, -6, -7, -8]
 
@@ -114,7 +120,7 @@ def process_tb_event_dir(event_file_path, tags=None):
   data_csv_path = os.path.join(log_base_dir, 'data.csv')
 
   if 1 == 0 and os.path.exists(data_csv_path):
-    data = pd.read_csv(data_csv_path)
+    data = pd.read_csv(data_csv_path, on_bad_lines='skip')
 
     # We can't load timestamp from csv, so we need to convert that column from
     # string to datetime
@@ -140,7 +146,7 @@ def process_tb_event_dir(event_file_path, tags=None):
 
 
 def process_codecarbon_csv(csv_file_path):
-  df = pd.read_csv(csv_file_path)
+  df = pd.read_csv(csv_file_path, on_bad_lines='skip')
   exp_split = csv_file_path.split('/')
 
   # Process path to extract experiment details
@@ -176,8 +182,49 @@ def process_codecarbon_csv(csv_file_path):
       lambda x: x.replace(tzinfo=None) if x.tzinfo else x
   )
 
+  # Identify and handle corrupt rows for specific columns
+  for tag in ['gpu_power', 'cpu_power', 'duration']:
+    # Convert to numeric, coercing errors to NaN
+    df[tag] = pd.to_numeric(df[tag], errors='coerce')
+
+    # Log and drop rows where conversion failed (NaN values present)
+    corrupt_rows = df[df[tag].isna()]
+    if not corrupt_rows.empty:
+      logging.warning(f'Corrupt rows due to invalid {tag}:')
+      logging.warning(corrupt_rows)
+
+    # Drop rows with NaN values in these columns
+    df = df.dropna(subset=[tag])
+
   # Sort by timestamp
   df = df.sort_values(by='timestamp')
+
+  return df
+
+
+def correct_cpu_energy(df, cpus_per_collect_job=96,
+    total_cpus_on_collect_machine=128, cpus_per_train_job=96,
+    total_cpus_on_train_machine=96, true_cpu_tdp=120):
+  # Reset the DataFrame index to ensure uniqueness
+  df = df.reset_index(drop=True)
+
+  # Create a job type column with either `collect` or `train` depending on whether gpu_energy is 0 or not
+  df['job_type'] = 'collect'
+  df.loc[df['gpu_power'] > 0, 'job_type'] = 'train'
+
+  # Compute the actual CPU power based on the job type
+  df['actual_cpu_power'] = 0
+  collect_mask = df['job_type'] == 'collect'
+  train_mask = df['job_type'] == 'train'
+
+  df.loc[
+    collect_mask, 'actual_cpu_power'] = true_cpu_tdp * cpus_per_collect_job / total_cpus_on_collect_machine
+  df.loc[
+    train_mask, 'actual_cpu_power'] = true_cpu_tdp * cpus_per_train_job / total_cpus_on_train_machine
+
+  # Compute the cpu energy in kWh
+  df['cpu_energy'] = (df['actual_cpu_power'] * df['duration'] / 3600) / 1000
+
   return df
 
 
@@ -272,61 +319,6 @@ def plot_training_reward_data(metrics_df,
       ax.legend()
       plt.tight_layout()
       plt.show()
-
-
-#
-# def plot_training_reward_data(metrics_df,
-#     event_file_tags=('Metrics/
-#   for tag in event_file_tags:
-#     tag_display_val = METRIC_DISPLAY_NAME.get(tag, tag)
-#     plot_df = metrics_df.groupby(['domain', 'task', 'algo'])
-#
-#     for (domain, task, algo), group in plot_df:
-#       # Downsample the group
-#       group = downsample_steps(group=group, n_steps=2000, tag=tag)
-#
-#       # Create first plot for 'Step'
-#       plt.figure(figsize=(8, 5))
-#       sns.lineplot(
-#           x=f'{tag}_Step',
-#           y=f'{tag}_Value',
-#           data=group,
-#           label=f'{algo}',
-#       )
-#       plt.xlabel('Train Step')
-#       plt.ylabel(tag_display_val)
-#       plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-#       plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
-#
-#       title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
-#               f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
-#               f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Train Steps)'
-#       plt.title(title)
-#       plt.legend()
-#       plt.tight_layout()
-#       plt.show()
-#
-#       # Create second plot for 'Duration'
-#       plt.figure(figsize=(8, 5))
-#       group[f'{tag}_Duration_minutes'] = group[f'{tag}_Duration'] // 60
-#       sns.lineplot(
-#           x=f'{tag}_Duration_minutes',
-#           y=f'{tag}_Value',
-#           data=group,
-#           label=f'{algo}',
-#       )
-#       plt.xlabel('Duration (minutes)')
-#       plt.ylabel(tag_display_val)
-#       plt.gca().yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
-#       plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
-#
-#       title = f'{DOMAIN_DISPLAY_NAME.get(domain, domain)} - ' \
-#               f'{TASK_DISPLAY_NAME.get(task, task)} - ' \
-#               f'{ALGO_DISPLAY_NAME.get(algo, algo)} (Duration)'
-#       plt.title(title)
-#       plt.legend()
-#       plt.tight_layout()
-#       plt.show()
 
 
 def glob_path(path):
@@ -444,17 +436,16 @@ def load_training_system_data(base_dir, experiment_ids):
   csv_files = load_data(patterns)
   logging.info('Found %s csv files', len(csv_files))
 
-  process_codecarbon_csv_fn = functools.partial(process_codecarbon_csv)
-
   all_dfs = []
   with concurrent.futures.ProcessPoolExecutor() as executor:
-    for data in executor.map(process_codecarbon_csv_fn, csv_files):
+    for data in executor.map(process_codecarbon_csv, csv_files):
       if data is not None:
         all_dfs.append(data)
   metrics_df = pd.concat(all_dfs)
   logging.info('Loaded %s rows of data', len(metrics_df))
 
-  return metrics_df
+  # return metrics_df
+  return correct_cpu_energy(metrics_df)
 
 
 def load_inference_metric_data(base_dir, experiment_ids):
