@@ -1,0 +1,21 @@
+# ----------------------
+# IMPORTS
+# ----------------------
+import a2perf.submission.submission_util
+import a2perf.domains.tfa.suite_gym
+import pkg_resources
+
+# ----------------------
+# SUBMISSION SETUP
+# ----------------------
+# Set up submission object
+Submission.mode = %BenchmarkMode.GENERALIZATION
+Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
+Submission.run_offline_metrics_only = False
+Submission.measure_emissions = False
+
+# ----------------------
+# GENERALIZATION ENVIRONMENT PARAMETERS
+# ----------------------
+Submission.generalization_tasks = ['difficulty_level_1_num_websites_1',  'difficulty_level_1_num_websites_5', 'difficulty_level_1_num_websites_10']
+Submission.num_generalization_episodes = 100
