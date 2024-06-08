@@ -34,8 +34,8 @@ _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run offline metrics only.'
 )
 _MODE = flags.DEFINE_enum(
-    'mode', 'train', ['train', 'inference'],
-    'Mode of the submission. train or inference.'
+    'mode', 'train', ['train', 'inference', 'generalization'],
+    'Mode of the submission. train, inference, or generalization.'
 )
 
 

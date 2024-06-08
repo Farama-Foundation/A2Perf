@@ -1,3 +1,4 @@
+import collections
 import enum
 import functools
 import importlib
@@ -11,6 +12,7 @@ from contextlib import contextmanager
 
 import gin
 import numpy as np
+import pkg_resources
 from absl import flags
 from absl import logging
 from tf_agents.metrics import py_metrics
@@ -108,7 +110,7 @@ def perform_rollouts(
   all_rewards = []
   for _ in range(num_episodes):
     rollout_actor.run()
-    all_rewards.append(episode_reward_metric.result())
+    all_rewards.append(float(episode_reward_metric.result()))
     episode_reward_metric.reset()
 
   if rollout_rewards_queue:
@@ -116,6 +118,94 @@ def perform_rollouts(
       rollout_rewards_queue.put(reward)
 
   return all_rewards
+
+
+def _perform_rollout_task(generalization_task, domain, root_dir,
+    participant_module_path, num_generalization_episodes, gin_config_str,
+    absl_flags):
+  generalization_env_vars = {}
+
+  if domain == BenchmarkDomain.WEB_NAVIGATION:
+    if generalization_task == 'difficulty_level_1_num_websites_1':
+      generalization_env_vars['DIFFICULTY_LEVEL'] = '1'
+      generalization_env_vars['NUM_WEBSITES'] = '1'
+    elif generalization_task == 'difficulty_level_1_num_websites_5':
+      generalization_env_vars['DIFFICULTY_LEVEL'] = '1'
+      generalization_env_vars['NUM_WEBSITES'] = '5'
+    elif generalization_task == 'difficulty_level_1_num_websites_10':
+      generalization_env_vars['DIFFICULTY_LEVEL'] = '1'
+      generalization_env_vars['NUM_WEBSITES'] = '10'
+    else:
+      raise ValueError(
+          'Generalization tasks for WebNavigation domain must be either'
+          ' difficulty_level_1_num_websites_1, '
+          'difficulty_level_1_num_websites_5, '
+          'or difficulty_level_1_num_websites_10')
+  elif domain == BenchmarkDomain.CIRCUIT_TRAINING:
+    if generalization_task == 'toy_macro_stdcell':
+      generalization_env_vars[
+        'NETLIST_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt'
+      )
+      generalization_env_vars[
+        'INIT_PLACEMENT_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc')
+    elif generalization_task == 'ariane':
+      generalization_env_vars[
+        'NETLIST_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt'
+      )
+      generalization_env_vars[
+        'INIT_PLACEMENT_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc')
+    else:
+      raise ValueError(
+          'Generalization tasks for CircuitTraining domain must be either toy_macro_stdcell or ariane')
+  elif domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
+    if generalization_task == 'dog_pace':
+      generalization_env_vars[
+        'MOTION_FILE_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt'
+      )
+    elif generalization_task == 'dog_trot':
+      generalization_env_vars[
+        'MOTION_FILE_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/quadruped_locomotion/motion_imitation/data/motions/dog_trot.txt'
+      )
+    elif generalization_task == 'dog_spin':
+      generalization_env_vars[
+        'MOTION_FILE_PATH'] = pkg_resources.resource_filename(
+          'a2perf',
+          'domains/quadruped_locomotion/motion_imitation/data/motions/dog_spin.txt'
+      )
+  else:
+    raise ValueError(
+        'Generalization tasks are only supported for WebNavigation, CircuitTraining, and QuadrupedLocomotion domains.')
+
+  for key, value in generalization_env_vars.items():
+    os.environ[key] = value
+
+  create_domain_fn = functools.partial(suite_gym.create_domain,
+                                       env_name=domain.value,
+                                       root_dir=root_dir)
+  all_rewards = perform_rollouts(module_path=participant_module_path,
+                                 create_domain_fn=create_domain_fn,
+                                 num_episodes=num_generalization_episodes,
+                                 gin_config_str=gin_config_str,
+                                 absl_flags=absl_flags,
+                                 rollout_rewards_queue=None)
+
+  # Reset the environment variables after rolling out each task
+  for key in generalization_env_vars.keys():
+    os.environ.pop(key)
+
+  return generalization_task, all_rewards
 
 
 def train(
@@ -135,6 +225,7 @@ def train(
 class BenchmarkMode(enum.Enum):
   TRAIN = 'train'
   INFERENCE = 'inference'
+  GENERALIZATION = 'generalization'
 
 
 @gin.constants_from_enum
@@ -179,6 +270,7 @@ class Submission:
       train_logs_dirs: typing.List[str] = None,
       num_inference_steps: int = 1000,
       num_inference_episodes: int = 1,
+      num_generalization_episodes: int = 1,
       time_participant_code: bool = True,
       measure_emissions: bool = False,
       baseline_measure_sec: float = 0,
@@ -186,6 +278,7 @@ class Submission:
       run_offline_metrics_only: bool = False,
       reliability_metrics: typing.List[ReliabilityMetrics] = None,
       tracking_mode: str = None,
+      generalization_tasks: typing.List = None
   ):
     """Object that represents a submission to the benchmark.
 
@@ -210,6 +303,7 @@ class Submission:
         tracking_mode: Tracking mode for the participant's code.
     """
     self.root_dir = root_dir
+    self.generalization_tasks = generalization_tasks
     self.metric_values_dir = metric_values_dir
     self.train_logs_dirs = train_logs_dirs
     os.makedirs(self.root_dir, exist_ok=True)
@@ -230,6 +324,7 @@ class Submission:
     self.plot_metrics = plot_metrics
     self.num_inference_steps = num_inference_steps
     self.num_inference_episodes = num_inference_episodes
+    self.num_generalization_episodes = num_generalization_episodes
     self.time_inference_steps = time_participant_code
     self.participant_module_path = os.path.abspath(participant_module_path)
     self.domain = domain
@@ -237,12 +332,19 @@ class Submission:
     self.reliability_metrics = reliability_metrics
 
     self.metrics_results = {}
-    metrics_path = os.path.join(
-        self.metric_values_dir,
-        'inference_metrics.json'
-        if self.mode == BenchmarkMode.INFERENCE
-        else 'train_metrics.json',
-    )
+
+    if self.mode == BenchmarkMode.TRAIN:
+      metrics_path = os.path.join(self.metric_values_dir, 'train_metrics.json')
+    elif self.mode == BenchmarkMode.INFERENCE:
+      metrics_path = os.path.join(self.metric_values_dir,
+                                  'inference_metrics.json')
+    elif self.mode == BenchmarkMode.GENERALIZATION:
+      metrics_path = os.path.join(self.metric_values_dir,
+                                  'generalization_metrics.json')
+    else:
+      raise ValueError(
+          'Benchmark mode must be either train, inference or generalization')
+
     if os.path.exists(metrics_path):
       logging.info(f'Loading pre-existing metric results from {metrics_path}')
       with open(metrics_path, 'r') as f:
@@ -352,13 +454,39 @@ class Submission:
         logging.info(
             f'Participant process {participant_training_process.pid} finished')
 
+  def _run_generalization_benchmark(self):
+    all_returns = collections.defaultdict(list)
+    tasks = []
+
+    for generalization_task in self.generalization_tasks:
+      logging.info('Running generalization task: %s', generalization_task)
+      tasks.append((generalization_task, self.domain, self.root_dir,
+                    self.participant_module_path,
+                    self.num_generalization_episodes,
+                    self.gin_config_str, self.absl_flags))
+
+    with multiprocessing.Pool() as pool:
+      results = pool.starmap(_perform_rollout_task, tasks)
+      pool.close()
+      pool.join()
+
+    for generalization_task, all_rewards in results:
+      all_returns[generalization_task] = all_rewards
+
+    # Save the rollouts for each generalization task to a file
+    logging.info('Saving generalization rollouts to file')
+    logging.info('Generalization rollouts: %s', all_returns)
+    with open(
+        os.path.join(self.metric_values_dir, 'generalization_rollouts.json'),
+        'w') as f:
+      json.dump(all_returns, f)
+
   def _run_inference_benchmark(self):
     if not self.run_offline_metrics_only:
       logging.info('Creating Gymnasium domain...')
       env = suite_gym.create_domain(env_name=self.domain.value,
                                     root_dir=self.root_dir)
       logging.info('Successfully created domain')
-
 
       logging.info('Generating inference data...')
       inference_data = self._get_observation_data(env)
@@ -446,11 +574,17 @@ class Submission:
     if self.mode == BenchmarkMode.TRAIN:
       self._run_training_benchmark()
     elif self.mode == BenchmarkMode.INFERENCE:
-
       if not os.path.exists(self.root_dir):
         raise FileNotFoundError(
             f'Root directory {self.root_dir} not found. This is necessary for loading the trained model'
         )
       self._run_inference_benchmark()
+    elif self.mode == BenchmarkMode.GENERALIZATION:
+      if not os.path.exists(self.root_dir):
+        raise FileNotFoundError(
+            f'Root directory {self.root_dir} not found. This is necessary for loading the trained model'
+        )
+      self._run_generalization_benchmark()
+
     else:
       raise ValueError('Benchmark mode must be either train or inference')
