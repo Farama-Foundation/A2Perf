@@ -111,10 +111,12 @@ _INTERACTIVE = flags.DEFINE_bool(
 )
 _LOCAL = flags.DEFINE_bool('local', False, 'Run locally or on cluster')
 _MODE = flags.DEFINE_enum(
-    'mode', 'train', ['train', 'inference'], 'Mode of execution'
+    'mode', 'train', ['train', 'inference', 'generalization'],
+    'Mode of execution'
 )
 _JOB_TYPE = flags.DEFINE_enum(
-    'job_type', None, ['train', 'collect', 'inference', 'reverb'], 'Type of job'
+    'job_type', None,
+    ['train', 'collect', 'inference', 'reverb', 'generalization'], 'Type of job'
 )
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     'run_offline_metrics_only', False, 'Whether to run train or inference.'
@@ -291,15 +293,15 @@ def _get_entrypoint(domain):
   entrypoints = {
       'quadruped_locomotion': xm.CommandList([
           'echo $@',
-          #           f"""
-          # /bin/bash <<EOF
-          # source /opt/conda/etc/profile.d/conda.sh &&
-          # conda activate py39 &&
-          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-          # EOF
-          #         """,
-          #           # Waste the trailing "$@" argument
-          #           'echo',
+          f"""
+          /bin/bash <<EOF
+          source /opt/conda/etc/profile.d/conda.sh &&
+          conda activate py39 &&
+          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          EOF
+                  """,
+          # Waste the trailing "$@" argument
+          'echo',
       ]),
       'web_navigation': xm.CommandList([
           'echo $@',
@@ -315,13 +317,13 @@ def _get_entrypoint(domain):
       ]),
       'circuit_training': xm.CommandList([
           'echo $@',
-          f"""
-          /bin/bash <<EOF
-          source /opt/conda/etc/profile.d/conda.sh &&
-          conda activate py310 &&
-          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-          EOF
-          """,
+          # f"""
+          # /bin/bash <<EOF
+          # source /opt/conda/etc/profile.d/conda.sh &&
+          # conda activate py310 &&
+          # python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          # EOF
+          # """,
           'echo',
       ]),
   }
@@ -422,6 +424,10 @@ def get_web_navigation_hparam_sweeps(**kwargs):
   elif mode == 'train':
     general_hyperparameters['gin_config'] = [
         '/workdir/a2perf/submission/configs/web_navigation/train.gin'
+    ]
+  elif mode == 'generalization':
+    general_hyperparameters['gin_config'] = [
+        '/workdir/a2perf/submission/configs/web_navigation/generalization.gin'
     ]
   elif mode in ['generate', 'evaluate']:
     # gin file does not matter for these modes since we are not running
@@ -552,7 +558,7 @@ def get_quadruped_locomotion_hparam_sweeps(**kwargs):
   task_names = [motion_file for motion_file in motion_files]
   general_hyperparameters = {
       'env_name': ['QuadrupedLocomotion-v0'],
-      'motion_file': motion_files,
+      # 'motion_file': motion_files,
   }
   if mode == 'inference':
     general_hyperparameters['gin_config'] = [
@@ -562,6 +568,10 @@ def get_quadruped_locomotion_hparam_sweeps(**kwargs):
             'inference.gin',
         )
         for motion_file in motion_files
+    ]
+  elif mode == 'generalization':
+    general_hyperparameters['gin_config'] = [
+        '/workdir/a2perf/submission/configs/quadruped_locomotion/generalization.gin'
     ]
   elif mode == 'train':
     general_hyperparameters['gin_config'] = [
@@ -724,6 +734,10 @@ def get_circuit_training_hparam_sweeps(**kwargs):
         )
         for netlist in netlists
     ]
+  elif mode == 'generalization':
+    general_hyperparameters['gin_config'] = [
+        '/workdir/a2perf/submission/configs/circuit_training/generalization.gin'
+    ]
   elif mode == 'train':
     general_hyperparameters['gin_config'] = [
         '/workdir/a2perf/submission/configs/circuit_training/train.gin'
@@ -872,13 +886,16 @@ def get_circuit_training_hparam_sweeps(**kwargs):
           },
           'ppo': {
               'algo': ['ppo'],
-              'batch_size': [128],
+              # 'batch_size': [128],
+              'batch_size': [32],
               'entropy_regularization': [1e-2],
-              'env_batch_size': [512],
+              # 'env_batch_size': [512],
+              'env_batch_size': [4],
               'eval_interval': [1],
               'learning_rate': [4e-4],
               'log_interval': [1],
-              'num_episodes_per_iteration': [1024],
+              # 'num_episodes_per_iteration': [1024],
+              'num_episodes_per_iteration': [8],
               'num_epochs': [4],
               'num_iterations': [250],
               'policy_checkpoint_interval': [25],
