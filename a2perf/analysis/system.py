@@ -154,19 +154,31 @@ def get_ram_power_usage(data_df):
   return {}
 
 
-def get_cpu_power_usage(data_df):
-  # Not implemented since this is an estimate without access to Intel RAPL
-  return {}
+def get_cpu_power_usage(data_df, tolerance=pd.Timedelta('10sec')):
+  # This is an estimate without access to Intel RAPL
+  cpu_power_df = get_distributed_experiment_metric(
+      data_df, 'cpu_power', tolerance=tolerance
+  )
+  metrics = {}
+
+  for (domain, algo, task), group in cpu_power_df.groupby(
+      ['domain', 'algo', 'task']
+  ):
+    mean_ram_usage = group['experiment_cpu_power'].mean()
+    std_ram_usage = group['experiment_cpu_power'].std()
+
+    metrics[(domain, algo, task)] = {
+        'mean': mean_ram_usage,
+        'std': std_ram_usage,
+    }
+
+  return metrics
 
 
 def get_total_energy(data_df):
-  energy_consumed_all = data_df.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed', 'run_id']
-  )['energy_consumed'].last().astype(float)
-
-  total_energy_consumed = energy_consumed_all.groupby(
-      ['domain', 'algo', 'task', 'experiment', 'seed']
-  ).sum()
+  total_energy_consumed = data_df.groupby(
+      ['domain', 'algo', 'task', 'experiment', 'seed', ]
+  )['energy_consumed'].sum().astype(float)
 
   # Group by 'domain', 'algo', 'task' and calculate mean and std of total energy
   metrics = {}
@@ -188,6 +200,7 @@ def get_power_usage(data_df):
 
   return {
       'gpu_power_usage': gpu_power_usage,
+      # 'cpu_power_usage': cpu_power_usage,
   }
 
 

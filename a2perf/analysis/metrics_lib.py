@@ -183,7 +183,7 @@ def process_codecarbon_csv(csv_file_path):
   )
 
   # Identify and handle corrupt rows for specific columns
-  for tag in ['gpu_power', 'cpu_power', 'duration']:
+  for tag in ['gpu_power', 'cpu_power', 'duration', 'ram_power']:
     # Convert to numeric, coercing errors to NaN
     df[tag] = pd.to_numeric(df[tag], errors='coerce')
 
@@ -202,28 +202,70 @@ def process_codecarbon_csv(csv_file_path):
   return df
 
 
-def correct_cpu_energy(df, cpus_per_collect_job=96,
-    total_cpus_on_collect_machine=128, cpus_per_train_job=96,
-    total_cpus_on_train_machine=96, true_cpu_tdp=120):
-  # Reset the DataFrame index to ensure uniqueness
-  df = df.reset_index(drop=True)
-
+def correct_energy_measurements(df, cpus_per_collect_job=128,
+    cpus_per_train_job=128,
+    total_cpus_on_collect_machine=128,
+    total_cpus_on_train_machine=128,
+    true_collect_cpu_tdp=120,
+    true_train_cpu_tdp=120,
+    percent_collect_cpu_usage=1.0,
+    percent_train_cpu_usage=1.0,
+):
   # Create a job type column with either `collect` or `train` depending on whether gpu_energy is 0 or not
   df['job_type'] = 'collect'
   df.loc[df['gpu_power'] > 0, 'job_type'] = 'train'
 
-  # Compute the actual CPU power based on the job type
-  df['actual_cpu_power'] = 0
-  collect_mask = df['job_type'] == 'collect'
-  train_mask = df['job_type'] == 'train'
+  # Group by the specified columns
+  grouped = df.groupby(
+      ['domain', 'task', 'algo', 'experiment', 'seed', 'run_id'])
 
-  df.loc[
-    collect_mask, 'actual_cpu_power'] = true_cpu_tdp * cpus_per_collect_job / total_cpus_on_collect_machine
-  df.loc[
-    train_mask, 'actual_cpu_power'] = true_cpu_tdp * cpus_per_train_job / total_cpus_on_train_machine
+  # Adjust the CPU power based on the job type if all existing power metrics are the same
+  def adjust_cpu_power(group):
+    if group['cpu_power'].nunique() == 1:
+      job_type = group['job_type'].iloc[0]
+      if job_type == 'collect':
+        group.loc[:,
+        'actual_cpu_power'] = true_collect_cpu_tdp * percent_collect_cpu_usage * (
+            cpus_per_collect_job / total_cpus_on_collect_machine)
+      elif job_type == 'train':
+        group.loc[:,
+        'actual_cpu_power'] = true_train_cpu_tdp * percent_train_cpu_usage * (
+            cpus_per_train_job / total_cpus_on_train_machine)
+    else:
+      group.loc[:, 'actual_cpu_power'] = group['cpu_power']
+    return group
 
-  # Compute the cpu energy in kWh
-  df['cpu_energy'] = (df['actual_cpu_power'] * df['duration'] / 3600) / 1000
+  # Apply the CPU power adjustment function to each group
+  df = grouped.apply(adjust_cpu_power).reset_index(drop=True)
+
+  # Re-group by the specified columns after adjustment
+  grouped = df.groupby(
+      ['domain', 'task', 'algo', 'experiment', 'seed', 'run_id'])
+
+  def compute_energy(group):
+    group['duration_interval'] = group['duration'].diff().fillna(0)
+
+    # Calculate energy consumption directly in place
+    mask = group['duration_interval'] >= 0
+    group.loc[mask, 'cpu_energy'] = (group.loc[mask, 'actual_cpu_power'] *
+                                     group.loc[
+                                       mask, 'duration_interval'] / 3600) / 1000
+    assert group.loc[mask, 'cpu_energy'].min() >= 0, 'Negative CPU energy'
+    group.loc[mask, 'gpu_energy'] = (group.loc[mask, 'gpu_power'] * group.loc[
+      mask, 'duration_interval'] / 3600) / 1000
+    assert group.loc[mask, 'gpu_energy'].min() >= 0, 'Negative GPU energy'
+    group.loc[mask, 'ram_energy'] = (group.loc[mask, 'ram_power'] * group.loc[
+      mask, 'duration_interval'] / 3600) / 1000
+    assert group.loc[mask, 'ram_energy'].min() >= 0, 'Negative RAM energy'
+    group.loc[mask, 'energy_consumed'] = group.loc[mask, 'cpu_energy'] + \
+                                         group.loc[mask, 'gpu_energy'] + \
+                                         group.loc[mask, 'ram_energy']
+
+    # Filter out rows with negative duration intervals
+    return group[mask]
+
+  # Apply the function to each group and reset the index
+  df = grouped.apply(compute_energy).reset_index(drop=True)
 
   return df
 
@@ -428,6 +470,26 @@ def load_training_reward_data(
   return metrics_df
 
 
+def load_training_system_data_sequential(base_dir, experiment_ids):
+  patterns = [
+      os.path.join(base_dir, f'{exp_id}/**/train_emissions.csv')
+      for exp_id in experiment_ids
+  ]
+  csv_files = load_data(patterns)
+  logging.info('Found %s csv files', len(csv_files))
+
+  all_dfs = []
+  for csv_file in csv_files:
+    logging.info('Processing csv file: %s', csv_file)
+    data = process_codecarbon_csv(csv_file)
+    if data is not None:
+      all_dfs.append(data)
+  metrics_df = pd.concat(all_dfs)
+  logging.info('Loaded %s rows of data', len(metrics_df))
+
+  return metrics_df
+
+
 def load_training_system_data(base_dir, experiment_ids):
   patterns = [
       os.path.join(base_dir, f'{exp_id}/**/train_emissions.csv')
@@ -444,8 +506,75 @@ def load_training_system_data(base_dir, experiment_ids):
   metrics_df = pd.concat(all_dfs)
   logging.info('Loaded %s rows of data', len(metrics_df))
 
-  # return metrics_df
-  return correct_cpu_energy(metrics_df)
+  return metrics_df
+
+
+def load_generalization_metric_data(base_dir, experiment_ids):
+  patterns = [
+      os.path.join(base_dir, f'{exp_id}/**/generalization_rollouts.json')
+      for exp_id in experiment_ids
+  ]
+  json_files = load_data(patterns)
+  logging.info('Found %s json files', len(json_files))
+
+  # Load all of the json files
+  all_dfs = []
+  for json_file in json_files:
+    logging.info('Processing json file: %s', json_file)
+    indices = [-4, -5, -6, -7, -8]
+    exp_split = json_file.split('/')
+    details_segment, algo, task, experiment_number, domain = [
+        exp_split[i] for i in indices
+    ]
+    seed = int(re.search(r'seed_(\d+)', details_segment).group(1)
+               )
+    skill_level = re.search(r'skill_level_(\w+)', details_segment).group(1)
+
+    logging.info('Processing log dir: %s', json_file)
+    logging.info(
+        '\tDomain: %s, Task: %s, Algo: %s, Experiment Number: %s, Seed: %s, Skill Level: %s',
+        domain, task, algo, experiment_number, seed, skill_level)
+
+    with open(json_file, 'r') as f:
+      data = json.load(f)
+      data_df = pd.DataFrame.from_dict(data, orient='index')
+
+      # For generalization, we care about the total reward, so sum up the
+      # rewards along the first axis. The columns are numbered for each rollout
+      rollout_return = data_df.sum(axis=1)
+
+      # Make the rollout return series into a DataFrame
+      rollout_return_df = rollout_return.to_frame().reset_index()
+
+      # Rename the column named '0' to 'total_reward'
+      rollout_return_df = rollout_return_df.rename(columns={0: 'total_reward'})
+
+      # Add another column for the number of rollouts
+      rollout_return_df['num_rollouts'] = len(data_df.columns)
+
+      # Add columns for domain/algo/task/expeirment/seed so we can group by them
+      # later
+      data_df = rollout_return_df
+      data_df['domain'] = domain
+      data_df['task'] = task
+      data_df['algo'] = algo
+      data_df['experiment'] = experiment_number
+      data_df['seed'] = seed
+      data_df['skill_level'] = skill_level
+      all_dfs.append(data_df)
+
+  metrics_df = pd.concat(all_dfs)
+  metrics = collections.defaultdict(dict)
+
+  # For generalization, we add up all rewards and divide by the number of rollouts
+  for (domain, task, algo,), group in metrics_df.groupby(
+      ['domain', 'task', 'algo', ]
+  ):
+    # For each task (index in the df) get the cumulative total reward
+    group['avg_rollout_returns'] = group['total_reward'] / group['num_rollouts']
+    mean_val = group.groupby('index')['avg_rollout_returns'].mean().sum()
+    metrics['generalization_rollout_returns'][(domain, algo, task)] = mean_val
+  return metrics
 
 
 def load_inference_metric_data(base_dir, experiment_ids):

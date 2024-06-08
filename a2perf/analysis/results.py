@@ -3,6 +3,7 @@ import pandas as pd
 OPTIMAL_METRIC_CRITERIA = dict(
     energy_consumed='min',
     rollout_returns='max',
+    generalization_rollout_returns='max',
     dispersion_across_runs='min',
     dispersion_within_runs='min',
     dispersion_across_rollouts='min',
@@ -14,6 +15,7 @@ OPTIMAL_METRIC_CRITERIA = dict(
     wall_clock_time='min',
     inference_time='min',
     gpu_power_usage='min',
+    cpu_power_usage='min',
     risk_across_rollouts='max',
     disperion_across_rollouts='min',
 
@@ -21,6 +23,7 @@ OPTIMAL_METRIC_CRITERIA = dict(
 
 METRIC_TO_DISPLAY_NAME = dict(
     rollout_returns='Returns',
+    generalization_rollout_returns='Generalization',
     dispersion_across_runs='Dispersion Across Runs',
     dispersion_within_runs='Dispersion Within Runs',
     dispersion_across_rollouts='Dispersion Across Rollouts',
@@ -32,6 +35,7 @@ METRIC_TO_DISPLAY_NAME = dict(
     wall_clock_time='Wall Clock Time',
     inference_time='Inference Time',
     gpu_power_usage='GPU Power Usage',
+    cpu_power_usage='CPU Power Usage',
     risk_across_rollouts='Risk Across Rollouts',
     disperion_across_rollouts='Dispersion Across Rollouts',
     energy_consumed='Energy Consumed',
@@ -39,6 +43,7 @@ METRIC_TO_DISPLAY_NAME = dict(
 
 METRIC_TO_CATEGORY = dict(
     rollout_returns='Application',
+    generalization_rollout_returns='Application',
     dispersion_across_runs='Reliability',
     dispersion_within_runs='Reliability',
     dispersion_across_rollouts='Reliability',
@@ -50,6 +55,7 @@ METRIC_TO_CATEGORY = dict(
     wall_clock_time='System',
     inference_time='System',
     gpu_power_usage='System',
+    cpu_power_usage='System',
     risk_across_rollouts='Reliability',
     disperion_across_rollouts='Reliability',
     energy_consumed='System',
@@ -57,6 +63,7 @@ METRIC_TO_CATEGORY = dict(
 
 METRIC_TO_UNIT = dict(
     rollout_returns='100 eps.',
+    generalization_rollout_returns='100 eps. [all tasks]',
     dispersion_across_runs='IQR',
     dispersion_within_runs='IQR',
     dispersion_across_rollouts='IQR',
@@ -68,6 +75,7 @@ METRIC_TO_UNIT = dict(
     wall_clock_time='Hours',
     inference_time='ms',
     gpu_power_usage='W',
+    cpu_power_usage='W',
     risk_across_rollouts='CVaR',
     disperion_across_rollouts='IQR',
     energy_consumed='kWh',
@@ -146,10 +154,7 @@ def metrics_dict_to_pandas_df(metrics_dict):
       elif comparison_function(value_to_compare, best_value):
         best_exps = [
             parameters_to_add]
-  # After comparing all experiments, for the optimal experiment we simply need to replace
-  # the values with a latex bolded version
-  for exp in best_exps:
-    pass
+
   df = pd.DataFrame(
       data_for_df,
       columns=[
