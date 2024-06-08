@@ -74,7 +74,8 @@ _VOCABULARY_MANAGER_AUTH_KEY = flags.DEFINE_string(
 _JOB_TYPE = flags.DEFINE_enum(
     'job_type',
     None,
-    ['train', 'collect', 'inference', 'evaluate', 'generate', 'combine'],
+    ['train', 'collect', 'inference', 'evaluate', 'generate', 'combine',
+     'generalization'],
     'Type of job',
 )
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
@@ -182,7 +183,8 @@ _DEFAULT_CPU_TDP = flags.DEFINE_integer(
 _MODE = flags.DEFINE_enum(
     'mode',
     None,
-    ['train', 'collect', 'reverb', 'inference', 'evaluate', 'generate'],
+    ['train', 'collect', 'reverb', 'inference', 'evaluate', 'generate',
+     'generalization'],
     'Mode.',
 )
 _TASK_NAME = flags.DEFINE_string('task_name', None, 'Name of the task.')
@@ -277,6 +279,11 @@ def main(_):
 
     os.environ['POLICY_NAME'] = _POLICY_NAME.value
     logging.info('Evaluating the policy %s.', _POLICY_NAME.value)
+  elif _JOB_TYPE.value == 'generalization':
+    root_dir = _ROOT_DIR.value
+    os.environ['POLICY_NAME'] = _POLICY_NAME.value
+    logging.info('Running generalization experiments with the policy %s.',
+                 _POLICY_NAME.value)
   elif _JOB_TYPE.value == 'generate' or _JOB_TYPE.value == 'combine':
     # For dataset generation, we want the root dir to be at
     # the domain level, so we can load the expertise data
