@@ -1,0 +1,125 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "a2perf"
+description = "Benchmarking suite for evaluating autonomous agents in real-world domains."
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Farama Foundation", email = "contact@farama.org" }]
+license = { text = "MIT License" }
+keywords = ["Reinforcement Learning", "Autonomous Agents", "RL", "IL", "Benchmark", "AI"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "gin-config",
+    "gymnasium",
+    "minari",
+    "absl-py",
+]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+# Update dependencies in `all` if any are added or removed
+circuit-training = [
+    "torch==1.13.1",
+    "tensorflow<2.16.1",
+    "tf-agents",
+    "timeout-decorator",
+    "matplotlib",
+    "cairocffi",
+    "shapely",
+]
+web-navigation = [
+    "selenium",
+    "regex",
+    "chromedriver-py",
+]
+quadruped-locomotion = [
+    "pybullet",
+]
+all = [
+    "torch==1.13.1",
+    "tensorflow<2.16.1",
+    "tf-agents",
+    "timeout-decorator",
+    "matplotlib",
+    "cairocffi",
+    "shapely",
+    "selenium",
+    "regex",
+    "chromedriver-py",
+    "pybullet",
+]
+
+# Add this when we are ready to publish the package
+#[project.urls]
+#Homepage = "https://farama.org"
+#Repository = "https://github.com/Farama-Foundation/A2Perf"
+#Documentation = "https://a2perf.farama.org"
+#"Bug Report" = "https://github.com/Farama-Foundation/A2Perf/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["a2perf", "a2perf.*"]
+
+# Linters and Test tools #######################################################
+[tool.black]
+safe = true
+
+[tool.isort]
+atomic = true
+profile = "black"
+src_paths = ["a2perf", "test"]
+
+#
+#[tool.setuptools.packages.find]
+#where = ["src"]
+
+[tool.pyright]
+# add any files/directories with type declaration to include
+include = [
+    "a2perf/",
+]
+exclude = [
+    "a2perf/domains/circuit_training",
+    "a2perf/domains/quadruped_locomotion",
+    "a2perf/domains/web_navigation",
+]
+strict = [
+]
+verboseOutput = true
+typeCheckingMode = "basic"
+reportMissingImports = false
+
+[tool.pytest.ini_options]
+addopts = ["--ignore-glob=*/__init__.py", "-n=auto", "--ignore=tutorials", "--ignore=docs/_scripts", "--ignore=conf.py"]
+
+[tool.setuptools.package-data]
+"a2perf" = [
+    "submission/**/*.gin",
+    "domains/web_navigation/configs/web_navigation_env_config.gin",
+    "domains/quadruped_locomotion/motion_imitation/configs/envdesign.gin",
+    "domains/circuit_training/circuit_training/configs/envdesign.gin",
+    "domains/web_navigation/environment_generation/data/*.json",
+    "domains/web_navigation/**/*.html",
+    "domains/web_navigation/**/*.css",
+    "domains/web_navigation/**/*.js",
+    "domains/web_navigation/**/*.png",
+    "domains/quadruped_locomotion/motion_imitation/data/motions/*.txt",
+    "domains/circuit_training/**/*.pb.txt",
+    "domains/circuit_training/**/*.plc",
+    "domains/circuit_training/bin/plc_wrapper_main"
+]
