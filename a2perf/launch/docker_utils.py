@@ -4,9 +4,7 @@ from typing import Optional
 from absl import logging
 from xmanager import xm
 
-from a2perf.constants import CIRCUIT_TRAINING
-from a2perf.constants import QUADRUPED_LOCOMOTION
-from a2perf.constants import WEB_NAVIGATION
+from a2perf.constants import BenchmarkDomain
 
 
 def _get_common_setup(uid: str, user: str):
@@ -52,23 +50,23 @@ def _get_common_setup(uid: str, user: str):
     ]
 
 
-def get_entrypoint(domain: str, user: Optional[str] = "root") -> xm.CommandList:
+def get_entrypoint(domain: str, user: str) -> xm.CommandList:
     entrypoints = {
-        "quadruped_locomotion": xm.CommandList(
+        BenchmarkDomain.QUADRUPED_LOCOMOTION.value: xm.CommandList(
             [
                 "echo $@",
                 f"""
-          /bin/bash <<EOF
-          source /opt/conda/etc/profile.d/conda.sh &&
-          conda activate py39 &&
-          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-          EOF
-                  """,
+su {user} -c /bin/bash <<EOF
+source /opt/conda/etc/profile.d/conda.sh &&
+conda activate py39 &&
+python /workdir/a2perf/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+EOF
+""",
                 # Waste the trailing "$@" argument
                 "echo",
             ]
         ),
-        "web_navigation": xm.CommandList(
+        BenchmarkDomain.WEB_NAVIGATION.value: xm.CommandList(
             [
                 "echo $@",
                 "service dbus start",
@@ -76,23 +74,23 @@ def get_entrypoint(domain: str, user: Optional[str] = "root") -> xm.CommandList:
                             su {user} -c /bin/bash <<EOF
           source /opt/conda/etc/profile.d/conda.sh &&
           conda activate py310 &&
-          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          python /workdir/a2perf/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
           EOF
                     """,
                 # Waste the trailing "$@" argument
                 "echo",
             ]
         ),
-        "circuit_training": xm.CommandList(
+        BenchmarkDomain.CIRCUIT_TRAINING.value: xm.CommandList(
             [
                 "echo $@",
                 f"""
-          /bin/bash <<EOF
-          source /opt/conda/etc/profile.d/conda.sh &&
-          conda activate py310 &&
-          python /workdir/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
-          EOF
-          """,
+su {user} -c /bin/bash <<EOF
+source /opt/conda/etc/profile.d/conda.sh &&
+conda activate py310 &&
+python /workdir/a2perf/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+EOF
+""",
                 # Waste the trailing "$@" argument
                 "echo",
             ]
@@ -102,11 +100,15 @@ def get_entrypoint(domain: str, user: Optional[str] = "root") -> xm.CommandList:
 
 
 def get_docker_instructions(uid: str, user: str, env_name: str):
-    repo_dir = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+    repo_dir = os.path.basename(
+        os.path.abspath(
+            os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
+        )
+    )
     common_setup = _get_common_setup(uid, user)
 
     docker_instructions = {
-        QUADRUPED_LOCOMOTION: common_setup
+        BenchmarkDomain.QUADRUPED_LOCOMOTION.value: common_setup
         + [
             "RUN mkdir -p /workdir",
             "WORKDIR /workdir",
@@ -125,7 +127,7 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
                 pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"       
             """,
         ],
-        WEB_NAVIGATION: common_setup
+        BenchmarkDomain.WEB_NAVIGATION.value: common_setup
         + [
             'ARG CHROME_VERSION="120.0.6099.109-1"',
             'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
@@ -156,7 +158,7 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
             f"RUN mkdir -p /var/run/dbus && chown -R {uid}:root /var/run/dbus",
             "ENV CONDA_DEFAULT_ENV=py310",
         ],
-        CIRCUIT_TRAINING: common_setup
+        BenchmarkDomain.CIRCUIT_TRAINING.value: common_setup
         + [
             """
                     RUN ${APT_COMMAND} update --allow-releaseinfo-change && \

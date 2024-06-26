@@ -1,28 +1,5 @@
 absl-py
 gin-config
-gym
 gymnasium
 matplotlib
 minari
-psutil
-regex
-scipy
-setuptools
-fsspec
-termcolor
-pyfiglet
-
-# reliabiility
--r ./a2perf/metrics/reliability/requirements.txt
-
-# codecarbon
--r ./a2perf/metrics/system/codecarbon/requirements-dev.txt
-
-# quadruped locmotion
--r ./a2perf/domains/quadruped_locomotion/requirements.txt
-
-# web navigation
--r ./a2perf/domains/web_navigation/requirements.txt
-
-# circuit training
--r ./a2perf/domains/circuit_training/requirements.txt

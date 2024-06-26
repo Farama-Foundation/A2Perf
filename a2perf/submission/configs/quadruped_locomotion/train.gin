@@ -2,7 +2,6 @@
 # IMPORTS
 # ----------------------
 import a2perf.submission.submission_util
-import a2perf.domains.tfa.suite_gym
 
 # ----------------------
 # SUBMISSION SETUP
@@ -26,3 +25,4 @@ track_emissions_decorator.gpu_ids = None  # Enter list of specific GPU IDs to tr
 track_emissions_decorator.log_level = 'info'  # Log level set to 'info'
 track_emissions_decorator.country_iso_code = 'USA'
 track_emissions_decorator.region = 'Massachusetts'
+track_emissions_decorator.offline = True
