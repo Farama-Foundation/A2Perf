@@ -13,6 +13,11 @@ _GIN_CONFIG = flags.DEFINE_string("gin-config", None, "Path to the gin-config fi
 _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     "participant-module-path", None, "Path to participant module."
 )
+_PARTICIPANT_ARGS = flags.DEFINE_string(
+    "participant-args",
+    None,
+    "Additional arguments to pass to the participant's train function.",
+)
 _ROOT_DIR = flags.DEFINE_string(
     "root-dir", "/tmp/xm_local", "Base directory for logs and results."
 )
@@ -53,6 +58,7 @@ def main(_):
         root_dir=_ROOT_DIR.value,
         metric_values_dir=_METRIC_VALUES_DIR.value,
         participant_module_path=_PARTICIPANT_MODULE_PATH.value,
+        participant_args=_PARTICIPANT_ARGS.value,
         run_offline_metrics_only=_RUN_OFFLINE_METRICS_ONLY.value,
     )
 

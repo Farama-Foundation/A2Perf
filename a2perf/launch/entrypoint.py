@@ -17,10 +17,14 @@ _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     None,
     "Path to the participant training and inference Python modules",
 )
+_PARTICIPANT_ARGS = flags.DEFINE_string(
+    "participant-args",
+    None,
+    "Additional arguments to pass to the participant's train function",
+)
 
 
 def main(_):
-    # os.environ["EXPERIMENT_ID"] = _EXPERIMENT_ID.value
     # os.environ["MINARI_DATASETS_PATH"] = _DATASETS_PATH.value
     os.environ["CODECARBON_TRACKING_MODE"] = "process"
     # os.environ["CODECARBON_ON_CSV_WRITE"] = "append"
@@ -32,11 +36,12 @@ def main(_):
         "python",
         "-m",
         "a2perf.submission.main_submission",
+        f"--verbosity={logging.get_verbosity()}",
         f"--gin-config={_SUBMISSION_GIN_CONFIG_PATH.value}",
         f"--root-dir={root_dir}",
         f"--metric-values-dir={os.path.join(root_dir, 'metrics')}",
         f"--participant-module-path={_PARTICIPANT_MODULE_PATH.value}",
-        f"--verbosity={logging.get_verbosity()}",
+        f"--participant-args={_PARTICIPANT_ARGS.value}",
     ]
 
     process = subprocess.Popen(command, env=os.environ.copy(), text=True)

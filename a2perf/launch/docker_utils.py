@@ -59,7 +59,7 @@ def get_entrypoint(domain: str, user: str) -> xm.CommandList:
 su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py39 &&
-python /workdir/a2perf/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
 EOF
 """,
                 # Waste the trailing "$@" argument
@@ -74,7 +74,7 @@ EOF
                             su {user} -c /bin/bash <<EOF
           source /opt/conda/etc/profile.d/conda.sh &&
           conda activate py310 &&
-          python /workdir/a2perf/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+          python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
           EOF
                     """,
                 # Waste the trailing "$@" argument
@@ -88,7 +88,7 @@ EOF
 su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
-python /workdir/a2perf/launch/entrypoint.py $@ --verbosity={logging.get_verbosity()}
+python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
 EOF
 """,
                 # Waste the trailing "$@" argument
