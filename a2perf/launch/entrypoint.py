@@ -27,7 +27,7 @@ _PARTICIPANT_ARGS = flags.DEFINE_string(
 def main(_):
     # os.environ["MINARI_DATASETS_PATH"] = _DATASETS_PATH.value
     os.environ["CODECARBON_TRACKING_MODE"] = "process"
-    # os.environ["CODECARBON_ON_CSV_WRITE"] = "append"
+    os.environ["CODECARBON_ON_CSV_WRITE"] = "append"
     # os.environ["CODECARBON_PUE"] = "1.0"
 
     root_dir = _ROOT_DIR.value

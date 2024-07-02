@@ -142,9 +142,7 @@ def main(_):
             job = xm.Job(executable, args=hparams, executor=executor)
             work_unit.add(job)
 
-        hparams = {"datasets-path": DOCKER_DATASETS_PATH}
-
-        experiment.add(make_job, args=hparams)
+        experiment.add(make_job, args={})
 
 
 if __name__ == "__main__":
