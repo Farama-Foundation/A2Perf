@@ -48,6 +48,7 @@ web-navigation = [
 ]
 quadruped-locomotion = [
     "pybullet",
+    "scipy",
 ]
 all = [
     # circuit-training

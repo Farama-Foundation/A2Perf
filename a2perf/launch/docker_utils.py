@@ -7,6 +7,12 @@ from xmanager import xm
 from a2perf.constants import BenchmarkDomain
 
 
+GENERIC_GIN_CONFIG_NAME = "submission_config.gin"
+DOCKER_EXPERIMENT_DIR = "/experiment_dir"
+DOCKER_PARTICIPANT_DIR = "/participant_code"
+DOCKER_DATASETS_PATH = "/workdir/datasets"
+
+
 def _get_common_setup(uid: str, user: str):
     return [
         """
@@ -59,6 +65,7 @@ def get_entrypoint(domain: str, user: str) -> xm.CommandList:
 su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py39 &&
+pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
 python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
 EOF
 """,
@@ -71,11 +78,12 @@ EOF
                 "echo $@",
                 "service dbus start",
                 f"""
-                            su {user} -c /bin/bash <<EOF
-          source /opt/conda/etc/profile.d/conda.sh &&
-          conda activate py310 &&
-          python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
-          EOF
+su {user} -c /bin/bash <<EOF
+source /opt/conda/etc/profile.d/conda.sh &&
+conda activate py310 &&
+pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
+python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+EOF
                     """,
                 # Waste the trailing "$@" argument
                 "echo",
@@ -88,6 +96,7 @@ EOF
 su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
+pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
 python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
 EOF
 """,

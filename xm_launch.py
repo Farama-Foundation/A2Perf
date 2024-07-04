@@ -7,6 +7,9 @@ from xmanager import xm
 from xmanager import xm_local
 
 from a2perf.constants import BenchmarkDomain
+from a2perf.launch.docker_utils import DOCKER_EXPERIMENT_DIR
+from a2perf.launch.docker_utils import DOCKER_PARTICIPANT_DIR
+from a2perf.launch.docker_utils import GENERIC_GIN_CONFIG_NAME
 from a2perf.launch.docker_utils import get_docker_instructions
 from a2perf.launch.docker_utils import get_entrypoint
 from typing import Any, Dict
@@ -59,11 +62,6 @@ _ROOT_DIR = flags.DEFINE_string(
     None,
     "Root directory for the experiment",
 )
-
-GENERIC_GIN_CONFIG_NAME = "submission_config.gin"
-DOCKER_EXPERIMENT_DIR = "/experiment_dir"
-DOCKER_PARTICIPANT_DIR = "/participant_code"
-DOCKER_DATASETS_PATH = "/workdir/datasets"
 
 
 def main(_):
