@@ -1,19 +1,19 @@
 [submodule "a2perf/domains/web_navigation"]
 	path = a2perf/domains/web_navigation
     url = https://github.com/harvard-edge/a2perf-web-navigation.git
-	branch = main
+	branch = dev
 
 [submodule "a2perf/domains/quadruped_locomotion"]
 	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/harvard-edge/a2perf-quadruped-locomotion.git
-	branch = main
+	branch = dev
 
 [submodule "a2perf/domains/circuit_training"]
 	path = a2perf/domains/circuit_training
     url = https://github.com/harvard-edge/a2perf-circuit-training.git
-	branch = main
+	branch = dev
 
 [submodule "a2perf/a2perf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/harvard-edge/a2perf-benchmark-submission.git
-	branch = main
+	branch = dev
