@@ -46,12 +46,12 @@ from tf_agents.typing import types
 from a2perf.domains.tfa import gym_wrapper
 
 TimeLimitWrapperType = Callable[
-  [py_environment.PyEnvironment, int], py_environment.PyEnvironment
+    [py_environment.PyEnvironment, int], py_environment.PyEnvironment
 ]
 
-WEB_NAVIGATION = 'WebNavigation-v0'
-CIRCUIT_TRAINING = 'CircuitTraining-v0'
-QUADRUPED_LOCOMOTION = 'QuadrupedLocomotion-v0'
+WEB_NAVIGATION = "WebNavigation-v0"
+CIRCUIT_TRAINING = "CircuitTraining-v0"
+QUADRUPED_LOCOMOTION = "QuadrupedLocomotion-v0"
 
 
 @gin.configurable
@@ -65,49 +65,49 @@ def load(
     gym_kwargs: Optional[Dict[str, Any]] = None,
     render_kwargs: Optional[Dict[str, Any]] = None,
 ) -> py_environment.PyEnvironment:
-  """Loads the selected environment and wraps it with the specified wrappers.
+    """Loads the selected environment and wraps it with the specified wrappers.
 
-  Note that by default a TimeLimit wrapper is used to limit episode lengths
-  to the default benchmarks defined by the registered environments.
+    Note that by default a TimeLimit wrapper is used to limit episode lengths
+    to the default benchmarks defined by the registered environments.
 
-  Args:
-    environment_name: Name for the environment to load.
-    discount: Discount to use for the environment.
-    max_episode_steps: If None the max_episode_steps will be set to the default
-      step limit defined in the environment's spec. No limit is applied if set
-      to 0 or if there is no max_episode_steps set in the environment's spec.
-    gym_env_wrappers: Iterable with references to wrapper classes to use
-      directly on the gym environment.
-    env_wrappers: Iterable with references to wrapper classes to use on the
-      gym_wrapped environment.
-    spec_dtype_map: A dict that maps gym spaces to np dtypes to use as the
-      default dtype for the arrays. An easy way how to configure a custom
-      mapping through Gin is to define a gin-configurable function that returns
-      desired mapping and call it in your Gin congif file, for example:
-      `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
-    gym_kwargs: Optional kwargs to pass to the Gym environment class.
-    render_kwargs: Optional kwargs for rendering to pass to `render()` of the
-      gym_wrapped environment.
+    Args:
+      environment_name: Name for the environment to load.
+      discount: Discount to use for the environment.
+      max_episode_steps: If None the max_episode_steps will be set to the default
+        step limit defined in the environment's spec. No limit is applied if set
+        to 0 or if there is no max_episode_steps set in the environment's spec.
+      gym_env_wrappers: Iterable with references to wrapper classes to use
+        directly on the gym environment.
+      env_wrappers: Iterable with references to wrapper classes to use on the
+        gym_wrapped environment.
+      spec_dtype_map: A dict that maps gym spaces to np dtypes to use as the
+        default dtype for the arrays. An easy way how to configure a custom
+        mapping through Gin is to define a gin-configurable function that returns
+        desired mapping and call it in your Gin congif file, for example:
+        `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
+      gym_kwargs: Optional kwargs to pass to the Gym environment class.
+      render_kwargs: Optional kwargs for rendering to pass to `render()` of the
+        gym_wrapped environment.
 
-  Returns:
-    A PyEnvironment instance.
-  """
-  gym_kwargs = gym_kwargs if gym_kwargs else {}
-  gym_spec = gym.spec(environment_name)
-  gym_env = gym_spec.make(**gym_kwargs)
+    Returns:
+      A PyEnvironment instance.
+    """
+    gym_kwargs = gym_kwargs if gym_kwargs else {}
+    gym_spec = gym.spec(environment_name)
+    gym_env = gym_spec.make(**gym_kwargs)
 
-  if max_episode_steps is None and gym_spec.max_episode_steps is not None:
-    max_episode_steps = gym_spec.max_episode_steps
+    if max_episode_steps is None and gym_spec.max_episode_steps is not None:
+        max_episode_steps = gym_spec.max_episode_steps
 
-  return wrap_env(
-      gym_env,
-      discount=discount,
-      max_episode_steps=max_episode_steps,
-      gym_env_wrappers=gym_env_wrappers,
-      env_wrappers=env_wrappers,
-      spec_dtype_map=spec_dtype_map,
-      render_kwargs=render_kwargs,
-  )
+    return wrap_env(
+        gym_env,
+        discount=discount,
+        max_episode_steps=max_episode_steps,
+        gym_env_wrappers=gym_env_wrappers,
+        env_wrappers=env_wrappers,
+        spec_dtype_map=spec_dtype_map,
+        render_kwargs=render_kwargs,
+    )
 
 
 @gin.configurable
@@ -122,131 +122,139 @@ def wrap_env(
     auto_reset: bool = True,
     render_kwargs: Optional[Dict[str, Any]] = None,
 ) -> py_environment.PyEnvironment:
-  """Wraps given gym environment with TF Agent's GymWrapper.
+    """Wraps given gym environment with TF Agent's GymWrapper.
 
-  Note that by default a TimeLimit wrapper is used to limit episode lengths
-  to the default benchmarks defined by the registered environments.
+    Note that by default a TimeLimit wrapper is used to limit episode lengths
+    to the default benchmarks defined by the registered environments.
 
-  Args:
-    gym_env: An instance of OpenAI gym environment.
-    discount: Discount to use for the environment.
-    max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied if
-      set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load`.
-    gym_env_wrappers: Iterable with references to wrapper classes to use
-      directly on the gym environment.
-    time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to
-      enforce a TimeLimit. Usuaully this should be left as the default,
-      wrappers.TimeLimit.
-    env_wrappers: Iterable with references to wrapper classes to use on the
-      gym_wrapped environment.
-    spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
-      default dtype for the tensors. An easy way how to configure a custom
-      mapping through Gin is to define a gin-configurable function that returns
-      desired mapping and call it in your Gin config file, for example:
-      `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
-    auto_reset: If True (default), reset the environment automatically after a
-      terminal state is reached.
-    render_kwargs: Optional `dict` of keywoard arguments for rendering.
+    Args:
+      gym_env: An instance of OpenAI gym environment.
+      discount: Discount to use for the environment.
+      max_episode_steps: Used to create a TimeLimitWrapper. No limit is applied if
+        set to None or 0. Usually set to `gym_spec.max_episode_steps` in `load`.
+      gym_env_wrappers: Iterable with references to wrapper classes to use
+        directly on the gym environment.
+      time_limit_wrapper: Wrapper that accepts (env, max_episode_steps) params to
+        enforce a TimeLimit. Usuaully this should be left as the default,
+        wrappers.TimeLimit.
+      env_wrappers: Iterable with references to wrapper classes to use on the
+        gym_wrapped environment.
+      spec_dtype_map: A dict that maps gym specs to tf dtypes to use as the
+        default dtype for the tensors. An easy way how to configure a custom
+        mapping through Gin is to define a gin-configurable function that returns
+        desired mapping and call it in your Gin config file, for example:
+        `suite_gym.load.spec_dtype_map = @get_custom_mapping()`.
+      auto_reset: If True (default), reset the environment automatically after a
+        terminal state is reached.
+      render_kwargs: Optional `dict` of keywoard arguments for rendering.
 
-  Returns:
-    A PyEnvironment instance.
-  """
+    Returns:
+      A PyEnvironment instance.
+    """
 
-  for wrapper in gym_env_wrappers:
-    gym_env = wrapper(gym_env)
-  env = gym_wrapper.GymWrapper(
-      gym_env,
-      discount=discount,
-      spec_dtype_map=spec_dtype_map,
-      auto_reset=auto_reset,
-      render_kwargs=render_kwargs,
-  )
+    for wrapper in gym_env_wrappers:
+        gym_env = wrapper(gym_env)
+    env = gym_wrapper.GymWrapper(
+        gym_env,
+        discount=discount,
+        spec_dtype_map=spec_dtype_map,
+        auto_reset=auto_reset,
+        render_kwargs=render_kwargs,
+    )
 
-  if max_episode_steps is not None and max_episode_steps > 0:
-    env = time_limit_wrapper(env, max_episode_steps)
+    if max_episode_steps is not None and max_episode_steps > 0:
+        env = time_limit_wrapper(env, max_episode_steps)
 
-  for wrapper in env_wrappers:
-    env = wrapper(env)
+    for wrapper in env_wrappers:
+        env = wrapper(env)
 
-  return env
+    return env
 
 
 @gin.configurable
-def create_domain(env_name, root_dir=None, env_wrappers=(),
-    gym_env_wrappers=(), **env_kwargs):
-  if env_name == WEB_NAVIGATION:
-    # noinspection PyUnresolvedReferences
-    from a2perf.domains import web_navigation
-    from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
-    save_vocab_dir = os.path.join(root_dir, 'vocabulary')
-    reload_vocab = env_kwargs.pop('reload_vocab', True)
-    vocab_type = env_kwargs.pop('vocab_type', 'threaded')
-    if vocab_type == 'threaded':
-      global_vocab = vocabulary_node.LockedThreadedVocabulary()
-    elif vocab_type == 'unlocked':
-      global_vocab = vocabulary_node.UnlockedVocabulary()
-    elif vocab_type == 'multiprocessing':
-      global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
+def create_domain(
+    env_name, root_dir=None, env_wrappers=(), gym_env_wrappers=(), **env_kwargs
+):
+    if env_name == WEB_NAVIGATION:
+        # noinspection PyUnresolvedReferences
+        from a2perf.domains import web_navigation
+        from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
+
+        save_vocab_dir = os.path.join(root_dir, "vocabulary")
+        reload_vocab = env_kwargs.pop("reload_vocab", True)
+        vocab_type = env_kwargs.pop("vocab_type", "threaded")
+        if vocab_type == "threaded":
+            global_vocab = vocabulary_node.LockedThreadedVocabulary()
+        elif vocab_type == "unlocked":
+            global_vocab = vocabulary_node.UnlockedVocabulary()
+        elif vocab_type == "multiprocessing":
+            global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
+        else:
+            raise ValueError(f"Unknown vocabulary type: {vocab_type}")
+
+        if os.path.exists(save_vocab_dir) and reload_vocab:
+            vocab_files = os.listdir(save_vocab_dir)
+            if vocab_files:
+                vocab_files.sort()
+                latest_vocab_file = vocab_files[-1]
+                with open(os.path.join(save_vocab_dir, latest_vocab_file), "r") as f:
+                    global_vocab_dict = json.load(f)
+                    global_vocab.restore(state=global_vocab_dict)
+        seed = int(os.environ.get("SEED", None))
+        num_websites = int(os.environ.get("NUM_WEBSITES", None))
+        difficulty = int(os.environ.get("DIFFICULTY_LEVEL", None))
+
+        env_kwargs.update(
+            {
+                "global_vocabulary": global_vocab,
+                "seed": seed,
+                "num_websites": num_websites,
+                "difficulty": difficulty,
+                "browser_args": dict(
+                    threading=False,
+                    chrome_options={
+                        "--headless",
+                        "--no-sandbox",
+                        "--disable-gpu",
+                        # '--disable-dev-shm-usage',
+                    },
+                ),
+            }
+        )
+        env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
+    elif env_name == CIRCUIT_TRAINING:
+        # noinspection PyUnresolvedReferences
+        from a2perf.domains import circuit_training
+
+        env_kwargs.pop("netlist", None)
+        netlist_file_path = os.environ.get("NETLIST_PATH", None)
+        seed = int(os.environ.get("SEED", None))
+        init_placement_file_path = os.environ.get("INIT_PLACEMENT_PATH", None)
+        std_cell_placer_mode = os.environ.get("STD_CELL_PLACER_MODE", None)
+        env_kwargs.update(
+            {
+                "global_seed": seed,
+                "netlist_file": netlist_file_path,
+                "init_placement": init_placement_file_path,
+                "output_plc_file": os.path.join(root_dir, "output.plc"),
+                "std_cell_placer_mode": std_cell_placer_mode,
+            }
+        )
+        env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
+    elif env_name == QUADRUPED_LOCOMOTION:
+        # noinspection PyUnresolvedReferences
+        from a2perf.domains import quadruped_locomotion
+
+        motion_file_path = os.environ.get("MOTION_FILE_PATH", None)
+        env_kwargs["motion_files"] = [motion_file_path]
+        env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
     else:
-      raise ValueError(f'Unknown vocabulary type: {vocab_type}')
+        raise NotImplementedError(f"Unknown environment: {env_name}")
 
-    if os.path.exists(save_vocab_dir) and reload_vocab:
-      vocab_files = os.listdir(save_vocab_dir)
-      if vocab_files:
-        vocab_files.sort()
-        latest_vocab_file = vocab_files[-1]
-        with open(os.path.join(save_vocab_dir, latest_vocab_file), 'r') as f:
-          global_vocab_dict = json.load(f)
-          global_vocab.restore(state=global_vocab_dict)
-    seed = int(os.environ.get('SEED', None))
-    num_websites = int(os.environ.get('NUM_WEBSITES', None))
-    difficulty = int(os.environ.get('DIFFICULTY_LEVEL', None))
-
-    env_kwargs.update({
-        'global_vocabulary': global_vocab,
-        'seed': seed,
-        'num_websites': num_websites,
-        'difficulty': difficulty,
-        'browser_args': dict(
-            threading=False,
-            chrome_options={
-                '--headless',
-                '--no-sandbox',
-                '--disable-gpu',
-                '--disable-dev-shm-usage',
-            },
-        ),
-    })
-    env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
-  elif env_name == CIRCUIT_TRAINING:
-    # noinspection PyUnresolvedReferences
-    from a2perf.domains import circuit_training
-
-    env_kwargs.pop('netlist', None)
-    netlist_file_path = os.environ.get('NETLIST_PATH', None)
-    seed = int(os.environ.get('SEED', None))
-    init_placement_file_path = os.environ.get('INIT_PLACEMENT_PATH', None)
-    std_cell_placer_mode = os.environ.get('STD_CELL_PLACER_MODE', None)
-    env_kwargs.update({
-        'global_seed': seed,
-        'netlist_file': netlist_file_path,
-        'init_placement': init_placement_file_path,
-        'output_plc_file': os.path.join(root_dir,
-                                        'output.plc'),
-        'std_cell_placer_mode': std_cell_placer_mode
-    })
-    env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
-  elif env_name == QUADRUPED_LOCOMOTION:
-    # noinspection PyUnresolvedReferences
-    from a2perf.domains import quadruped_locomotion
-    motion_file_path = os.environ.get('MOTION_FILE_PATH', None)
-    env_kwargs['motion_files'] = [motion_file_path]
-    env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
-  else:
-    raise NotImplementedError(f'Unknown environment: {env_name}')
-
-  logging.info('Creating domain %s with kwargs %s', env_name, env_kwargs)
-  return load(environment_name=env_name,
-              env_wrappers=env_wrappers,
-              gym_env_wrappers=gym_env_wrappers,
-              gym_kwargs=env_kwargs)
+    logging.info("Creating domain %s with kwargs %s", env_name, env_kwargs)
+    return load(
+        environment_name=env_name,
+        env_wrappers=env_wrappers,
+        gym_env_wrappers=gym_env_wrappers,
+        gym_kwargs=env_kwargs,
+    )
