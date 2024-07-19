@@ -47,12 +47,11 @@ content/publications
 :hidden:
 :caption: Environments
 
-content/CircuitTraining-v0 
+content/CircuitTraining-v0
 content/QuadrupedLocomotion-v0
 content/WebNavigation-v0
 
 ```
-
 
 ```{toctree}
 :hidden:
