@@ -38,7 +38,6 @@ env.close()
 :caption: Introduction
 
 content/basic_usage
-content/installation
 content/publications
 
 ```
@@ -47,10 +46,9 @@ content/publications
 :hidden:
 :caption: Environments
 
-content/CircuitTraining-v0
-content/QuadrupedLocomotion-v0
-content/WebNavigation-v0
-
+content/circuit_training/index
+content/quadruped_locomotion/index
+content/web_navigation/index
 ```
 
 ```{toctree}
