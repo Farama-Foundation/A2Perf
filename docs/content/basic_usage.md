@@ -6,7 +6,39 @@ firstpage:
 
 # Basic Usage
 
-Test
+After installing A2Perf, you can easily instantiate environments from different
+domains. Here are some examples:
+
+## Circuit Training
+
+```python
+import gymnasium as gym
+
+env = gym.make('CircuitTraining-Ariane-v0',
+               netlist_file='path/to/netlist.pb.txt')
+```
+
+## Web Navigation
+
+```python
+import gymnasium as gym
+
+env = gym.make('WebNavigation-Difficulty-01-v0', difficulty=1, num_websites=1)
+```
+
+## Quadruped Locomotion
+
+```python
+import gymnasium as gym
+
+env = gym.make('QuadrupedLocomotion-DogPace-v0')
+# Other available environments:
+# env = gym.make('QuadrupedLocomotion-DogTrot-v0')
+# env = gym.make('QuadrupedLocomotion-DogSpin-v0')
+```
+
+
+For more detailed usage
 
 # Installation
 
