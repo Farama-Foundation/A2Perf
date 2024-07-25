@@ -9,7 +9,7 @@ lastpage:
 ```
 
 ```{project-heading}
-Description of the Project
+A2Perf is a benchmarking suite for evaluating agents on sequential decision-making problems that are relevant to the real world.
 ```
 
 ```{figure} _static/REPLACE_ME.gif
@@ -17,7 +17,12 @@ Description of the Project
    :width: 500
 ```
 
-**Basic example:**
+This library contains a collection of environments from domains spanning
+computer chip-floorplanning, web navigation, and quadruped locomotion.
+
+
+The Gymnasium interface allows users to initialize and interact with the A2Perf
+environments as follows:
 
 ```{code-block} python
 import gymnasium as gym
@@ -26,8 +31,8 @@ from a2perf.domains import circuit_training
 # from a2perf.domains import quadruped_locomotion
 
 # Choose one of the A2Perf environments
-env = gym.make("CircuitTraining-v0", netlist_file='path/to/netlist.pb.txt')
-# or env = gym.make("WebNavigation-v0", difficulty=1, num_websites=1)
+env = gym.make("CircuitTraining-Ariane-v0")
+# or env = gym.make("WebNavigation-Difficulty-01-v0")
 # or env = gym.make("QuadrupedLocomotion-DogPace-v0")
 
 observation, info = env.reset(seed=42)
