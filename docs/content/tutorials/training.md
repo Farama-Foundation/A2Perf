@@ -5,3 +5,5 @@ firstpage:
 ---
 
 # Tutorial on Benchmarking Training Code
+
+This tutorial is coming soon. Stay tuned!

@@ -25,15 +25,15 @@
 
 <div class="env-list">
     <div class="env-item">
-        <img src="../../_static/img/QuadrupedLocomotion-v0-Dog-Pace.gif" alt="Dog Pace">
+        <img src="../../_static/img/QuadrupedLocomotion-DogPace-v0.gif" alt="Dog Pace">
         <a href="QuadrupedLocomotion-DogPace-v0">Dog Pace</a>
     </div>
     <div class="env-item">
-        <img src="../../_static/img/QuadrupedLocomotion-v0-Dog-Trot.gif" alt="Dog Trot">
+        <img src="../../_static/img/QuadrupedLocomotion-DogTrot-v0.gif" alt="Dog Trot">
         <a href="QuadrupedLocomotion-DogTrot-v0">Dog Trot</a>
     </div>
     <div class="env-item">
-        <img src="../../_static/img/QuadrupedLocomotion-v0-Dog-Spin.gif" alt="Dog Spin">
+        <img src="../../_static/img/QuadrupedLocomotion-DogSpin-v0.gif" alt="Dog Spin">
         <a href="QuadrupedLocomotion-DogSpin-v0">Dog Spin</a>
     </div>
 </div>
