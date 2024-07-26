@@ -91,7 +91,7 @@ html_theme_options = {
     "light_logo": "img/a2perf_black.svg",
     "dark_logo": "img/a2perf_white.svg",
     "gtag": "G-6H9C8TWXZ8",
-    "description": "a2perf DESCRIPTION",
+    "description": "A2Perf is a benchmarking suite for evaluating autonomous agents on real-world problems.",
     "image": "img/a2perf-github.png",
     "versioning": True,
     "source_repository": "https://github.com/Farama-Foundation/A2Perf/",
