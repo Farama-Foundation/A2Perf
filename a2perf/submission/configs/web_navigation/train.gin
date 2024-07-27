@@ -2,7 +2,6 @@
 # IMPORTS
 # ----------------------
 import a2perf.submission.submission_util
-import a2perf.metrics.system.codecarbon
 
 # ----------------------
 # SUBMISSION SETUP
@@ -18,16 +17,12 @@ Submission.measure_emissions=True
 # SYSTEM METRICS SETUP
 # ----------------------
 # Set up codecarbon for system metrics
-track_emissions.project_name = 'a2perf_web_navigation_train'
-track_emissions.measure_power_secs = 5
-track_emissions.save_to_file = True  # Save data to file
-track_emissions.save_to_logger = False  # Do not save data to logger
-track_emissions.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
-track_emissions.tracking_mode = 'process'  # Tracking mode set to 'offline'
-track_emissions.log_level = 'info'  # Log level set to 'info'
-track_emissions.country_iso_code = 'USA'
-track_emissions.region = 'Massachusetts'
-track_emissions.baseline_measure_sec=30
-
-OfflineEmissionsTracker.country_2letter_iso_code = 'US'
-OfflineEmissionsTracker.on_csv_write='append'
+track_emissions_decorator.project_name = 'a2perf_web_navigation_train'
+track_emissions_decorator.measure_power_secs = 5
+track_emissions_decorator.save_to_file = True  # Save data to file
+track_emissions_decorator.save_to_logger = False  # Do not save data to logger
+track_emissions_decorator.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
+track_emissions_decorator.log_level = 'info'  # Log level set to 'info'
+track_emissions_decorator.country_iso_code = 'USA'
+track_emissions_decorator.region = 'Massachusetts'
+track_emissions_decorator.offline = True

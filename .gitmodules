@@ -1,4 +1,4 @@
-[submodule "web_navigation"]
+[submodule "a2perf/domains/web_navigation"]
 	path = a2perf/domains/web_navigation
     url = https://github.com/Farama-Foundation/a2perf-web-nav.git
 	branch = dev

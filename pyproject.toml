@@ -26,6 +26,7 @@ dependencies = [
     "gymnasium",
     "minari",
     "absl-py",
+    "codecarbon"
 ]
 dynamic = ["version"]
 
@@ -47,8 +48,10 @@ web-navigation = [
 ]
 quadruped-locomotion = [
     "pybullet",
+    "scipy",
 ]
 all = [
+    # circuit-training
     "torch==1.13.1",
     "tensorflow<2.16.1",
     "tf-agents",
@@ -56,9 +59,11 @@ all = [
     "matplotlib",
     "cairocffi",
     "shapely",
+    # web-navigation
     "selenium",
     "regex",
     "chromedriver-py",
+    # quadruped-locomotion
     "pybullet",
 ]
 
