@@ -9,7 +9,7 @@
 [submodule "a2perf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/Farama-Foundation/a2perf-benchmark-submission.git
-	branch = dev
+	branch = template
 [submodule "circuit_training"]
 	path = a2perf/domains/circuit_training
 	url = https://github.com/Farama-Foundation/a2perf-circuit-training.git
