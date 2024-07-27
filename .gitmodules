@@ -1,20 +1,16 @@
 [submodule "web_navigation"]
 	path = a2perf/domains/web_navigation
-    url = https://github.com/Farama-Foundation/a2perf-web-nav.git  # Updated URL
-	branch = main
+    url = https://github.com/Farama-Foundation/a2perf-web-nav.git
+	branch = dev
 [submodule "quadruped_locomotion"]
 	path = a2perf/domains/quadruped_locomotion
     url = https://github.com/Farama-Foundation/a2perf-quadruped-locomotion.git
-	branch = main
+	branch = dev
 [submodule "a2perf_benchmark_submission"]
 	path = a2perf/a2perf_benchmark_submission
     url = https://github.com/Farama-Foundation/a2perf-benchmark-submission.git
-	branch = farama/farama-dev
-[submodule "codecarbon"]
-	path = a2perf/metrics/system/codecarbon
-    url = https://github.com/Farama-Foundation/a2perf-code-carbon.git
-	branch = main
+	branch = dev
 [submodule "circuit_training"]
 	path = a2perf/domains/circuit_training
 	url = https://github.com/Farama-Foundation/a2perf-circuit-training.git
-	branch = farama-dev
+	branch = dev
