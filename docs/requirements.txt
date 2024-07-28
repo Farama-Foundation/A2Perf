@@ -5,3 +5,4 @@ git+https://github.com/Farama-Foundation/Celshast#egg=furo
 sphinx_github_changelog
 nbsphinx
 nbconvert
+pandoc
