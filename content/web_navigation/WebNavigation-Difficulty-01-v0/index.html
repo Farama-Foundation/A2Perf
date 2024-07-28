@@ -1,0 +1,875 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="A2Perf is a benchmarking suite for evaluating autonomous agents on real-world problems.">
+    <meta property="og:title" content="A2Perf Documentation" />
+    <meta property="og:type" content="website" />
+    <meta property="og:description" content="A2Perf is a benchmarking suite for evaluating autonomous agents on real-world problems." />
+    <meta property="og:url" content="https://a2perf.farama.org/content/web_navigation/WebNavigation-Difficulty-01-v0.html" /><meta property="og:image" content="https://a2perf.farama.org/_static/img/a2perf-github.png" /><meta name="twitter:card" content="summary_large_image"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../../genindex/" /><link rel="search" title="Search" href="../../../search/" /><link rel="next" title="Tutorial on Benchmarking Training Code" href="../../tutorials/training/" /><link rel="prev" title="Web Navigation Environments" href="../" />
+        <link rel="canonical" href="https://a2perf.farama.org/content/web_navigation/WebNavigation-Difficulty-01-v0.html" />
+
+    <link rel="shortcut icon" href="../../../_static/favicon.png"/><!-- Generated with Sphinx 7.4.7 and Furo 2023.08.19.dev1 -->
+        <title>Web Navigation - A2Perf Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=3e7f4c72" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=49cbaffd" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    <header class="farama-header" aria-label="Farama header">
+      <div class="farama-header__container">
+        <div class="farama-header__left--mobile">
+          <label class="nav-overlay-icon" for="__navigation">
+            <div class="visually-hidden">Toggle site navigation sidebar</div>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <defs></defs>
+              <line x1="0.5" y1="4" x2="23.5" y2="4"></line>
+              <line x1="0.232" y1="12" x2="23.5" y2="12"></line>
+              <line x1="0.232" y1="20" x2="23.5" y2="20"></line>
+            </svg>
+          </label>
+        </div>
+        <div class="farama-header__left farama-header__center--mobile">
+          <a href="../../../">
+              <img class="farama-header__logo only-light" src="../../../_static/img/a2perf_black.svg" alt="Light Logo"/>
+              <img class="farama-header__logo only-dark" src="../../../_static/img/a2perf_white.svg" alt="Dark Logo"/>
+            <span class="farama-header__title">A2Perf Documentation</span>
+          </a>
+        </div>
+        <div class="farama-header__right">
+          <div class="farama-header-menu">
+            <button class="farama-header-menu__btn" aria-label="Open Farama Menu" aria-expanded="false" aria-haspopup="true" aria-controls="farama-menu">
+              <img class="farama-black-logo-invert" src="../../../_static/img/farama-logo-header.svg">
+              <svg viewBox="0 0 24 24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <polyline style="stroke-linecap: round; stroke-linejoin: round; fill: none; stroke-width: 2px;" points="1 7 12 18 23 7"></polyline>
+              </svg>
+            </button>
+            <div class="farama-header-menu-container farama-hidden" aria-hidden="true" id="farama-menu">
+              <div class="farama-header-menu__header">
+                <a href="https://farama.org">
+                  <img class="farama-header-menu__logo farama-white-logo-invert" src="../../../_static/img/farama_solid_white.svg" alt="Farama Foundation logo">
+                  <span>Farama Foundation</span>
+                </a>
+                <div class="farama-header-menu-header__right">
+                  <button id="farama-close-menu">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-close">
+                      <line x1="3" y1="21" x2="21" y2="3"></line>
+                      <line x1="3" y1="3" x2="21" y2="21"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="farama-header-menu__body">
+                <!-- Response from farama.org/api/projects.json -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<div class="page">
+  <!--<header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../"><div class="brand">A2Perf Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>-->
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="farama-sidebar__title" href="../../../">
+      <img class="farama-header__logo only-light" src="../../../_static/img/a2perf_black.svg" alt="Light Logo"/>
+      <img class="farama-header__logo only-dark" src="../../../_static/img/a2perf_white.svg" alt="Dark Logo"/>
+    <span class="farama-header__title">A2Perf Documentation</span>
+  </a><form class="sidebar-search-container" method="get" action="../../../search/" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../basic_usage/">Basic Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../basic_usage/#installation">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../publications/">List of Publications</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Environments</span></p>
+<ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../circuit_training/">Circuit Training Environments</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Circuit Training Environments</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../circuit_training/CircuitTraining-Ariane-v0/">Ariane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../circuit_training/CircuitTraining-ToyMacroStdcell-v0/">Toy Macro Standard Cell</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../quadruped_locomotion/">Quadruped Locomotion Environments</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Quadruped Locomotion Environments</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../quadruped_locomotion/QuadrupedLocomotion-DogPace-v0/">Dog Pace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../quadruped_locomotion/QuadrupedLocomotion-DogTrot-v0/">Dog Trot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../quadruped_locomotion/QuadrupedLocomotion-DogSpin-v0/">Dog Spin</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../">Web Navigation Environments</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Web Navigation Environments</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Web Navigation</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/training/">Tutorial on Benchmarking Training Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/training/#Submission-folder">Submission folder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials/inference/">Tutorial on Benchmarking Inference Code</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../release_notes/">Release Notes</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/Farama-Foundation/A2Perf">Github</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main-container">
+
+    
+
+    
+
+    <div class="main">
+      <div class="content">
+        <div class="article-container">
+          <a href="#" class="back-to-top muted-link">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+            </svg>
+            <span>Back to top</span>
+          </a>
+          <div class="content-icon-container"><div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/Farama-Foundation/A2Perf/edit/main/docs/content/web_navigation/WebNavigation-Difficulty-01-v0.ipynb" title="Edit this page">
+    <svg aria-hidden="true" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <path d="M4 20h4l10.5 -10.5a1.5 1.5 0 0 0 -4 -4l-10.5 10.5v4" />
+      <line x1="13.5" y1="6.5" x2="17.5" y2="10.5" />
+    </svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+              <button class="theme-toggle" title="Toggle color theme">
+                <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+                <svg class="theme-icon-when-auto">
+                  <use href="#svg-sun-half"></use>
+                </svg>
+                <svg class="theme-icon-when-dark">
+                  <use href="#svg-moon"></use>
+                </svg>
+                <svg class="theme-icon-when-light">
+                  <use href="#svg-sun"></use>
+                </svg>
+              </button>
+            </div>
+            <label class="toc-overlay-icon toc-content-icon" for="__toc">
+              <div class="visually-hidden">Toggle table of contents sidebar</div>
+              <i class="icon"><svg>
+                  <use href="#svg-toc"></use>
+                </svg></i>
+            </label>
+          </div>
+          <article role="main">
+            
+            <section id="Web-Navigation">
+<h1>Web Navigation<a class="headerlink" href="#Web-Navigation" title="Link to this heading">¶</a></h1>
+<p>This environment is included in A2Perf, described in ADD A2PERF PAPER.</p>
+<section id="Description">
+<h2>Description<a class="headerlink" href="#Description" title="Link to this heading">¶</a></h2>
+<p>The web navigation environment aims at enabling the development of compositional tasks that can be represented by a dependency graph. Using Compositional Design of Environments (CoDE), propesed by Google Research in <a class="reference external" href="https://openreview.net/pdf?id=CeByDMy0YTL">‘Environment Generation for Zero-Shot Compositional Reinforcement Learning’</a>, websites are generated automatically, after which the policy has to complete the proposed webpages.</p>
+</section>
+<section id="Action-Space">
+<h2>Action Space<a class="headerlink" href="#Action-Space" title="Link to this heading">¶</a></h2>
+<p>The action should be passed as a scalar. Two types of actions are possible. Firstly, abstract navigation allows to directly refer to an element, and the profile is irrelevant. In this case, the action is converted to a tuple. If abstract navigation is desired, we have to pass <code class="docutils literal notranslate"><span class="pre">use_conceptual=True</span></code> when initializing the environment. Secondly, the action can refer to a pair of elements and profile fields. The agent will then enter the value of the profile key corresponding to the selected DOM
+element.</p>
+<p>For example, with abstract navigation, <code class="docutils literal notranslate"><span class="pre">action=5</span></code> refers to the 5-th element in the DOM tree where the tree is linearized using the <code class="docutils literal notranslate"><span class="pre">get_dom_elements</span></code> function. Without abstract navigation, ‘5’ refers to both profile and element indices, i.e., (element_index, profile_index) where <code class="docutils literal notranslate"><span class="pre">action=profile_index*number_of_dom_elements+element_index</span></code>.</p>
+</section>
+<section id="Observation-Space">
+<h2>Observation Space<a class="headerlink" href="#Observation-Space" title="Link to this heading">¶</a></h2>
+<div class="line-block">
+<div class="line">When performing one step in the environment, we are given the option to return the raw state of wrapped state. To return the raw state, we pass <code class="docutils literal notranslate"><span class="pre">raw_state=True</span></code>, by default, the observation is wrapped.</div>
+<div class="line">The wrapped structure will return a dictionary with the following keys: <code class="docutils literal notranslate"><span class="pre">profile_key,</span> <span class="pre">profile_value,</span> <span class="pre">profile_key_mask,</span> <span class="pre">profile_value_mask,</span> <span class="pre">dom_elements,</span> <span class="pre">dom_profile_joint_mask,</span> <span class="pre">time_step,</span> <span class="pre">dom_attribute_mask,</span> <span class="pre">dom_profile_intersection,</span> <span class="pre">dom_profile_intersection_mask,</span> <span class="pre">dom_features</span></code>, where the values are arrays. - <code class="docutils literal notranslate"><span class="pre">profile_key</span></code>, <code class="docutils literal notranslate"><span class="pre">profile_value</span></code>, <code class="docutils literal notranslate"><span class="pre">profile_key_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">profile_value_mask</span></code>:</div>
+<div class="line">The profile arrays are 2D arrays with the shape (number of fields, sequence length), dom arrays have the shape. The first keys of the wrapped observation relate to the profile, while the last few relate to the DOM tree. The profile of the webpage is the user profile, which contains keys and values which need to be filled in. When booking flights, this could be <code class="docutils literal notranslate"><span class="pre">{&quot;Departure</span> <span class="pre">Date&quot;:</span> <span class="pre">&quot;Friday&quot;,</span> <span class="pre">&quot;Destination</span> <span class="pre">Airport&quot;:</span> <span class="pre">&quot;Los</span> <span class="pre">Angeles</span> <span class="pre">(LAX)&quot;}</span></code>. These keys and values are subsequently embedded into
+vectors. All keys and values are embedded in fixed length vectors, which raises the need for padding the shorter embeddings. This is where the masks comes in, the mask contains ones where the embedding relates to the original key or value, and zeros where the embedding is padded. - <code class="docutils literal notranslate"><span class="pre">dom_elements</span></code>, <code class="docutils literal notranslate"><span class="pre">dom_elements_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">dom_attribute_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">dom_features</span></code>:</div>
+<div class="line">Next the webpage is returned as DOM elements, again embedded. Examples of DOM elements are eg. <code class="docutils literal notranslate"><span class="pre">&lt;div&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">&lt;header&gt;</span></code> etc. - <code class="docutils literal notranslate"><span class="pre">dom_profile_intersection</span></code>, <code class="docutils literal notranslate"><span class="pre">dom_profile_intersection_mask</span></code>:</div>
+<div class="line">Next, the intersection between the profile and DOM elements is embedded and returned. For each profile field key and value tokens (such as <code class="docutils literal notranslate"><span class="pre">[&quot;first&quot;,</span> <span class="pre">&quot;name&quot;]</span></code>) and for each element attribute tokens (such as <code class="docutils literal notranslate"><span class="pre">[&quot;initial&quot;,</span> <span class="pre">&quot;name&quot;,</span> <span class="pre">&quot;:&quot;]</span></code>), the overlapping tokens are embedded. The intersection is a 5D tensor of shape <code class="docutils literal notranslate"><span class="pre">(number</span> <span class="pre">of</span> <span class="pre">elements,</span> <span class="pre">max</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">attributes,</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">profile</span> <span class="pre">fields,</span> <span class="pre">number</span> <span class="pre">of</span> <span class="pre">action</span> <span class="pre">types</span> <span class="pre">(2),</span> <span class="pre">max</span> <span class="pre">sequence</span> <span class="pre">length)</span></code>. - <code class="docutils literal notranslate"><span class="pre">time_step</span></code>:</div>
+<div class="line">The timestep is calculated as the number of steps taken, divided by the maximum number of steps allowed.</div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+<div class="line">When <code class="docutils literal notranslate"><span class="pre">raw_state=True</span></code>, the raw state is returned as a <code class="docutils literal notranslate"><span class="pre">MiniWoBState</span></code> object. This object stores the raw website information, which can be accessed with the following attributes:</div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">obs.utterance</span></code>: returns the task utterance, a dictionary providing the profile key and value pairs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">obs.phrase</span></code>: returns the Phrase object of the utterance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">obs.tokens</span></code>: returns the tokens used for the encoding of the utterance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">obs.fields</span></code>: returns the key-value pairs extracted from the utterance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">obs.dom</span></code>: returns the root DOM structure.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">obs.dom_elements</span></code>: returns a flattened lsit of all DOM elements</p></li>
+</ul>
+</section>
+<section id="Rewards">
+<h2>Rewards<a class="headerlink" href="#Rewards" title="Link to this heading">¶</a></h2>
+<p>At every timestep, the agent receives a small penalty to encourage efficient navigation. Next, a potential-based positive reward is given to the agent after successfully linking a key to a field and entering the correct value. Lastly, the agent receives a task success reward (1.0 or -1.0) when the final state is reached or a time out is encountered.</p>
+<p>To give an example, consider booking flights where the agent has the following profile: <code class="docutils literal notranslate"><span class="pre">{&quot;Departure</span> <span class="pre">Date&quot;:</span> <span class="pre">&quot;Friday&quot;,</span> <span class="pre">&quot;Destination</span> <span class="pre">Airport&quot;:</span> <span class="pre">&quot;Los</span> <span class="pre">Angeles</span> <span class="pre">(LAX)&quot;}</span></code>, which has two fields (Departure Date and Destination Airport). The agent starts by picking a field, and tries to find the correpsonding text box in the page. The value corresponding to the field (eg. Destination Airport), is subsequently typed into the text box. If this is correct, the agent will receive a positive reward of 1/2,
+where the denominator, 2, is the number of fields in the profile.</p>
+</section>
+<section id="Starting-State">
+<h2>Starting State<a class="headerlink" href="#Starting-State" title="Link to this heading">¶</a></h2>
+<p>Upon resetting the website, all episode fields are emptied and a clean webpage is returned.</p>
+</section>
+<section id="Episode-End">
+<h2>Episode End<a class="headerlink" href="#Episode-End" title="Link to this heading">¶</a></h2>
+<p>The episode can be ended under multiple conditions. Firstly, if the number of steps is greater then the maximum allowed number of steps, the environment is terminated. The maximum number of steps can be defined when initializing the environment, by default, 6 steps is the limit.</p>
+</section>
+<section id="Arguments">
+<h2>Arguments<a class="headerlink" href="#Arguments" title="Link to this heading">¶</a></h2>
+<p>When creating the web navigation environment, there is parameters we have to define and optional parameters. Firstly, we have to define the number of websites that needs to be created, with the <code class="docutils literal notranslate"><span class="pre">num_websites</span></code> parameter. Next, we have to either specify a difficulty for the websites or we can provide a design. When creating the environment we thus either specify <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> or <code class="docutils literal notranslate"><span class="pre">designs</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gymnasium</span> <span class="k">as</span> <span class="nn">gym</span>
+<span class="kn">import</span> <span class="nn">a2perf.domains.web_navigation</span>
+
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;WebNavigation-v0&#39;</span><span class="p">,</span> <span class="n">num_websites</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">difficutly</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="Required-parameters:">
+<h3>Required parameters:<a class="headerlink" href="#Required-parameters:" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">num_websites</span></code></p></td>
+<td><p>int</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+<td><p>The number of websites to be created.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">difficulty</span></code></p></td>
+<td><p>Optional, int</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">1</span></code></p></td>
+<td><p>Defines the difficulty of the webpage(s)
+that are being created. A random agent has
+a &gt;=50% chance of completing a level 1
+website, a &gt;=25% chance of completing a
+level 2 website and a &gt;=10% chance of
+completing a level 3 website. You either
+define <code class="docutils literal notranslate"><span class="pre">difficulty</span></code> or <code class="docutils literal notranslate"><span class="pre">designs</span></code>, not
+both.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">designs</span></code></p></td>
+<td><p>Optional, list[dict[str, Any]]</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+<td><p>You can pass the design for a number of
+websites, where each website corresponds to
+one dictionary in the list. If you specify
+designs, note that you need to specify at
+least the number of websites defined with
+<code class="docutils literal notranslate"><span class="pre">num_websites</span></code>. The designs returned is
+then <code class="docutils literal notranslate"><span class="pre">num_websites</span></code> randomly sampled from
+<code class="docutils literal notranslate"><span class="pre">designs</span></code>. You either define
+<code class="docutils literal notranslate"><span class="pre">difficulty</span></code> or <code class="docutils literal notranslate"><span class="pre">designs</span></code>, not both.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="Optional-parameters:">
+<h3>Optional parameters:<a class="headerlink" href="#Optional-parameters:" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">seed</span></code></p></td>
+<td><p>int</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">0</span></code></p></td>
+<td><p>Defines the seed for the random number
+generator and the <code class="docutils literal notranslate"><span class="pre">reset</span></code> method.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">data_dir</span></code></p></td>
+<td><p>str</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;a2perf/domains/we</span>
+<span class="pre">b_navigation/environment_generation/data&quot;</span></code></p></td>
+<td><p>Path to the directory which contains a
+zipfile with json files describing
+difficulty levels for webpages.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">global_vocabulary</span></code></p></td>
+<td><p>Vocabulary</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">v</span>
+<span class="pre">ocabulary_node.LockedThreadedVocabulary()</span></code></p></td>
+<td><p>The global_vocabulary gathers all
+characters and corresponding tokens. Is
+used to create embeddings for profile
+dictionaries and DOM dictionaries.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">use_legacy_reset</span></code></p></td>
+<td><p>bool</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">reset</span></code> method returns
+only the observation. If <code class="docutils literal notranslate"><span class="pre">False</span></code> both the
+observation and info are returned.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">use_legacy_step</span></code></p></td>
+<td><p>bool</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the <code class="docutils literal notranslate"><span class="pre">step</span></code> method returns
+the observation, reward, (terminated or
+truncated), info. If <code class="docutils literal notranslate"><span class="pre">False</span></code>, both
+terminated and truncated are returned.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">step_limit</span></code></p></td>
+<td><p>int</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">25</span></code></p></td>
+<td><p>Defines the maximum number of steps that
+can be taken by the environment.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">render_mode</span></code></p></td>
+<td><p>str</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">image</span></code></p></td>
+<td><p>Possible render modes are <code class="docutils literal notranslate"><span class="pre">test</span></code>, which
+saves screenshots of the website in the
+screenshots attribute, <code class="docutils literal notranslate"><span class="pre">rgb_array</span></code> which
+returns a 3D array, and <code class="docutils literal notranslate"><span class="pre">image</span></code>, which
+returns a screenshot of the webstie.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">raw_state</span></code></p></td>
+<td><p>bool</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the raw observation is
+returned, else the observation is wrapped,
+for more info, see the Observation section
+of this notebook.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">use_conceptual</span></code></p></td>
+<td><p>bool</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+<td><p>If true, the action spac expects abstract
+navigation, else an action refers to a pair
+of elements and profile fields.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">**kwargs</span></code></p></td>
+<td><p>dict</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">None</span></code></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Reset you can pass kwargs in the options argument, not possible in step though</p>
+</section>
+</section>
+<section id="Version-History">
+<h2>Version History<a class="headerlink" href="#Version-History" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>v0: Initial versions release</p></li>
+</ul>
+</section>
+</section>
+
+          </article>
+        </div>
+        <footer>
+          
+          <div class="related-pages">
+            <a class="next-page" href="../../tutorials/training/">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Tutorial on Benchmarking Training Code</div>
+              </div>
+              <svg class="furo-related-icon">
+                <use href="#svg-arrow-right"></use>
+              </svg>
+            </a>
+            <a class="prev-page" href="../">
+              <svg class="furo-related-icon">
+                <use href="#svg-arrow-right"></use>
+              </svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Web Navigation Environments</div>
+                
+              </div>
+            </a>
+          </div>
+          <div class="bottom-of-page">
+            <div class="left-details">
+              <div class="copyright">
+                Copyright &#169; 2022 Farama Foundation
+              </div>
+              <!--
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            -->
+            </div>
+            <div class="right-details">
+              <div class="icons">
+                <a class="muted-link" href="https://github.com/Farama-Foundation/A2Perf/"
+                  aria-label="On GitHub">
+                  <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                      d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z">
+                    </path>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+          
+        </footer>
+      </div>
+      <aside class="toc-drawer">
+        
+        
+        <div class="toc-sticky toc-scroll">
+          <div class="toc-title-container">
+            <span class="toc-title">
+              On this page
+            </span>
+          </div>
+          <div class="toc-tree-container">
+            <div class="toc-tree">
+              <ul>
+<li><a class="reference internal" href="#">Web Navigation</a><ul>
+<li><a class="reference internal" href="#Description">Description</a></li>
+<li><a class="reference internal" href="#Action-Space">Action Space</a></li>
+<li><a class="reference internal" href="#Observation-Space">Observation Space</a></li>
+<li><a class="reference internal" href="#Rewards">Rewards</a></li>
+<li><a class="reference internal" href="#Starting-State">Starting State</a></li>
+<li><a class="reference internal" href="#Episode-End">Episode End</a></li>
+<li><a class="reference internal" href="#Arguments">Arguments</a><ul>
+<li><a class="reference internal" href="#Required-parameters:">Required parameters:</a></li>
+<li><a class="reference internal" href="#Optional-parameters:">Optional parameters:</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Version-History">Version History</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+        
+        
+      </aside>
+    </div>
+  </div>
+</div>
+    <script>
+      const toggleMenu = () => {
+        const menuBtn = document.querySelector(".farama-header-menu__btn");
+        const menuContainer = document.querySelector(".farama-header-menu-container");
+        if (document.querySelector(".farama-header-menu").classList.contains("active")) {
+          menuBtn.setAttribute("aria-expanded", "false");
+          menuContainer.setAttribute("aria-hidden", "true");
+        } else {
+          menuBtn.setAttribute("aria-expanded", "true");
+          menuContainer.setAttribute("aria-hidden", "false");
+        }
+        document.querySelector(".farama-header-menu").classList.toggle("active");
+      }
+
+      document.querySelector(".farama-header-menu__btn").addEventListener("click", toggleMenu);
+      document.getElementById("farama-close-menu").addEventListener("click", toggleMenu);
+    </script>
+
+    
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6H9C8TWXZ8"></script>
+      <script>
+        const enableGtag = () => {
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-6H9C8TWXZ8');
+        }
+        (() => {
+            if (!localStorage.getItem("acceptedCookieAlert")) {
+                const boxElem = document.createElement("div");
+                boxElem.classList.add("cookie-alert");
+                const containerElem = document.createElement("div");
+                containerElem.classList.add("cookie-alert__container");
+                const textElem = document.createElement("p");
+                textElem.innerHTML = `This page uses <a href="https://analytics.google.com/">
+                                    Google Analytics</a> to collect statistics.`;
+                                    containerElem.appendChild(textElem);
+
+                const declineBtn = Object.assign(document.createElement("button"),
+                  {
+                    innerText: "Deny",
+                    className: "farama-btn cookie-alert__button",
+                    id: "cookie-alert__decline",
+                  }
+                );
+                declineBtn.addEventListener("click", () => {
+                  localStorage.setItem("acceptedCookieAlert", false);
+                  boxElem.remove();
+                });
+
+                const acceptBtn = Object.assign(document.createElement("button"),
+                  {
+                    innerText: "Allow",
+                    className: "farama-btn cookie-alert__button",
+                    id: "cookie-alert__accept",
+                  }
+                );
+                acceptBtn.addEventListener("click", () => {
+                  localStorage.setItem("acceptedCookieAlert", true);
+                  boxElem.remove();
+                  enableGtag();
+                });
+
+                containerElem.appendChild(declineBtn);
+                containerElem.appendChild(acceptBtn);
+                boxElem.appendChild(containerElem);
+                document.body.appendChild(boxElem);
+            } else if (localStorage.getItem("acceptedCookieAlert") === "true") {
+              enableGtag();
+            }
+        })()
+      </script>
+
+    <script src="../../../_static/documentation_options.js?v=b59dc8fc"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/furo.js?v=7660844c"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <script>
+
+      const createProjectsList = (projects, displayImages) => {
+        const ulElem = Object.assign(document.createElement('ul'),
+          {
+            className:'farama-header-menu-list',
+          }
+        )
+        for (let project of projects) {
+          const liElem = document.createElement("li");
+          const aElem = Object.assign(document.createElement("a"),
+            {
+              href: project.link
+            }
+          );
+          liElem.appendChild(aElem);
+          if (displayImages) {
+            const imgElem = Object.assign(document.createElement("img"),
+              {
+                src: project.image ? imagesBasepath + project.image : imagesBasepath + "/farama_black.svg",
+                alt: `${project.name} logo`,
+                className: "farama-black-logo-invert"
+              }
+            );
+            aElem.appendChild(imgElem);
+          }
+          aElem.appendChild(document.createTextNode(project.name));
+          ulElem.appendChild(liElem);
+        }
+        return ulElem;
+      }
+
+      // Create menu with Farama projects by using the API at farama.org/api/projects.json
+      const createCORSRequest = (method, url) => {
+        let xhr = new XMLHttpRequest();
+        xhr.responseType = 'json';
+
+        if ("withCredentials" in xhr) {
+          xhr.open(method, url, true);
+        } else if (typeof XDomainRequest != "undefined") {
+          // IE8 & IE9
+          xhr = new XDomainRequest();
+          xhr.open(method, url);
+        } else {
+          // CORS not supported.
+          xhr = null;
+        }
+        return xhr;
+      };
+
+      const url = 'https://farama.org/api/projects.json';
+      const imagesBasepath = "https://farama.org/assets/images"
+      const method = 'GET';
+      let xhr = createCORSRequest(method, url);
+
+      xhr.onload = () => {
+        const jsonResponse = xhr.response;
+        const sections = {
+          "Core Projects": [],
+          "Mature Projects": {
+            "Documentation": [],
+            "Repositories": [],
+          },
+          "Incubating Projects": {
+            "Documentation": [],
+            "Repositories": [],
+          },
+          "Foundation": [
+            {
+              name: "About",
+              link: "https://farama.org/about"
+            },
+            {
+              name: "Standards",
+              link: "https://farama.org/project_standards",
+            },
+            {
+              name: "Donate",
+              link: "https://farama.org/donations"
+            }
+          ]
+        }
+
+        // Categorize projects
+        Object.keys(jsonResponse).forEach(key => {
+          projectJson = jsonResponse[key];
+          if (projectJson.website !== null) {
+            projectJson.link = projectJson.website;
+          } else {
+            projectJson.link = projectJson.github;
+          }
+          if (projectJson.type === "core") {
+            sections["Core Projects"].push(projectJson)
+          } else if (projectJson.type == "mature") {
+            if (projectJson.website !== null) {
+              sections["Mature Projects"]["Documentation"].push(projectJson)
+            } else {
+              sections["Mature Projects"]["Repositories"].push(projectJson)
+            }
+          } else {
+            if (projectJson.website !== null) {
+              sections["Incubating Projects"]["Documentation"].push(projectJson)
+            } else {
+              sections["Incubating Projects"]["Repositories"].push(projectJson)
+            }
+          }
+        })
+
+        const menuContainer = document.querySelector(".farama-header-menu__body");
+
+        Object.keys(sections).forEach((key, i) => {
+          const sectionElem = Object.assign(
+            document.createElement('div'), {
+              className:'farama-header-menu__section',
+            }
+          )
+          sectionElem.appendChild(Object.assign(document.createElement('span'),
+            {
+              className:'farama-header-menu__section-title' ,
+              innerText: key
+            }
+          ))
+          // is not a list
+          if (sections[key].constructor !== Array) {
+            const subSections = sections[key];
+            const subSectionContainerElem = Object.assign(
+                document.createElement('div'), {
+                  className:'farama-header-menu__subsections-container',
+                  style: 'display: flex'
+                }
+            )
+            Object.keys(subSections).forEach((subKey, i) => {
+              const subSectionElem = Object.assign(
+                document.createElement('div'), {
+                  className:'farama-header-menu__subsection',
+                }
+              )
+              subSectionElem.appendChild(Object.assign(document.createElement('span'),
+                {
+                  className:'farama-header-menu__subsection-title' ,
+                  innerText: subKey
+                }
+              ))
+              const ulElem = createProjectsList(subSections[subKey], key !== 'Foundation');
+              subSectionElem.appendChild(ulElem);
+              subSectionContainerElem.appendChild(subSectionElem);
+            })
+            sectionElem.appendChild(subSectionContainerElem);
+          } else {
+            const projects = sections[key];
+            const ulElem = createProjectsList(projects, true);
+            sectionElem.appendChild(ulElem);
+          }
+          menuContainer.appendChild(sectionElem)
+        });
+      }
+
+      xhr.onerror = function() {
+        console.error("Unable to load projects");
+      };
+
+      xhr.send();
+    </script>
+
+    
+    <script>
+      const versioningConfig = {
+        githubUser: 'Farama-Foundation',
+        githubRepo: 'A2Perf',
+      };
+      fetch('/main/_static/versioning/versioning_menu.html').then(response => {
+        if (response.status === 200) {
+            response.text().then(text => {
+                const container = document.createElement("div");
+                container.innerHTML = text;
+                document.querySelector("body").appendChild(container);
+                // innerHtml doenst evaluate scripts, we need to add them dynamically
+                Array.from(container.querySelectorAll("script")).forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            });
+        } else {
+            console.warn("Unable to load versioning menu", response);
+        }
+      });
+    </script>
+
+    </body>
+</html>
