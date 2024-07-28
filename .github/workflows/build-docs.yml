@@ -1,0 +1,45 @@
+name: Deploy Docs
+on:
+  push:
+    branches: [ dev ]
+permissions:
+  contents: write
+jobs:
+  docs:
+    name: Generate Website
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+        fetch-depth: 0
+    - name: Update submodules
+      run: |
+        git submodule update --init --recursive --remote
+    - name: Set up Conda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: '3.10'
+        activate-environment: a2perf-docs
+    - name: Install pandoc and other dependencies
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge pandoc
+        pip install -r docs/requirements.txt
+        pip install -e .
+    - name: Build documentation
+      shell: bash -l {0}
+      run: |
+        sphinx-build -b dirhtml -v docs _build
+    - name: Post-process documentation
+      shell: bash -l {0}
+      run: |
+        mv _build/404/index.html _build/404.html
+        python docs/_scripts/move_404.py _build/404.html
+        rm -r _build/.doctrees
+    - name: Upload to GitHub Pages
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        folder: _build

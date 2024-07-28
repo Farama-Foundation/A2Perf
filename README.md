@@ -9,14 +9,17 @@ the benchmark platform.
 
 A2Perf provides benchmark environments in the following domains:
 
-* [Web Navigation](tutorials/WebNav.ipynb) - This environment facilitates the
+* [Web Navigation](docs/content/web_navigation/WebNavigation-Difficulty-01-v0.ipynb) -
+  This environment facilitates the
   creation of compositional tasks represented by dependency graphs, where
   automatically generated websites are completed by the trained agent.
-* [Quadruped Locomotion](tutorials/QuadrupedLocomotion.ipynb) - This quadruped
+* [Quadruped Locomotion](docs/content/quadruped_locomotion/QuadrupedLocomotion-DogPace-v0.ipynb) -
+  This quadruped
   locomotion environment aims to teach a legged robot with 18 degrees of freedom
   to replicate animal-like behaviors by imitating real-world motion data to
   develop a diverse repertoire of skills.
-* [Circuit Training](tutorials/CircuitTraining.ipynb) - Chip floorplanning, a
+* [Circuit Training](docs/content/circuit_training/CircuitTraining-Ariane-v0.ipynb) -
+  Chip floorplanning, a
   complex and traditionally manual process, has been addressed by Google's
   open-source Circuit Training framework, which uses reinforcement learning to
   optimize chip layouts for multiple objectives.
@@ -86,7 +89,7 @@ env = gym.make("WebNavigation-v0", difficulty=1, seed=0)
 ## User Submission
 
 A beginners guide to benchmarking with A2Perf is
-described [here](tutorials/beginners_guide.ipynb).
+described [here](docs/content/tutorials/training.ipynb).
 
 - Users can pull the template repository
   at https://github.com/Farama-Foundation/a2perf-benchmark-submission
@@ -113,9 +116,10 @@ described [here](tutorials/beginners_guide.ipynb).
 
 ## Gin Configuration Files
 
-Under `a2perf/submission/configs`, there are default gin configuration files for
-training and inference for each domain. These files define various settings and
-hyperparameters for benchmarking.
+Under [`a2perf/submission/configs`](https://github.com/Farama-Foundation/A2Perf/tree/main/a2perf/submission/configs),
+there are default gin configuration files for training and inference for each
+domain. These files define various settings and hyperparameters for
+benchmarking.
 
 Here's an example of an `inference.gin` file for web navigation:
 
