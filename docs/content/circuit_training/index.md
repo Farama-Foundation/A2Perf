@@ -35,7 +35,7 @@
             <a href="CircuitTraining-Ariane-v0">Ariane</a>
         </div>
         <div class="env-item">
-            <img src="../../_static/img/CircuitTraining-Ariane-v0.gif" alt="Toy Macro Netlist">
+            <img src="../../_static/img/CircuitTraining-ToyMacro-v0.gif" alt="Toy Macro Netlist">
             <a href="CircuitTraining-ToyMacroStdcell-v0">Toy Macro Netlist</a>
         </div>
     </div>
