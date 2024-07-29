@@ -82,7 +82,7 @@ import gymnasium as gym
 
 from a2perf.domains import web_navigation
 
-env = gym.make("WebNavigation-v0", difficulty=1, seed=0)
+env = gym.make("WebNavigation-DifficultyLevel-01-v0", num_websites=10, seed=0)
 
 ```
 

@@ -49,9 +49,13 @@ TimeLimitWrapperType = Callable[
     [py_environment.PyEnvironment, int], py_environment.PyEnvironment
 ]
 
-WEB_NAVIGATION = "WebNavigation-v0"
-CIRCUIT_TRAINING = "CircuitTraining-v0"
-QUADRUPED_LOCOMOTION = "QuadrupedLocomotion-v0"
+WEB_NAVIGATION_ENVS = ("WebNavigation-DifficultyLevel-01-v0",)
+CIRCUIT_TRAINING_ENVS = ("CircuitTraining-Ariane-v0", "CircuitTraining-ToyMacro-v0")
+QUADRUPED_LOCOMOTION_ENVS = (
+    "QuadrupedLocomotion-DogPace-v0",
+    "QuadrupedLocomotion-DogTrot-v0",
+    "QuadrupedLocomotion-DogSpin-v0",
+)
 
 
 @gin.configurable
@@ -175,7 +179,7 @@ def wrap_env(
 def create_domain(
     env_name, root_dir=None, env_wrappers=(), gym_env_wrappers=(), **env_kwargs
 ):
-    if env_name == WEB_NAVIGATION:
+    if env_name in WEB_NAVIGATION_ENVS:
         # noinspection PyUnresolvedReferences
         from a2perf.domains import web_navigation
         from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
@@ -222,7 +226,7 @@ def create_domain(
             }
         )
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
-    elif env_name == CIRCUIT_TRAINING:
+    elif env_name in CIRCUIT_TRAINING_ENVS:
         # noinspection PyUnresolvedReferences
         from a2perf.domains import circuit_training
 
@@ -241,7 +245,7 @@ def create_domain(
             }
         )
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
-    elif env_name == QUADRUPED_LOCOMOTION:
+    elif env_name in QUADRUPED_LOCOMOTION_ENVS:
         # noinspection PyUnresolvedReferences
         from a2perf.domains import quadruped_locomotion
 
