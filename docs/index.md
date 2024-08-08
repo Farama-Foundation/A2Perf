@@ -4,7 +4,7 @@ firstpage:
 lastpage:
 ---
 
-```{project-logo} _static/A2Perf-text.png
+```{project-logo} _static/img/logo/text/A2Perf-text.png
 :alt: A2Perf Logo
 ```
 

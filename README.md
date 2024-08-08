@@ -1,5 +1,6 @@
-# A2Perf: Real-World Autonomous Agents Benchmark
-
+<p align="center">
+    <img src="docs/_static/img/logo/github/A2Perf-github.png" width="500px"/>
+</p>
 A2Perf is a benchmark for evaluating agents on sequential decision problems that
 are relevant to the real world. This
 repository contains code for running and evaluating participant's submissions on
