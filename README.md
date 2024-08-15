@@ -25,7 +25,7 @@ A2Perf provides benchmark environments in the following domains:
   open-source Circuit Training framework, which uses reinforcement learning to
   optimize chip layouts for multiple objectives.
 
-<!-- 
+<!--
 ### Web Navigation
 
 ![Three web navigation environments](media/gminiwob_scene.png)

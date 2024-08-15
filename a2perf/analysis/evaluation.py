@@ -2,21 +2,19 @@ import functools
 import json
 import multiprocessing
 import os
-from typing import Any
-from typing import Dict
-from typing import Tuple
+from typing import Any, Dict, Tuple
+
+import numpy as np
+from absl import app, flags, logging
 
 from a2perf.analysis.metrics_lib import load_training_system_data
-from a2perf.domains import circuit_training
-from a2perf.domains import quadruped_locomotion
-from a2perf.domains import web_navigation
+from a2perf.domains import (  # noqa: F401
+    circuit_training,
+    quadruped_locomotion,
+    web_navigation,
+)
 from a2perf.domains.tfa.suite_gym import create_domain
-from a2perf.domains.tfa.utils import load_policy
-from a2perf.domains.tfa.utils import perform_rollouts
-from absl import app
-from absl import flags
-from absl import logging
-import numpy as np
+from a2perf.domains.tfa.utils import load_policy, perform_rollouts
 
 _NUM_EVAL_EPISODES = flags.DEFINE_integer(
     "num_eval_episodes", 100, "Number of episodes to evaluate the policy."

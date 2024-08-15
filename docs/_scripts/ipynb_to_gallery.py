@@ -5,6 +5,7 @@ Usage: python ipynb_to_gallery.py <notebook.ipynb>
 Dependencies: pypandoc, beautifulsoup4, numpy
 install using `pip install pypandoc, beautifulsoup4, numpy`
 """
+
 import json
 import warnings
 
@@ -14,7 +15,7 @@ from bs4 import BeautifulSoup
 
 warnings.filterwarnings(
     "ignore",
-    message="The input looks more like a filename than markup. You may want to open this file and pass the filehandle into Beautiful Soup",
+    message="The input looks more like a filename than markup. You may want to open this file and pass the filehandle into Beautiful Soup",  # noqa: E501
 )
 
 

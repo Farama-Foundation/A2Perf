@@ -1,18 +1,18 @@
 import os
 import shutil
+from typing import Any, Dict
 
-from absl import app
-from absl import flags
-from xmanager import xm
-from xmanager import xm_local
+from absl import app, flags
+from xmanager import xm, xm_local
 
 from a2perf.constants import BenchmarkDomain
-from a2perf.launch.docker_utils import DOCKER_EXPERIMENT_DIR
-from a2perf.launch.docker_utils import DOCKER_PARTICIPANT_DIR
-from a2perf.launch.docker_utils import GENERIC_GIN_CONFIG_NAME
-from a2perf.launch.docker_utils import get_docker_instructions
-from a2perf.launch.docker_utils import get_entrypoint
-from typing import Any, Dict
+from a2perf.launch.docker_utils import (
+    DOCKER_EXPERIMENT_DIR,
+    DOCKER_PARTICIPANT_DIR,
+    GENERIC_GIN_CONFIG_NAME,
+    get_docker_instructions,
+    get_entrypoint,
+)
 
 _NUM_GPUS = flags.DEFINE_integer("num-gpus", 1, "Number of GPUs to use")
 _CPU_BASE_IMAGE = flags.DEFINE_string(

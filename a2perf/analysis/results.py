@@ -82,7 +82,8 @@ METRIC_TO_UNIT = dict(
 
 
 def format_value(val):
-    """Format the value in scientific notation if its absolute value is below a certain threshold."""
+    """Format the value in scientific notation if absolute value is
+    below a certain threshold."""
     threshold = 1e-2  # You can adjust this threshold as needed
     if abs(val) < threshold:
         return f"{val:.2e}"  # scientific notation
@@ -133,11 +134,11 @@ def metrics_dict_to_pandas_df(metrics_dict):
                 value_to_compare = value_to_compare["mean"]
 
             if best_value is None:
-                comparison_function = lambda new, old: True
+                comparison_function = lambda new, old: True  # noqa: E731
             elif optimal_criterion == "min":
-                comparison_function = lambda new, old: new < old
+                comparison_function = lambda new, old: new < old  # noqa: E731
             elif optimal_criterion == "max":
-                comparison_function = lambda new, old: new > old
+                comparison_function = lambda new, old: new > old  # noqa: E731
 
             if comparison_function is not None and comparison_function(
                 value_to_compare, best_value
@@ -145,7 +146,8 @@ def metrics_dict_to_pandas_df(metrics_dict):
                 best_exps.clear()
                 best_value = value_to_compare
 
-            # Check for equality for the case where it's as good as the best_value (and best_value is not None)
+            # Check for equality for the case where it's as good as
+            # the best_value (and best_value is not None)
             parameters_to_add = (
                 domain,
                 task,
@@ -185,7 +187,8 @@ def df_as_latex(df, mode):
     # Reindex and sort the DataFrame
     df = df.set_index(["domain", "task", "category", "metric", "algo"]).sort_index()
 
-    # Create a pivot table with 'category' and 'metric' as the row index, and 'algo' as the column index
+    # Create a pivot table with 'category' and 'metric' as the row index,
+    # and 'algo' as the column index
     df_pivot = df.pivot_table(
         index=["category", "metric"],
         columns="algo",

@@ -83,7 +83,8 @@ def install_dreamplace():
 
 
 def set_executable_permissions():
-    """Set the executable permissions for the plc_wrapper_main binary and raise an error if it fails."""
+    """Set the executable permissions for the plc_wrapper_main binary
+    and raise an error if it fails."""
     package_dir = os.path.dirname(importlib.util.find_spec("a2perf").origin)
     binary_path = os.path.join(
         package_dir, "domains", "circuit_training", "bin", "plc_wrapper_main"

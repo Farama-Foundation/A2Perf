@@ -4,17 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import tensorflow as tf
-from absl import app
-from absl import flags
-from absl import logging
+from absl import app, flags, logging
 
 from a2perf import analysis
-from a2perf.analysis.metrics_lib import correct_energy_measurements
-from a2perf.analysis.metrics_lib import load_generalization_metric_data
-from a2perf.analysis.metrics_lib import load_inference_metric_data
-from a2perf.analysis.metrics_lib import load_inference_system_data
-from a2perf.analysis.metrics_lib import load_training_reward_data
-from a2perf.analysis.metrics_lib import load_training_system_data
+from a2perf.analysis.metrics_lib import (
+    correct_energy_measurements,
+    load_generalization_metric_data,
+    load_inference_metric_data,
+    load_inference_system_data,
+    load_training_reward_data,
+    load_training_system_data,
+)
 
 _SEED = flags.DEFINE_integer("seed", 0, "Random seed.")
 _BASE_DIR = flags.DEFINE_string(
@@ -84,7 +84,8 @@ def main(_):
         base_dir=base_dir, experiment_ids=_EXPERIMENT_IDS.value
     )
 
-    # DEBUG: See how many collect jobs there are. To do this, group by domain/task/algo/seed, and count the number of unique
+    # DEBUG: See how many collect jobs there are. To do this,
+    # group by domain/task/algo/seed, and count the number of unique
     # experiment fields. This should be 1 + the number of collect jobs.
     total_jobs = training_system_metrics_df.groupby(
         ["domain", "task", "algo", "seed", "experiment"]
@@ -156,7 +157,8 @@ def main(_):
     )
     print(generalization_reward_metrics)
 
-    # Take the rollout_returns from generalization_metrics and add it to training_metrics
+    # Take the rollout_returns from
+    # generalization_metrics and add it to training_metrics
     training_metrics["generalization_rollout_returns"] = generalization_reward_metrics[
         "generalization_rollout_returns"
     ]

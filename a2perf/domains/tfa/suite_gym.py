@@ -22,25 +22,17 @@ agent behaviour. This prevents us from setting the appropriate discount value
 for the final step of an episode. To prevent that we extract the step limit
 from the environment specs and utilize our TimeLimit wrapper.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import json
 import os
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Optional
-from typing import Sequence
-from typing import Text
+from typing import Any, Callable, Dict, Optional, Sequence, Text
 
 import gin
 import gymnasium as gym
 import numpy as np
 from absl import logging
-from tf_agents.environments import py_environment
-from tf_agents.environments import wrappers
+from tf_agents.environments import py_environment, wrappers
 from tf_agents.typing import types
 
 from a2perf.domains.tfa import gym_wrapper
@@ -181,7 +173,7 @@ def create_domain(
 ):
     if env_name in WEB_NAVIGATION_ENVS:
         # noinspection PyUnresolvedReferences
-        from a2perf.domains import web_navigation
+        from a2perf.domains import web_navigation  # noqa: F401
         from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
 
         save_vocab_dir = os.path.join(root_dir, "vocabulary")
@@ -228,7 +220,7 @@ def create_domain(
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
     elif env_name in CIRCUIT_TRAINING_ENVS:
         # noinspection PyUnresolvedReferences
-        from a2perf.domains import circuit_training
+        from a2perf.domains import circuit_training  # noqa: F401
 
         env_kwargs.pop("netlist", None)
         netlist_file_path = os.environ.get("NETLIST_PATH", None)
@@ -247,7 +239,7 @@ def create_domain(
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
     elif env_name in QUADRUPED_LOCOMOTION_ENVS:
         # noinspection PyUnresolvedReferences
-        from a2perf.domains import quadruped_locomotion
+        from a2perf.domains import quadruped_locomotion  # noqa: F401
 
         motion_file_path = os.environ.get("MOTION_FILE_PATH", None)
         env_kwargs["motion_files"] = [motion_file_path]

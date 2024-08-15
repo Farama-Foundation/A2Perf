@@ -1,9 +1,7 @@
 import os
 import subprocess
 
-from absl import app
-from absl import flags
-from absl import logging
+from absl import app, flags, logging
 
 _ROOT_DIR = flags.DEFINE_string("root-dir", None, "Root directory.")
 _DATASETS_PATH = flags.DEFINE_string(

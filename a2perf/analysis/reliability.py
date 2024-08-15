@@ -376,7 +376,8 @@ def long_term_risk(data_df, tag, index):
 
 
 def risk_across_runs(data_df, tag, alpha=0.05):
-    """Calculate the Conditional Value at Risk (CVaR) for the final values across different runs.
+    """Calculate the Conditional Value at Risk (CVaR) for the final values
+        across different runs.
 
     Args:
 

@@ -13,14 +13,11 @@ import codecarbon
 import gin
 import numpy as np
 import pkg_resources
-from absl import flags
-from absl import logging
+from absl import flags, logging
 from tf_agents.metrics import py_metrics
 from tf_agents.train import actor
 
-from a2perf.constants import BenchmarkDomain
-from a2perf.constants import BenchmarkMode
-from a2perf.constants import ReliabilityMetrics
+from a2perf.constants import BenchmarkDomain, BenchmarkMode, ReliabilityMetrics
 from a2perf.domains.tfa import suite_gym
 
 
@@ -233,54 +230,55 @@ def _perform_rollout_task(
         if generalization_task == "toy_macro_stdcell":
             generalization_env_vars["NETLIST_PATH"] = pkg_resources.resource_filename(
                 "a2perf",
-                "domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt",
+                "domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt",  # noqa: E501
             )
             generalization_env_vars["INIT_PLACEMENT_PATH"] = (
                 pkg_resources.resource_filename(
                     "a2perf",
-                    "domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc",
+                    "domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc",  # noqa: E501
                 )
             )
         elif generalization_task == "ariane":
             generalization_env_vars["NETLIST_PATH"] = pkg_resources.resource_filename(
                 "a2perf",
-                "domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt",
+                "domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt",  # noqa: E501
             )
             generalization_env_vars["INIT_PLACEMENT_PATH"] = (
                 pkg_resources.resource_filename(
                     "a2perf",
-                    "domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc",
+                    "domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc",  # noqa: E501
                 )
             )
         else:
             raise ValueError(
-                "Generalization tasks for CircuitTraining domain must be either toy_macro_stdcell or ariane"
+                "Generalization tasks for CircuitTraining domain must be either toy_macro_stdcell or ariane"  # noqa: E501
             )
     elif domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
         if generalization_task == "dog_pace":
             generalization_env_vars["MOTION_FILE_PATH"] = (
                 pkg_resources.resource_filename(
                     "a2perf",
-                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt",
+                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt",  # noqa: E501
                 )
             )
         elif generalization_task == "dog_trot":
             generalization_env_vars["MOTION_FILE_PATH"] = (
                 pkg_resources.resource_filename(
                     "a2perf",
-                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_trot.txt",
+                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_trot.txt",  # noqa: E501
                 )
             )
         elif generalization_task == "dog_spin":
             generalization_env_vars["MOTION_FILE_PATH"] = (
                 pkg_resources.resource_filename(
                     "a2perf",
-                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_spin.txt",
+                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_spin.txt",  # noqa: E501
                 )
             )
     else:
         raise ValueError(
-            "Generalization tasks are only supported for WebNavigation, CircuitTraining, and QuadrupedLocomotion domains."
+            "Generalization tasks are only supported for "
+            "WebNavigation, CircuitTraining, and QuadrupedLocomotion domains."
         )
 
     for key, value in generalization_env_vars.items():
@@ -498,24 +496,24 @@ class Submission:
 
             participant_training_process.start()
             logging.info(
-                f"Participant training process ID: {participant_training_process.pid}"
+                "Participant training process ID: %d", participant_training_process.pid
             )
-
             participant_training_process.join()
             logging.info(
-                f"Participant module process {participant_training_process.pid} finished"
+                "Participant module process %d finished",
+                participant_training_process.pid,
             )
 
             if participant_training_process.is_alive():
                 logging.error("Participant process is still running")
             elif participant_training_process.exitcode != 0:
                 logging.error(
-                    "Participant process exited with code"
-                    f" {participant_training_process.exitcode}"
+                    "Participant process exited with code %d",
+                    participant_training_process.exitcode,
                 )
             else:
                 logging.info(
-                    f"Participant process {participant_training_process.pid} finished"
+                    "Participant process %d finished", participant_training_process.pid
                 )
 
     def _run_generalization_benchmark(self):
@@ -586,9 +584,11 @@ class Submission:
                 logging.info("Timing inference steps...")
                 inference_times = []
                 for i in range(self.num_inference_steps):
-                    inference_step = lambda: participant_module.infer_once(
-                        policy=participant_policy,
-                        preprocessed_observation=preprocessed_data[i],
+                    inference_step = (
+                        lambda: participant_module.infer_once(  # noqa: E731
+                            policy=participant_policy,
+                            preprocessed_observation=preprocessed_data[i],
+                        )
                     )
                     inference_times.append(timeit.timeit(inference_step, number=1))
                 logging.info("Finished timing inference steps")
@@ -645,7 +645,8 @@ class Submission:
 
         if not os.path.exists(self.participant_module_path):
             raise FileNotFoundError(
-                f"Participant module path {self.participant_module_path} not found. This is necessary for running training and inference code."
+                f"Participant module path {self.participant_module_path} not found."
+                f" This is necessary for running training and inference code."
             )
 
         if self.mode == BenchmarkMode.TRAIN:
@@ -653,13 +654,15 @@ class Submission:
         elif self.mode == BenchmarkMode.INFERENCE:
             if not os.path.exists(self.root_dir):
                 raise FileNotFoundError(
-                    f"Root directory {self.root_dir} not found. This is necessary for loading the trained model"
+                    f"Root directory {self.root_dir} not found."
+                    f" This is necessary for loading the trained model"
                 )
             self._run_inference_benchmark()
         elif self.mode == BenchmarkMode.GENERALIZATION:
             if not os.path.exists(self.root_dir):
                 raise FileNotFoundError(
-                    f"Root directory {self.root_dir} not found. This is necessary for loading the trained model"
+                    f"Root directory {self.root_dir} not found."
+                    f" This is necessary for loading the trained model"
                 )
             self._run_generalization_benchmark()
 

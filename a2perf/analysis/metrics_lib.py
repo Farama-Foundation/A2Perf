@@ -214,14 +214,16 @@ def correct_energy_measurements(
     percent_collect_cpu_usage=1.0,
     percent_train_cpu_usage=1.0,
 ):
-    # Create a job type column with either `collect` or `train` depending on whether gpu_energy is 0 or not
+    # Create a job type column with either `collect` or `train`
+    # depending on whether gpu_energy is 0 or not
     df["job_type"] = "collect"
     df.loc[df["gpu_power"] > 0, "job_type"] = "train"
 
     # Group by the specified columns
     grouped = df.groupby(["domain", "task", "algo", "experiment", "seed", "run_id"])
 
-    # Adjust the CPU power based on the job type if all existing power metrics are the same
+    # Adjust the CPU power based on the job type
+    # if all existing power metrics are the same
     def adjust_cpu_power(group):
         if group["cpu_power"].nunique() == 1:
             job_type = group["job_type"].iloc[0]
@@ -281,16 +283,9 @@ def correct_energy_measurements(
     return df
 
 
-def format_func(value, tick_number):
-    # Function to format tick labels
-    if value.is_integer():
-        return f"{int(value)}"
-    else:
-        return f"{value}"
-
-
 def downsample_steps(group, tag, n_steps=1000):
-    """Select a subset of steps at regular intervals that have sufficient data points across seeds"""
+    """Select a subset of steps at regular intervals that have
+    sufficient data points across seeds"""
     # Count the number of values at each step
     step_counts = group.groupby(f"{tag}_Step").size()
 
@@ -337,7 +332,10 @@ def plot_training_reward_data(metrics_df, event_file_tags=("Metrics/AverageRetur
             ax.set_ylabel(tag_display_val)
             ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
-            title = f"{DOMAIN_DISPLAY_NAME.get(domain, domain)} - {TASK_DISPLAY_NAME.get(task, task)} (Train Steps)"
+            title = (
+                f"{DOMAIN_DISPLAY_NAME.get(domain, domain)}"
+                f" - {TASK_DISPLAY_NAME.get(task, task)} (Train Steps)"
+            )
             ax.set_title(title)
             ax.legend()
             plt.tight_layout()
@@ -367,7 +365,10 @@ def plot_training_reward_data(metrics_df, event_file_tags=("Metrics/AverageRetur
             ax.set_ylabel(tag_display_val)
             ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
             ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_func))
-            title = f"{DOMAIN_DISPLAY_NAME.get(domain, domain)} - {TASK_DISPLAY_NAME.get(task, task)} (Duration)"
+            title = (
+                f"{DOMAIN_DISPLAY_NAME.get(domain, domain)}"
+                f" - {TASK_DISPLAY_NAME.get(task, task)} (Duration)"
+            )
             ax.set_title(title)
             ax.legend()
             plt.tight_layout()
@@ -409,7 +410,14 @@ def load_training_reward_data(
             if data is not None:
                 logging.info(
                     "Processing log dir: %s",
-                    f' {data.iloc[0]["domain"]}/{data.iloc[0]["task"]}/{data.iloc[0]["algo"]}/{data.iloc[0]["experiment"]}/{data.iloc[0]["seed"]}',
+                    " %(domain)s/%(task)s/%(algo)s/%(experiment)s/%(seed)s",
+                    {
+                        "domain": data.iloc[0]["domain"],
+                        "task": data.iloc[0]["task"],
+                        "algo": data.iloc[0]["algo"],
+                        "experiment": data.iloc[0]["experiment"],
+                        "seed": data.iloc[0]["seed"],
+                    },
                 )
 
                 all_dfs.append(data)
@@ -539,7 +547,8 @@ def load_generalization_metric_data(base_dir, experiment_ids):
 
         logging.info("Processing log dir: %s", json_file)
         logging.info(
-            "\tDomain: %s, Task: %s, Algo: %s, Experiment Number: %s, Seed: %s, Skill Level: %s",
+            "\tDomain: %s, Task: %s, Algo: %s, "
+            "Experiment Number: %s, Seed: %s, Skill Level: %s",
             domain,
             task,
             algo,
@@ -620,7 +629,8 @@ def load_inference_metric_data(base_dir, experiment_ids):
 
         logging.info("Processing log dir: %s", json_file)
         logging.info(
-            "\tDomain: %s, Task: %s, Algo: %s, Experiment Number: %s, Seed: %s, Skill Level: %s",
+            "\tDomain: %s, Task: %s, Algo: %s, "
+            "Experiment Number: %s, Seed: %s, Skill Level: %s",
             domain,
             task,
             algo,

@@ -6,7 +6,6 @@ from xmanager import xm
 
 from a2perf.constants import BenchmarkDomain
 
-
 GENERIC_GIN_CONFIG_NAME = "submission_config.gin"
 DOCKER_EXPERIMENT_DIR = "/experiment_dir"
 DOCKER_PARTICIPANT_DIR = "/participant_code"
@@ -57,6 +56,8 @@ def _get_common_setup(uid: str, user: str):
 
 
 def get_entrypoint(domain: str, user: str) -> xm.CommandList:
+    # flake8: noqa
+
     entrypoints = {
         BenchmarkDomain.QUADRUPED_LOCOMOTION.value: xm.CommandList(
             [
@@ -66,7 +67,7 @@ su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py39 &&
 pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
-python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@
 EOF
 """,
                 # Waste the trailing "$@" argument
@@ -82,7 +83,7 @@ su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
-python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@
 EOF
                     """,
                 # Waste the trailing "$@" argument
@@ -97,7 +98,7 @@ su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
-python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@
 EOF
 """,
                 # Waste the trailing "$@" argument
@@ -105,6 +106,8 @@ EOF
             ]
         ),
     }
+    # flake8: qa
+
     return entrypoints[domain]
 
 
@@ -133,7 +136,7 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
                 conda activate py39 && \
                 pip install -e /workdir[all] seaborn matplotlib minari==0.4.3 && \
                 python /workdir/setup.py install && \
-                pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"       
+                pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
             """,
         ],
         BenchmarkDomain.WEB_NAVIGATION.value: common_setup

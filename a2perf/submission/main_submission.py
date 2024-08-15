@@ -2,9 +2,7 @@ import multiprocessing
 import os
 
 import gin
-from absl import app
-from absl import flags
-from absl import logging
+from absl import app, flags, logging
 
 from a2perf.constants import BenchmarkMode
 from a2perf.submission import submission_util
