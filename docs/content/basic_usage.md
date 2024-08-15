@@ -37,27 +37,14 @@ env = gym.make('QuadrupedLocomotion-DogPace-v0')
 # env = gym.make('QuadrupedLocomotion-DogSpin-v0')
 ```
 
-
-For more detailed usage
-
 # Installation
 
-To install A2Perf, the easiest way is to use `pip`. You can install specific
-domains or all domains depending on your needs:
-
-```bash
-# Install all domains
-pip install a2perf[all]
-
-# Install specific domains
-pip install a2perf[circuit-training]
-pip install a2perf[web-navigation]
-pip install a2perf[quadruped-locomotion]
-```
+Note: The pip installation is not available yet. Users should install from
+source for now.
 
 ## Installing from source
 
-If you would like to install A2Perf from source, follow these steps:
+To install A2Perf from source, follow these steps:
 
 1. Clone the repository:
 
@@ -65,11 +52,35 @@ If you would like to install A2Perf from source, follow these steps:
 git clone https://github.com/Farama-Foundation/A2Perf.git
 cd A2Perf
 git submodule update --init --recursive
-pip install .
 ```
 
-If you want to install the package in development mode, use the `-e` flag:
+2. Install the package:
 
 ```bash
-pip install -e .
+# Install all domains
+pip install -e .[all]
+# Or install specific domains
+pip install -e .[circuit-training]
+pip install -e .[web-navigation]
+pip install -e .[quadruped-locomotion]
 ```
+
+If you do not need an editable installation, you can omit the `-e` flag:
+
+```bash
+pip install .[all]
+```
+
+Once pip installation becomes available, you'll be able to install A2Perf
+directly:
+
+```bash
+# Install all domains
+pip install a2perf[all]
+# Or install specific domains
+pip install a2perf[circuit-training]
+pip install a2perf[web-navigation]
+pip install a2perf[quadruped-locomotion]
+```
+
+We will update this README when pip installation is ready.
