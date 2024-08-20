@@ -8,11 +8,11 @@
     <meta property="og:type" content="website" />
     <meta property="og:description" content="A2Perf is a benchmarking suite for evaluating autonomous agents on real-world problems." />
     <meta property="og:url" content="https://a2perf.farama.org/content/tutorials/training.html" /><meta property="og:image" content="https://a2perf.farama.org/_static/_static/img/logo/vectors/A2Perf-github.svg" /><meta name="twitter:card" content="summary_large_image"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../../genindex/" /><link rel="search" title="Search" href="../../../search/" /><link rel="next" title="Tutorial on Benchmarking Inference Code" href="../inference/" /><link rel="prev" title="Web Navigation" href="../../web_navigation/WebNavigation-Difficulty-01-v0/" />
+<link rel="index" title="Index" href="../../../genindex/" /><link rel="search" title="Search" href="../../../search/" /><link rel="next" title="Benchmarking Inference" href="../inference/" /><link rel="prev" title="Web Navigation" href="../../web_navigation/WebNavigation-Difficulty-01-v0/" />
         <link rel="canonical" href="https://a2perf.farama.org/content/tutorials/training.html" />
 
     <link rel="shortcut icon" href="../../../_static/A2Perf-favicon.png"/><!-- Generated with Sphinx 7.4.7 and Furo 2023.08.19.dev1 -->
-        <title>Tutorial on Benchmarking Training Code - A2Perf Documentation</title>
+        <title>Benchmarking Training - A2Perf Documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=3e7f4c72" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=49cbaffd" />
@@ -236,9 +236,11 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Tutorial on Benchmarking Training Code</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Submission-folder">Submission folder</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../inference/">Tutorial on Benchmarking Inference Code</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Benchmarking Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../inference/">Benchmarking Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../generalization/">Benchmarking Generalization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../metrics/metrics/">Collecting Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../add_domain/">Adding Custom Domains</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
 <ul>
@@ -301,8 +303,8 @@
           </div>
           <article role="main">
             
-            <section id="Tutorial-on-Benchmarking-Training-Code">
-<h1>Tutorial on Benchmarking Training Code<a class="headerlink" href="#Tutorial-on-Benchmarking-Training-Code" title="Link to this heading">¶</a></h1>
+            <section id="Benchmarking-Training">
+<h1>Benchmarking Training<a class="headerlink" href="#Benchmarking-Training" title="Link to this heading">¶</a></h1>
 <p>This notebook walks through the steps and components necessary to launch your first A2Perf submission.</p>
 <section id="Python-quick-start">
 <h2>Python quick start<a class="headerlink" href="#Python-quick-start" title="Link to this heading">¶</a></h2>
@@ -355,9 +357,8 @@ If you are having issues with `mpi` or `mpi4py` when using conda, use:
 ```bash
 conda install -c conda-forge mpi mpi4py
 ``` --></section>
-</section>
 <section id="Submission-folder">
-<h1>Submission folder<a class="headerlink" href="#Submission-folder" title="Link to this heading">¶</a></h1>
+<h2>Submission folder<a class="headerlink" href="#Submission-folder" title="Link to this heading">¶</a></h2>
 <p>In order to benchmark your reinforcement learning algorithms, your submission should have the following structure:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>├── my_submission
 │   ├── __init__.py
@@ -367,6 +368,8 @@ conda install -c conda-forge mpi mpi4py
 |   ├── your supporting files
 </pre></div>
 </div>
+<section id="Explanation-of-files:">
+<h3>Explanation of files:<a class="headerlink" href="#Explanation-of-files:" title="Link to this heading">¶</a></h3>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>: The <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> file can be an empty file.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">train.py</span></code>: The <code class="docutils literal notranslate"><span class="pre">train.py</span></code> file includes the function <code class="docutils literal notranslate"><span class="pre">train()</span></code>, which A2Perf calls for the training of your algorithm.</p></li>
@@ -379,6 +382,8 @@ conda install -c conda-forge mpi mpi4py
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>: Specifies any package dependencies required to run the submission code. This file may include version constraints for the dependencies. Having an explicit requirements file ensures a consistent environment for evaluation.</p></li>
 </ul>
+</section>
+</section>
 <section id="Running-the-Benchmark">
 <h2>Running the Benchmark<a class="headerlink" href="#Running-the-Benchmark" title="Link to this heading">¶</a></h2>
 <div class="line-block">
@@ -403,7 +408,7 @@ conda install -c conda-forge mpi mpi4py
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Tutorial on Benchmarking Inference Code</div>
+                <div class="title">Benchmarking Inference</div>
               </div>
               <svg class="furo-related-icon">
                 <use href="#svg-arrow-right"></use>
@@ -462,11 +467,12 @@ conda install -c conda-forge mpi mpi4py
           <div class="toc-tree-container">
             <div class="toc-tree">
               <ul>
-<li><a class="reference internal" href="#">Tutorial on Benchmarking Training Code</a><ul>
+<li><a class="reference internal" href="#">Benchmarking Training</a><ul>
 <li><a class="reference internal" href="#Python-quick-start">Python quick start</a></li>
+<li><a class="reference internal" href="#Submission-folder">Submission folder</a><ul>
+<li><a class="reference internal" href="#Explanation-of-files:">Explanation of files:</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#Submission-folder">Submission folder</a><ul>
 <li><a class="reference internal" href="#Running-the-Benchmark">Running the Benchmark</a></li>
 </ul>
 </li>
