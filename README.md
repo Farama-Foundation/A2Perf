@@ -1,3 +1,14 @@
+![pre-commit](https://github.com/Farama-Foundation/A2Perf/actions/workflows/pre-commit.yml/badge.svg)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[//]: # ([![Python]&#40;https://img.shields.io/pypi/pyversions/gymnasium.svg&#41;]&#40;https://badge.fury.io/py/gymnasium&#41; TODO: Add working Python versions once a2perf package is available)
+
+[//]: # ([![PyPI]&#40;https://badge.fury.io/py/gymnasium.svg&#41;]&#40;https://badge.fury.io/py/gymnasium&#41;
+TODO: Add PyPI once a2perf package is available)
+
+[//]: # ([![arXiv]&#40;https://img.shields.io/badge/arXiv-2407.17032-b31b1b.svg&#41;]&#40;https://arxiv.org/abs/2407.17032&#41; TODO: Add arXiv once we have DOI link)
+
+
 <p align="center">
     <img src="docs/_static/img/logo/github/A2Perf-github.png" width="500px"/>
 </p>
