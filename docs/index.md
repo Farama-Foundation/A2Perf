@@ -20,7 +20,6 @@ A2Perf is a benchmarking suite for evaluating agents on sequential decision-maki
 This library contains a collection of environments from domains spanning
 computer chip-floorplanning, web navigation, and quadruped locomotion.
 
-
 The Gymnasium interface allows users to initialize and interact with the A2Perf
 environments as follows:
 
@@ -69,6 +68,9 @@ content/web_navigation/index
 
 content/tutorials/training
 content/tutorials/inference
+content/tutorials/generalization
+content/tutorials/metrics/index
+content/tutorials/add_domain
 ```
 
 ```{toctree}

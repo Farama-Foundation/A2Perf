@@ -1,9 +1,9 @@
 ---
 layout: "contents"
-title: Tutorial on Benchmarking Inference Code
+title: Benchmarking Inference
 firstpage:
 ---
 
-# Tutorial on Benchmarking Inference Code
+# Benchmarking Inference
 
 This tutorial is coming soon. Stay tuned!
