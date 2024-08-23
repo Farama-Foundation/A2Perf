@@ -5,9 +5,9 @@ import gin
 
 @gin.constants_from_enum
 class BenchmarkDomain(enum.Enum):
-    QUADRUPED_LOCOMOTION = "QuadrupedLocomotion-v0"
-    WEB_NAVIGATION = "WebNavigation-v0"
-    CIRCUIT_TRAINING = "CircuitTraining-v0"
+    QUADRUPED_LOCOMOTION = "QuadrupedLocomotion"
+    WEB_NAVIGATION = "WebNavigation"
+    CIRCUIT_TRAINING = "CircuitTraining"
 
 
 @gin.constants_from_enum
@@ -40,7 +40,18 @@ class ReliabilityMetrics(enum.Enum):
 
 
 ENV_NAMES = {
-    BenchmarkDomain.QUADRUPED_LOCOMOTION: BenchmarkDomain.QUADRUPED_LOCOMOTION.value,
-    BenchmarkDomain.WEB_NAVIGATION: BenchmarkDomain.WEB_NAVIGATION.value,
-    BenchmarkDomain.CIRCUIT_TRAINING: BenchmarkDomain.CIRCUIT_TRAINING.value,
+    BenchmarkDomain.QUADRUPED_LOCOMOTION: [
+        "QuadrupedLocomotion-DogPace-v0",
+        "QuadrupedLocomotion-DogTrot-v0",
+        "QuadrupedLocomotion-DogSpin-v0",
+    ],
+    BenchmarkDomain.WEB_NAVIGATION: [
+        "WebNavigation-Difficulty-01-v0",
+        "WebNavigation-Difficulty-02-v0",
+        "WebNavigation-Difficulty-03-v0",
+    ],
+    BenchmarkDomain.CIRCUIT_TRAINING: [
+        "CircuitTraining-ToyMacro-v0",
+        "CircuitTraining-Ariane-v0",
+    ],
 }
