@@ -6,6 +6,7 @@ from absl import app, flags
 from xmanager import xm, xm_local
 
 from a2perf.constants import BenchmarkDomain
+from a2perf.constants import ENV_NAMES
 from a2perf.launch.docker_utils import (
     DOCKER_EXPERIMENT_DIR,
     DOCKER_PARTICIPANT_DIR,
@@ -25,14 +26,10 @@ _GPU_BASE_IMAGE = flags.DEFINE_string(
     "gcr.io/deeplearning-platform-release/base-gpu:latest",
     "Base image for GPU jobs",
 )
-_DOMAIN = flags.DEFINE_enum(
+_ENV_NAME = flags.DEFINE_enum(
     "domain",
     None,
-    [
-        BenchmarkDomain.QUADRUPED_LOCOMOTION.value,
-        BenchmarkDomain.WEB_NAVIGATION.value,
-        BenchmarkDomain.CIRCUIT_TRAINING.value,
-    ],
+    sum([ENV_NAMES[domain] for domain in BenchmarkDomain], []),
     "Domain to run",
 )
 _USER_ID = flags.DEFINE_integer("user_id", 1000, "User ID")
@@ -67,7 +64,7 @@ _ROOT_DIR = flags.DEFINE_string(
 def main(_):
     """Main function to set up and run the experiment."""
     create_experiment = xm_local.create_experiment
-
+    domain = _ENV_NAME.value.split("-")[0]
     with create_experiment(experiment_title=_EXPERIMENT_NAME.value) as experiment:
         experiment_id = _EXPERIMENT_ID.value or experiment.experiment_id
         base_root_dir = os.path.join(
@@ -81,7 +78,9 @@ def main(_):
             full_root_dir = os.path.join(base_root_dir, str(work_unit_id))
             os.makedirs(full_root_dir, exist_ok=True)
 
+            # Allow relative path for participant module
             participant_module_path = _PARTICIPANT_MODULE_PATH.value
+            participant_module_path = os.path.abspath(participant_module_path)
 
             docker_gin_config_path = os.path.join(
                 full_root_dir, GENERIC_GIN_CONFIG_NAME
@@ -106,7 +105,7 @@ def main(_):
                 experimental_stream_output=True,
             )
             docker_instructions = get_docker_instructions(
-                uid=_USER_ID.value, env_name=_DOMAIN.value, user=_USER.value
+                uid=_USER_ID.value, domain=domain, user=_USER.value
             )
 
             base_image = (
@@ -121,7 +120,7 @@ def main(_):
                         use_deep_module=True,
                         base_image=base_image,
                         docker_instructions=docker_instructions,
-                        entrypoint=get_entrypoint(_DOMAIN.value, _USER.value),
+                        entrypoint=get_entrypoint(domain=domain, user=_USER.value),
                     )
                 ]
             )
@@ -146,7 +145,7 @@ def main(_):
 if __name__ == "__main__":
     flags.mark_flags_as_required(
         [
-            _DOMAIN.name,
+            _ENV_NAME.name,
             _EXPERIMENT_NAME.name,
             _ROOT_DIR.name,
             _SUBMISSION_GIN_CONFIG_PATH.name,
