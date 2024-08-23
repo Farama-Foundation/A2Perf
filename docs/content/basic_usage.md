@@ -44,43 +44,44 @@ source for now.
 
 ## Installing from source
 
+**Note:** We highly recommend using Conda to manage your environment for
+installing A2Perf, as it simplifies dependency management and ensures
+compatibility across different systems.
+
 To install A2Perf from source, follow these steps:
 
 1. Clone the repository:
-
-```bash
-git clone https://github.com/Farama-Foundation/A2Perf.git
-cd A2Perf
-git submodule update --init --recursive
-```
+    ```bash
+    git clone https://github.com/Farama-Foundation/A2Perf.git
+    cd A2Perf
+    git submodule update --init --recursive
+    ```
 
 2. Install the package:
 
-```bash
-# Install all domains
-pip install -e .[all]
-# Or install specific domains
-pip install -e .[circuit-training]
-pip install -e .[web-navigation]
-pip install -e .[quadruped-locomotion]
-```
+    ```bash
+    # Install all domains
+    pip install -e .[all]
+    # Or install specific domains
+    pip install -e .[circuit-training]
+    pip install -e .[web-navigation]
+    pip install -e .[quadruped-locomotion]
+    ```
 
-If you do not need an editable installation, you can omit the `-e` flag:
+   If you do not need an editable installation, you can omit the `-e` flag:
 
-```bash
-pip install .[all]
-```
+    ```bash
+    pip install .[all]
+    ```
 
-Once pip installation becomes available, you'll be able to install A2Perf
-directly:
+   Once pip installation becomes available, you'll be able to install A2Perf
+   directly:
 
-```bash
-# Install all domains
-pip install a2perf[all]
-# Or install specific domains
-pip install a2perf[circuit-training]
-pip install a2perf[web-navigation]
-pip install a2perf[quadruped-locomotion]
-```
-
-We will update this README when pip installation is ready.
+    ```bash
+    # Install all domains
+    pip install a2perf[all]
+    # Or install specific domains
+    pip install a2perf[circuit-training]
+    pip install a2perf[web-navigation]
+    pip install a2perf[quadruped-locomotion]
+    ```

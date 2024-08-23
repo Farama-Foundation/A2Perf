@@ -111,7 +111,7 @@ EOF
     return entrypoints[domain]
 
 
-def get_docker_instructions(uid: str, user: str, env_name: str):
+def get_docker_instructions(uid: str, user: str, domain: str):
     repo_dir = os.path.basename(
         os.path.abspath(
             os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
@@ -198,4 +198,4 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
         ],
     }
 
-    return docker_instructions[env_name]
+    return docker_instructions[domain]
