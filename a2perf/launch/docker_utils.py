@@ -192,6 +192,7 @@ def get_docker_instructions(uid: str, user: str, domain: str):
                         conda activate py310 && \
                         pip install -e /workdir[all] seaborn codecarbon matplotlib minari==0.4.3 && \
                         python /workdir/setup.py install && \
+                        python /workdir/setup.py circuit_training && \
                         pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
                     """,
             "ENV CONDA_DEFAULT_ENV=py310",
