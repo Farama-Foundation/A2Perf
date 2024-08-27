@@ -128,7 +128,7 @@ def main(_):
             hparams.update(
                 {
                     "root-dir": DOCKER_EXPERIMENT_DIR,
-                    "gin-config": os.path.join(
+                    "submission-gin-config-path": os.path.join(
                         DOCKER_EXPERIMENT_DIR, GENERIC_GIN_CONFIG_NAME
                     ),
                     "participant-module-path": DOCKER_PARTICIPANT_DIR,

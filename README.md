@@ -101,7 +101,7 @@ env = gym.make("WebNavigation-DifficultyLevel-01-v0", num_websites=10, seed=0)
 ## User Submission
 
 A beginners guide to benchmarking with A2Perf is
-described [here](docs/content/tutorials/training.ipynb).
+described [here](docs/content/tutorials/training.md).
 
 - Users can pull the template repository
   at https://github.com/Farama-Foundation/a2perf-benchmark-submission

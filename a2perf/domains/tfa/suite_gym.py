@@ -22,19 +22,30 @@ agent behaviour. This prevents us from setting the appropriate discount value
 for the final step of an episode. To prevent that we extract the step limit
 from the environment specs and utilize our TimeLimit wrapper.
 """
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import json
 import os
-from typing import Any, Callable, Dict, Optional, Sequence, Text
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Sequence
+from typing import Text
 
 import gin
 import gymnasium as gym
 import numpy as np
 from absl import logging
-from tf_agents.environments import py_environment, wrappers
+from tf_agents.environments import py_environment
+from tf_agents.environments import wrappers
 from tf_agents.typing import types
 
+from a2perf.domains import circuit_training  # noqa: F401
+from a2perf.domains import quadruped_locomotion  # noqa: F401
+from a2perf.domains import web_navigation  # noqa: F401
 from a2perf.domains.tfa import gym_wrapper
 
 TimeLimitWrapperType = Callable[

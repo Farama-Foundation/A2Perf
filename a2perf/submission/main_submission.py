@@ -7,7 +7,9 @@ from absl import app, flags, logging
 from a2perf.constants import BenchmarkMode
 from a2perf.submission import submission_util
 
-_GIN_CONFIG = flags.DEFINE_string("gin-config", None, "Path to the gin-config file.")
+_GIN_CONFIG = flags.DEFINE_string(
+    "submission-gin-config-path", None, "Path to the gin-config file."
+)
 _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     "participant-module-path", None, "Path to participant module."
 )

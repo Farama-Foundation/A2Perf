@@ -8,7 +8,7 @@ _DATASETS_PATH = flags.DEFINE_string(
     "datasets-path", None, "Path to save the dataset to."
 )
 _SUBMISSION_GIN_CONFIG_PATH = flags.DEFINE_string(
-    "gin-config", None, "Path to the gin configuration file."
+    "submission-gin-config-path", None, "Path to the gin configuration file."
 )
 _PARTICIPANT_MODULE_PATH = flags.DEFINE_string(
     "participant-module-path",
@@ -28,14 +28,14 @@ def main(_):
     os.environ["CODECARBON_ON_CSV_WRITE"] = "append"
     # os.environ["CODECARBON_PUE"] = "1.0"
 
-    root_dir = _ROOT_DIR.value
+    root_dir = os.path.expanduser(_ROOT_DIR.value)
     os.environ["ROOT_DIR"] = root_dir
     command = [
         "python",
         "-m",
         "a2perf.submission.main_submission",
         f"--verbosity={logging.get_verbosity()}",
-        f"--gin-config={_SUBMISSION_GIN_CONFIG_PATH.value}",
+        f"--submission-gin-config-path={_SUBMISSION_GIN_CONFIG_PATH.value}",
         f"--root-dir={root_dir}",
         f"--metric-values-dir={os.path.join(root_dir, 'metrics')}",
         f"--participant-module-path={_PARTICIPANT_MODULE_PATH.value}",
