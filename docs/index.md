@@ -69,7 +69,6 @@ content/web_navigation/index
 content/tutorials/training
 content/tutorials/inference
 content/tutorials/generalization
-content/tutorials/metrics/index
 content/tutorials/add_domain
 ```
 
