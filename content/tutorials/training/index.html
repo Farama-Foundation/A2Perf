@@ -239,7 +239,6 @@
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Benchmarking Training</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../inference/">Benchmarking Inference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../generalization/">Benchmarking Generalization</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../metrics/metrics/">Collecting Metrics</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../add_domain/">Adding Custom Domains</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
@@ -303,98 +302,239 @@
           </div>
           <article role="main">
             
-            <section id="Benchmarking-Training">
-<h1>Benchmarking Training<a class="headerlink" href="#Benchmarking-Training" title="Link to this heading">¶</a></h1>
-<p>This notebook walks through the steps and components necessary to launch your first A2Perf submission.</p>
-<section id="Python-quick-start">
-<h2>Python quick start<a class="headerlink" href="#Python-quick-start" title="Link to this heading">¶</a></h2>
-<p>To install the latest release of A2Perf, run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Farama-Foundation/A2Perf.git
-<span class="nb">cd</span><span class="w"> </span>A2Perf
-git<span class="w"> </span>submodule<span class="w"> </span>sync<span class="w"> </span>--recursive
-git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init<span class="w"> </span>--recursive
-pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
-pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+            <section class="tex2jax_ignore mathjax_ignore" id="benchmarking-training">
+<h1>Benchmarking Training<a class="headerlink" href="#benchmarking-training" title="Link to this heading">¶</a></h1>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<p>Before you begin, ensure you have done the following:</p>
+<section id="install-a2perf">
+<h3>Install A2Perf<a class="headerlink" href="#install-a2perf" title="Link to this heading">¶</a></h3>
+<p>For detailed instructions, please refer to
+our <a class="reference internal" href="../../basic_usage/#Installation"><span class="std std-ref">Installation Guide</span></a>.</p>
+</section>
+<section id="proper-submission-folder-structure">
+<h3>Proper Submission folder structure<a class="headerlink" href="#proper-submission-folder-structure" title="Link to this heading">¶</a></h3>
+<p>Your submission should be placed in
+the <code class="docutils literal notranslate"><span class="pre">A2Perf/a2perf/a2perf_benchmark_submission/</span></code> directory. The structure should
+look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>A2Perf/
+├── a2perf/
+│   ├── a2perf_benchmark_submission/
+│   │   ├── init.py
+│   │   ├── train.py
+│   │   ├── inference.py
+│   │   ├── requirements.txt
+│   │   └── [your supporting files and directories]
 </pre></div>
 </div>
-<!-- ### Linux
-If having issues with `mpi4py`, run:
-```sh
-sudo apt-get install mpi
-pip install -r requirements.txt
-```
-If using conda, use:
-```sh
-conda install -c conda-forge mpi
-conda install -c conda-forge mpi4py
-``` --><p>Both x86-64 and Arch64 (ARM64) architectures are supported.</p>
-<!-- ### macOS
-Both Intel and Apple Silicon CPUs are supported.
-Python version <3.9 is supported.
-On Apple Silicon (M1 and M2), make sure you are using Python/Pip for Apple Silicon.
-If necessary, use
-```bash
-brew install open-mpi
-brew install mpi4py
-```
-If using conda, use:
-```bash
-conda install -c conda-forge open-mpi
-conda install -c conda-forge mpi4py
-``` --><p>Please note that the Windows version is not as well-tested as Linux and macOS versions. It can be used for development and testing but if you want to conduct serious (time and resource-extensive) experiments on Windows, please consider using <a class="reference external" href="https://docs.docker.com/docker-for-windows/install/">Docker</a> or <a class="reference external" href="https://docs.microsoft.com/en-us/windows/wsl/install-win10">WSL</a> with Linux version.</p>
-<!-- ## Installation
-First things first, we need to install A2Perf on our machine. A2Perf currently offers support for Python versions 3.7 to 3.9. Follow the commands below to clone and configure the repository:
-```bash
-git clone https://github.com/Farama-Foundation/A2Perf.git
-cd A2Perf
-git submodule update --init --recursive
-pip install -e .
-pip install -r requirements.txt
-```
-
-__Troubleshooting:__
-If you are having issues with `mpi` or `mpi4py` when using conda, use:
-```bash
-conda install -c conda-forge mpi mpi4py
-``` --></section>
-<section id="Submission-folder">
-<h2>Submission folder<a class="headerlink" href="#Submission-folder" title="Link to this heading">¶</a></h2>
-<p>In order to benchmark your reinforcement learning algorithms, your submission should have the following structure:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>├── my_submission
-│   ├── __init__.py
-│   ├── train.py
-│   ├── inference.py
-│   ├── requirements.txt
-|   ├── your supporting files
-</pre></div>
-</div>
-<section id="Explanation-of-files:">
-<h3>Explanation of files:<a class="headerlink" href="#Explanation-of-files:" title="Link to this heading">¶</a></h3>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>: The <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> file can be an empty file.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">train.py</span></code>: The <code class="docutils literal notranslate"><span class="pre">train.py</span></code> file includes the function <code class="docutils literal notranslate"><span class="pre">train()</span></code>, which A2Perf calls for the training of your algorithm.</p></li>
-<li><div class="line-block">
-<div class="line"><code class="docutils literal notranslate"><span class="pre">inference.py</span></code> Next, the <code class="docutils literal notranslate"><span class="pre">inference.py</span></code> file is subsequently used for benchmarking the trained model. This file includes several key functions.</div>
-<div class="line"><strong>``load_model(env)``:</strong> This function loads and returns the trained model. A2Perf passes the environment that is being tested via the <code class="docutils literal notranslate"><span class="pre">env</span></code> parameter. This allows the model loading logic to use any context needed, such as the environment name.</div>
-<div class="line"><strong>``preprocess_observation(observation)``:</strong> Preprocesses the observation before feeding it to the model. If no preprocessing is required, simply return the initial observation.</div>
-<div class="line"><strong>``infer_once(model, observation)``:</strong> Passes a single observation to the loaded model and returns the predicted action. This function performs a single inference step.</div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>: Specifies any package dependencies required to run the submission code. This file may include version constraints for the dependencies. Having an explicit requirements file ensures a consistent environment for evaluation.</p></li>
+<p>To get started quickly, you can use our template repository as a starting point.
+You can find the template at:</p>
+<p><a class="reference external" href="https://github.com/Farama-Foundation/a2perf-benchmark-submission/tree/template">https://github.com/Farama-Foundation/a2perf-benchmark-submission/tree/template</a></p>
+<p>This template provides the basic structure and files needed for your submission.
+You can clone this repository and modify it to fit your specific implementation.</p>
+<section id="explanation-of-files">
+<h4>Explanation of files:<a class="headerlink" href="#explanation-of-files" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>:
+The <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code> file can be an empty file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">train.py</span></code>:
+The <code class="docutils literal notranslate"><span class="pre">train.py</span></code> file includes the function <code class="docutils literal notranslate"><span class="pre">train()</span></code>, which A2Perf calls for
+the training of your algorithm.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inference.py</span></code>
+Next, the <code class="docutils literal notranslate"><span class="pre">inference.py</span></code> file is subsequently used for benchmarking the
+trained model.
+This file includes several key functions.<br />
+<br />
+<strong><code class="docutils literal notranslate"><span class="pre">load_model(env)</span></code>:</strong>
+This function loads and returns the trained model. A2Perf passes the
+environment that is being tested via the <code class="docutils literal notranslate"><span class="pre">env</span></code> parameter. This allows the
+model loading logic to use any context needed, such as the environment name.
+<br />
+<strong><code class="docutils literal notranslate"><span class="pre">preprocess_observation(observation)</span></code>:</strong>
+Preprocesses the observation before feeding it to the model. If no
+preprocessing is required, simply return the initial observation.
+<br />
+<strong><code class="docutils literal notranslate"><span class="pre">infer_once(model,</span> <span class="pre">observation)</span></code>:</strong>
+Passes a single observation to the loaded model and returns the predicted
+action. This function performs a single inference step.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>:
+Specifies any package dependencies required to run the submission code. This
+file may include version constraints for the dependencies. Having an explicit
+requirements file ensures a consistent environment for evaluation.</p></li>
 </ul>
 </section>
 </section>
-<section id="Running-the-Benchmark">
-<h2>Running the Benchmark<a class="headerlink" href="#Running-the-Benchmark" title="Link to this heading">¶</a></h2>
-<div class="line-block">
-<div class="line">To finally run the benchmark, we run the <code class="docutils literal notranslate"><span class="pre">A2Perf/rl_perf/submission/main_submission.py</span></code> file from a command line interface. We need to define several flags. While some of these flags are necessary for running the benchmark, other flags are optional.</div>
-<div class="line">Required: - <code class="docutils literal notranslate"><span class="pre">gin_config</span></code>: the path to the gin_config of the environment you want to run. For this tutorial, we use the quadruped_locomotion library. This file can be found under <code class="docutils literal notranslate"><span class="pre">A2Perf/rl_perf/submission/configs/quadruped_locomotion/train.gin</span></code>. - <code class="docutils literal notranslate"><span class="pre">participant_module_path</span></code>: the path to the module of your submission. This is the path to the <code class="docutils literal notranslate"><span class="pre">my_submission</span></code> folder is the folder structure section.</div>
-</div>
-<p>Optional: - <code class="docutils literal notranslate"><span class="pre">root_dir</span></code>: base directory for logs and results. Defaults to <code class="docutils literal notranslate"><span class="pre">/tmp/xm_local</span></code>. - <code class="docutils literal notranslate"><span class="pre">metric_values_dir</span></code>: directory to save metric values. - <code class="docutils literal notranslate"><span class="pre">train_logs_dirs</span></code>: directories for train logs from all experiments. Defaults to <code class="docutils literal notranslate"><span class="pre">train_logs</span></code>. - <code class="docutils literal notranslate"><span class="pre">extra_gin_bindings</span></code>: extra GIN bindings to add configurations on the fly. - <code class="docutils literal notranslate"><span class="pre">run_offline_metrics_only</span></code>: boolean defining whether to run offline metrics only. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
-<p>To run the benchmark, we use the following command:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>A2Perf/rl_perf/submission/main_submission.py<span class="w"> </span>--gin_config<span class="o">=</span><span class="s1">&#39;YOUR_PATH&#39;</span><span class="w"> </span>--participant_module_path<span class="o">=</span><span class="s1">&#39;YOUR_MODULE&#39;</span>
+</section>
+<hr class="docutils" />
+<section id="update-the-a2perf-benchmark-submission-submodule">
+<h2>Update the <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> Submodule<a class="headerlink" href="#update-the-a2perf-benchmark-submission-submodule" title="Link to this heading">¶</a></h2>
+<p>For the purposes of this tutorial, we will use the repository of our local
+baselines as the “submission.” To use this, please update
+the <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> submodule to the following
+branch: <code class="docutils literal notranslate"><span class="pre">baselines-local</span></code></p>
+<section id="navigate-to-the-submodule-directory">
+<h3>Navigate to the Submodule Directory<a class="headerlink" href="#navigate-to-the-submodule-directory" title="Link to this heading">¶</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>a2perf/a2perf_benchmark_submission
 </pre></div>
 </div>
+</section>
+<section id="checkout-the-branch-with-code-for-baselines">
+<h3>Checkout the branch with code for baselines<a class="headerlink" href="#checkout-the-branch-with-code-for-baselines" title="Link to this heading">¶</a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>fetch<span class="w"> </span>origin
+git<span class="w"> </span>checkout<span class="w"> </span>baselines-local
+</pre></div>
+</div>
+</section>
+<section id="pull-latest-changes">
+<h3>Pull Latest Changes<a class="headerlink" href="#pull-latest-changes" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>```bash
+git pull origin baselines-local
+```
+</pre></div>
+</div>
+</section>
+<section id="back-to-the-main-directory">
+<h3>Back to the Main Directory<a class="headerlink" href="#back-to-the-main-directory" title="Link to this heading">¶</a></h3>
+<p>Return to the main directory of the <code class="docutils literal notranslate"><span class="pre">A2Perf</span></code> repository:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>  ```bash
+  cd ../../..
+  ```
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="running-the-training-benchmark">
+<h2>Running the Training Benchmark<a class="headerlink" href="#running-the-training-benchmark" title="Link to this heading">¶</a></h2>
+<section id="running-locally-with-xmanager-docker">
+<h3>Running locally with XManager (Docker)<a class="headerlink" href="#running-locally-with-xmanager-docker" title="Link to this heading">¶</a></h3>
+<section id="running-the-benchmark">
+<h4>Running the Benchmark<a class="headerlink" href="#running-the-benchmark" title="Link to this heading">¶</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>xmanager<span class="w"> </span>launch<span class="w"> </span>xm_launch.py<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--experiment-name<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\ </span>
+<span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--domain<span class="o">=</span>QuadrupedLocomotion-DogPace-v0<span class="w">  </span><span class="se">\</span>
+<span class="w">  </span>--submission-gin-config-path<span class="o">=</span>a2perf/submission/configs/quadruped_locomotion/train.gin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--user<span class="o">=</span><span class="nv">$USER</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-module-path<span class="o">=</span>a2perf/a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-args<span class="o">=</span><span class="s2">&quot;gin_config_path=configs/quadruped_locomotion/dog_pace/ppo.gin&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line-arguments">
+<h4>Command line arguments<a class="headerlink" href="#command-line-arguments" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">root-dir</span></code></strong>: Specifies the directory where experiment logs and artifacts
+will be saved.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gin-config</span></code></strong>: Points to the Gin configuration file for the <strong>Dog Pace</strong>
+environment in the Quadruped Locomotion domain.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-module-path</span></code></strong>: Indicates the path to the directory containing
+the submission code. Adjust this path to point to
+your <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> directory.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-args</span></code></strong>: Provides additional arguments for the participant’s
+code, including the path to the algorithm-specific Gin configuration file.</p></li>
+</ul>
+<p><a class="reference external" href="https://github.com/google-deepmind/xmanager">XManager</a> will automatically
+launch a Docker container with the necessary dependencies installed. It will
+also create a new experiment directory
+at <code class="docutils literal notranslate"><span class="pre">~/gcs/a2perf/experiments/&lt;experiment-number&gt;/test/1/</span></code>. The number <code class="docutils literal notranslate"><span class="pre">1</span></code> is
+included because we are running a single work unit in the experiment. For more
+details on work units, refer
+to <a class="reference external" href="https://github.com/google-deepmind/xmanager">XManager’s documentation</a>.</p>
+<p>The experiment directory will contain all logs and artifacts generated during
+the benchmark. Here is how the directory structure will look at the end of the
+training:</p>
+<div class="highlight-plaintext notranslate"><div class="highlight"><pre><span></span>~/gcs/a2perf/experiments/1724700456099
+└── test
+    └── 1
+        ├── collect
+        ├── metrics
+        ├── policies
+        ├── submission_config.gin
+        └── train
+</pre></div>
+</div>
+<ul>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">collect/</span></code></strong>: Contains TensorBoard summaries for each of the separate
+collection policies. Each subdirectory (e.g., <code class="docutils literal notranslate"><span class="pre">actor_0</span></code>, <code class="docutils literal notranslate"><span class="pre">actor_1</span></code>, …)
+corresponds to a different actor’s summary data.</p>
+<p>Example structure:</p>
+<div class="highlight-plaintext notranslate"><div class="highlight"><pre><span></span>collect/
+├── actor_0
+│   └── summaries
+│       └── 0
+├── actor_1
+│   └── summaries
+│       └── 1
+└── ...
+</pre></div>
+</div>
+</li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">metrics/</span></code></strong>: Stores system metrics collected during training, such
+as <code class="docutils literal notranslate"><span class="pre">train_emissions.csv</span></code>, which logs energy consumption and emissions data.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">policies/</span></code></strong>: Contains the saved policies generated during training. This
+includes different policies such as <code class="docutils literal notranslate"><span class="pre">collect_policy</span></code>, <code class="docutils literal notranslate"><span class="pre">greedy_policy</span></code>, and the
+main <code class="docutils literal notranslate"><span class="pre">policy</span></code>. Each subdirectory represents a different policy and contains
+the necessary files for TensorFlow models, including saved models and
+variables.</p>
+<p>Example structure:</p>
+<div class="highlight-plaintext notranslate"><div class="highlight"><pre><span></span>policies/
+├── collect_policy
+├── greedy_policy
+└── policy
+
+</pre></div>
+</div>
+</li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">train/</span></code></strong>: Contains additional checkpoint information and TensorBoard logs
+from the training process, which are useful for monitoring training progress
+and debugging.</p></li>
+</ul>
+</section>
+</section>
+<section id="running-locally-without-docker">
+<h3>Running Locally Without Docker<a class="headerlink" href="#running-locally-without-docker" title="Link to this heading">¶</a></h3>
+<p>If you prefer to run the benchmark locally without using Docker, follow these
+steps:</p>
+<section id="installing-dependencies">
+<h4>Installing Dependencies<a class="headerlink" href="#installing-dependencies" title="Link to this heading">¶</a></h4>
+<p>To run the benchmark locally, you need to manually install the required Python
+dependencies. Run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>A2Perf/a2perf/a2perf_benchmark_submission/requirements.txt
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h4>Running the Benchmark<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h4>
+<p>Once the dependencies are installed, you can run the benchmark for the Quadruped
+Locomotion - Dog Pace environment with the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>A2perf
+<span class="nb">export</span><span class="w"> </span><span class="nv">A2PERF_ROOT</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>
+python<span class="w"> </span>a2perf/launch/entrypoint.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/test_without_docker<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--submission-gin-config-path<span class="o">=</span><span class="nv">$A2PERF_ROOT</span>/a2perf/submission/configs/quadruped_locomotion/train.gin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-module-path<span class="o">=</span><span class="nv">$A2PERF_ROOT</span>/a2perf/a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-args<span class="o">=</span><span class="s2">&quot;gin_config_path=configs/quadruped_locomotion/dog_pace/ppo.gin&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h4>Command line arguments<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">root-dir</span></code></strong>: Specifies the directory where experiment logs and artifacts
+will be saved.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gin-config</span></code></strong>: Points to the Gin configuration file for the <strong>Dog Pace</strong>
+environment in the Quadruped Locomotion domain.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-module-path</span></code></strong>: Indicates the path to the directory containing
+the submission code. Adjust this path to point to
+your <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> directory.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-args</span></code></strong>: Provides additional arguments for the participant’s
+code, including the path to the algorithm-specific Gin configuration file.</p></li>
+</ul>
+<p>Make sure to adjust the paths according to your setup if they differ from the
+example provided.</p>
+</section>
+</section>
 </section>
 </section>
 
@@ -468,12 +608,35 @@ conda install -c conda-forge mpi mpi4py
             <div class="toc-tree">
               <ul>
 <li><a class="reference internal" href="#">Benchmarking Training</a><ul>
-<li><a class="reference internal" href="#Python-quick-start">Python quick start</a></li>
-<li><a class="reference internal" href="#Submission-folder">Submission folder</a><ul>
-<li><a class="reference internal" href="#Explanation-of-files:">Explanation of files:</a></li>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
+<li><a class="reference internal" href="#install-a2perf">Install A2Perf</a></li>
+<li><a class="reference internal" href="#proper-submission-folder-structure">Proper Submission folder structure</a><ul>
+<li><a class="reference internal" href="#explanation-of-files">Explanation of files:</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#Running-the-Benchmark">Running the Benchmark</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#update-the-a2perf-benchmark-submission-submodule">Update the <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> Submodule</a><ul>
+<li><a class="reference internal" href="#navigate-to-the-submodule-directory">Navigate to the Submodule Directory</a></li>
+<li><a class="reference internal" href="#checkout-the-branch-with-code-for-baselines">Checkout the branch with code for baselines</a></li>
+<li><a class="reference internal" href="#pull-latest-changes">Pull Latest Changes</a></li>
+<li><a class="reference internal" href="#back-to-the-main-directory">Back to the Main Directory</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-the-training-benchmark">Running the Training Benchmark</a><ul>
+<li><a class="reference internal" href="#running-locally-with-xmanager-docker">Running locally with XManager (Docker)</a><ul>
+<li><a class="reference internal" href="#running-the-benchmark">Running the Benchmark</a></li>
+<li><a class="reference internal" href="#command-line-arguments">Command line arguments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-locally-without-docker">Running Locally Without Docker</a><ul>
+<li><a class="reference internal" href="#installing-dependencies">Installing Dependencies</a></li>
+<li><a class="reference internal" href="#id1">Running the Benchmark</a></li>
+<li><a class="reference internal" href="#id2">Command line arguments</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -565,8 +728,6 @@ conda install -c conda-forge mpi mpi4py
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=7660844c"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <script>
 
