@@ -342,20 +342,20 @@ The <code class="docutils literal notranslate"><span class="pre">train.py</span>
 the training of your algorithm.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">inference.py</span></code>
 Next, the <code class="docutils literal notranslate"><span class="pre">inference.py</span></code> file is subsequently used for benchmarking the
-trained model.
+trained agent.
 This file includes several key functions.<br />
 <br />
 <strong><code class="docutils literal notranslate"><span class="pre">load_model(env)</span></code>:</strong>
-This function loads and returns the trained model. A2Perf passes the
+This function loads and returns the trained agent. A2Perf passes the
 environment that is being tested via the <code class="docutils literal notranslate"><span class="pre">env</span></code> parameter. This allows the
-model loading logic to use any context needed, such as the environment name.
+agent loading logic to use any context needed, such as the environment object.
 <br />
 <strong><code class="docutils literal notranslate"><span class="pre">preprocess_observation(observation)</span></code>:</strong>
-Preprocesses the observation before feeding it to the model. If no
+Preprocesses the observation before feeding it to the agent. If no
 preprocessing is required, simply return the initial observation.
 <br />
 <strong><code class="docutils literal notranslate"><span class="pre">infer_once(model,</span> <span class="pre">observation)</span></code>:</strong>
-Passes a single observation to the loaded model and returns the predicted
+Passes a single observation to the loaded agent and returns the predicted
 action. This function performs a single inference step.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code>:
 Specifies any package dependencies required to run the submission code. This
@@ -387,18 +387,14 @@ git<span class="w"> </span>checkout<span class="w"> </span>baselines-local
 </section>
 <section id="pull-latest-changes">
 <h3>Pull Latest Changes<a class="headerlink" href="#pull-latest-changes" title="Link to this heading">¶</a></h3>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>```bash
-git pull origin baselines-local
-```
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>baselines-local
 </pre></div>
 </div>
 </section>
 <section id="back-to-the-main-directory">
 <h3>Back to the Main Directory<a class="headerlink" href="#back-to-the-main-directory" title="Link to this heading">¶</a></h3>
-<p>Return to the main directory of the <code class="docutils literal notranslate"><span class="pre">A2Perf</span></code> repository:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>  ```bash
-  cd ../../..
-  ```
+<p>Return to the root directory of the <code class="docutils literal notranslate"><span class="pre">A2Perf</span></code> repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>../..
 </pre></div>
 </div>
 </section>
@@ -411,7 +407,7 @@ git pull origin baselines-local
 <section id="running-the-benchmark">
 <h4>Running the Benchmark<a class="headerlink" href="#running-the-benchmark" title="Link to this heading">¶</a></h4>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>xmanager<span class="w"> </span>launch<span class="w"> </span>xm_launch.py<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--experiment-name<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\ </span>
+<span class="w">  </span>--experiment-name<span class="o">=</span><span class="nb">test</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--domain<span class="o">=</span>QuadrupedLocomotion-DogPace-v0<span class="w">  </span><span class="se">\</span>
 <span class="w">  </span>--submission-gin-config-path<span class="o">=</span>a2perf/submission/configs/quadruped_locomotion/train.gin<span class="w"> </span><span class="se">\</span>
@@ -437,12 +433,16 @@ code, including the path to the algorithm-specific Gin configuration file.</p></
 <p><a class="reference external" href="https://github.com/google-deepmind/xmanager">XManager</a> will automatically
 launch a Docker container with the necessary dependencies installed. It will
 also create a new experiment directory
-at <code class="docutils literal notranslate"><span class="pre">~/gcs/a2perf/experiments/&lt;experiment-number&gt;/test/1/</span></code>. The number <code class="docutils literal notranslate"><span class="pre">1</span></code> is
+at <code class="docutils literal notranslate"><span class="pre">~/gcs/a2perf/experiments/&lt;experiment-id&gt;/test/1/</span></code>. The number <code class="docutils literal notranslate"><span class="pre">1</span></code> is
 included because we are running a single work unit in the experiment. For more
 details on work units, refer
 to <a class="reference external" href="https://github.com/google-deepmind/xmanager">XManager’s documentation</a>.</p>
+<p><strong>Important</strong>: Make note of the <code class="docutils literal notranslate"><span class="pre">&lt;experiment-id&gt;</span></code> in your experiment directory
+path. You will need this ID when running the inference benchmark later.
+The <code class="docutils literal notranslate"><span class="pre">&lt;experiment-id&gt;</span></code> is a unique identifier for your training run and is
+typically a long string of numbers.</p>
 <p>The experiment directory will contain all logs and artifacts generated during
-the benchmark. Here is how the directory structure will look at the end of the
+the benchmark. Here is how the directory structure will look at the end of
 training:</p>
 <div class="highlight-plaintext notranslate"><div class="highlight"><pre><span></span>~/gcs/a2perf/experiments/1724700456099
 └── test
@@ -451,6 +451,7 @@ training:</p>
         ├── metrics
         ├── policies
         ├── submission_config.gin
+        ├── training_complete
         └── train
 </pre></div>
 </div>
@@ -482,7 +483,6 @@ variables.</p>
 ├── collect_policy
 ├── greedy_policy
 └── policy
-
 </pre></div>
 </div>
 </li>

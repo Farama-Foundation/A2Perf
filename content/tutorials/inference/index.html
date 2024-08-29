@@ -191,7 +191,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -293,7 +293,7 @@
                 </svg>
               </button>
             </div>
-            <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <label class="toc-overlay-icon toc-content-icon" for="__toc">
               <div class="visually-hidden">Toggle table of contents sidebar</div>
               <i class="icon"><svg>
                   <use href="#svg-toc"></use>
@@ -304,7 +304,124 @@
             
             <section class="tex2jax_ignore mathjax_ignore" id="benchmarking-inference">
 <h1>Benchmarking Inference<a class="headerlink" href="#benchmarking-inference" title="Link to this heading">¶</a></h1>
-<p>This tutorial is coming soon. Stay tuned!</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<p>Before you begin, ensure you have done the following:</p>
+<section id="install-a2perf">
+<h3>Install A2Perf<a class="headerlink" href="#install-a2perf" title="Link to this heading">¶</a></h3>
+<p>For detailed instructions, please refer to
+our <a class="reference internal" href="../../basic_usage/#Installation"><span class="std std-ref">Installation Guide</span></a>.</p>
+</section>
+<section id="benchmarking-training-tutorial">
+<h3>Benchmarking Training Tutorial<a class="headerlink" href="#benchmarking-training-tutorial" title="Link to this heading">¶</a></h3>
+<p>Please refer to the <a class="reference internal" href="../training/"><span class="std std-doc">Benchmarking Training Tutorial</span></a> for
+instructions on how to train your agent. We will use the artifacts generated
+from the training tutorial for this inference tutorial.</p>
+</section>
+<section id="update-the-a2perf-benchmark-submission-submodule">
+<h3>Update the <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> Submodule<a class="headerlink" href="#update-the-a2perf-benchmark-submission-submodule" title="Link to this heading">¶</a></h3>
+<p>If you have not already done so for the training tutorial, update
+the <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> submodule to the <code class="docutils literal notranslate"><span class="pre">baselines-local</span></code> branch:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>a2perf/a2perf_benchmark_submission
+git<span class="w"> </span>fetch<span class="w"> </span>origin
+git<span class="w"> </span>checkout<span class="w"> </span>baselines-local
+git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>baselines-local
+<span class="nb">cd</span><span class="w"> </span>../..
+</pre></div>
+</div>
+</section>
+</section>
+<section id="running-the-inference-benchmark">
+<h2>Running the Inference Benchmark<a class="headerlink" href="#running-the-inference-benchmark" title="Link to this heading">¶</a></h2>
+<p>After running the training benchmark, you will have a directory with the trained
+agent and other artifacts. We will use these for the inference benchmark.</p>
+<section id="running-locally-with-xmanager-docker">
+<h3>Running locally with XManager (Docker)<a class="headerlink" href="#running-locally-with-xmanager-docker" title="Link to this heading">¶</a></h3>
+<section id="running-the-benchmark">
+<h4>Running the Benchmark<a class="headerlink" href="#running-the-benchmark" title="Link to this heading">¶</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>xmanager<span class="w"> </span>launch<span class="w"> </span>xm_launch.py<span class="w"> </span>--<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--experiment-name<span class="o">=</span>test_inference<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--experiment-id<span class="o">=</span>&lt;experiment-id&gt;<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--domain<span class="o">=</span>QuadrupedLocomotion-DogPace-v0<span class="w">  </span><span class="se">\</span>
+<span class="w">  </span>--submission-gin-config-path<span class="o">=</span>a2perf/submission/configs/quadruped_locomotion/dog_pace/inference.gin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--user<span class="o">=</span><span class="nv">$USER</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-module-path<span class="o">=</span>a2perf/a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-args<span class="o">=</span><span class="s2">&quot;root_dir=/experiment_dir,policy_name=greedy_policy&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line-arguments">
+<h4>Command line arguments<a class="headerlink" href="#command-line-arguments" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">root-dir</span></code></strong>: Specifies the directory where experiment logs and artifacts
+will be saved.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">experiment-id</span></code></strong>: The ID of the training experiment from which to load the
+trained agent.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">submission-gin-config-path</span></code></strong>: Points to the Gin configuration file for
+inference in the Dog Pace environment.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-module-path</span></code></strong>: Indicates the path to the directory containing
+the submission code.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-args</span></code></strong>: Provides additional arguments for the participant’s
+code, including the path to the trained agent and the policy name to use.</p></li>
+</ul>
+<p>XManager will automatically launch a Docker container with the necessary
+dependencies installed. It will create a new experiment directory for the
+inference results.</p>
+</section>
+</section>
+<section id="running-locally-without-docker">
+<h3>Running Locally Without Docker<a class="headerlink" href="#running-locally-without-docker" title="Link to this heading">¶</a></h3>
+<p>If you prefer to run the benchmark locally without using Docker, follow these
+steps:</p>
+<section id="installing-dependencies">
+<h4>Installing Dependencies<a class="headerlink" href="#installing-dependencies" title="Link to this heading">¶</a></h4>
+<p>If you have not already done so for the training tutorial, install the required
+Python dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>A2Perf/a2perf/a2perf_benchmark_submission/requirements.txt
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h4>Running the Benchmark<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h4>
+<p>Once the dependencies are installed, you can run the inference benchmark with
+the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>A2Perf
+<span class="nb">export</span><span class="w"> </span><span class="nv">A2PERF_ROOT</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>
+python<span class="w"> </span>a2perf/launch/entrypoint.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/&lt;experiment-id&gt;/test/1<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--submission-gin-config-path<span class="o">=</span><span class="nv">$A2PERF_ROOT</span>/a2perf/submission/configs/quadruped_locomotion/dog_pace/inference.gin<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-module-path<span class="o">=</span><span class="nv">$A2PERF_ROOT</span>/a2perf/a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--participant-args<span class="o">=</span><span class="s2">&quot;root_dir=~/gcs/a2perf/experiments/&lt;experiment-id&gt;/test/1,policy_name=greedy_policy&quot;</span>
+</pre></div>
+</div>
+<p>Note: Replace <code class="docutils literal notranslate"><span class="pre">&lt;experiment-id&gt;</span></code> with the actual ID of your training experiment.
+This ID is unique for each run and can be found in the output of your training
+command or in the experiment directory structure.</p>
+</section>
+<section id="id2">
+<h4>Command line arguments<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h4>
+<p>The command line arguments are similar to those used in the Docker version, but
+adapted for local execution:</p>
+<ul class="simple">
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">root-dir</span></code></strong>: Specifies the directory where the training artifacts are
+located and where inference results will be saved.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">submission-gin-config-path</span></code></strong>: Points to the Gin configuration file for
+inference in the Dog Pace environment.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-module-path</span></code></strong>: Indicates the path to the directory containing
+the submission code.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">participant-args</span></code></strong>: Provides additional arguments for the participant’s
+code, including the path to the trained agent and the policy name to use.</p></li>
+</ul>
+<p>Make sure to adjust the paths according to your setup if they differ from the
+example provided.</p>
+<p>After running the inference benchmark, you will find the results in the
+specified
+root directory. These results will include metrics on the agent’s performance
+during inference, such as average returns, inference time, and resource usage.</p>
+</section>
+</section>
+</section>
 </section>
 
           </article>
@@ -352,8 +469,46 @@
           
         </footer>
       </div>
-      <aside class="toc-drawer no-toc">
+      <aside class="toc-drawer">
         
+        
+        <div class="toc-sticky toc-scroll">
+          <div class="toc-title-container">
+            <span class="toc-title">
+              On this page
+            </span>
+          </div>
+          <div class="toc-tree-container">
+            <div class="toc-tree">
+              <ul>
+<li><a class="reference internal" href="#">Benchmarking Inference</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a><ul>
+<li><a class="reference internal" href="#install-a2perf">Install A2Perf</a></li>
+<li><a class="reference internal" href="#benchmarking-training-tutorial">Benchmarking Training Tutorial</a></li>
+<li><a class="reference internal" href="#update-the-a2perf-benchmark-submission-submodule">Update the <code class="docutils literal notranslate"><span class="pre">a2perf_benchmark_submission</span></code> Submodule</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-the-inference-benchmark">Running the Inference Benchmark</a><ul>
+<li><a class="reference internal" href="#running-locally-with-xmanager-docker">Running locally with XManager (Docker)</a><ul>
+<li><a class="reference internal" href="#running-the-benchmark">Running the Benchmark</a></li>
+<li><a class="reference internal" href="#command-line-arguments">Command line arguments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-locally-without-docker">Running Locally Without Docker</a><ul>
+<li><a class="reference internal" href="#installing-dependencies">Installing Dependencies</a></li>
+<li><a class="reference internal" href="#id1">Running the Benchmark</a></li>
+<li><a class="reference internal" href="#id2">Command line arguments</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
         
         
       </aside>
