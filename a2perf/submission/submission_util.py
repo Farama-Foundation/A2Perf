@@ -142,13 +142,13 @@ def _load_module(module_path, filename):
     return module, spec
 
 
-def _load_policy(module_path, env):
+def _load_policy(module_path, env, participant_args=None):
     """Loads the policy from the participant's module."""
     with working_directory(module_path):
         participant_module, participant_module_spec = _load_module(
             module_path, "inference.py"
         )
-        policy = participant_module.load_policy(env)
+        policy = participant_module.load_policy(env, **(participant_args or {}))
     return policy, participant_module
 
 
@@ -159,6 +159,7 @@ def perform_rollouts(
     gin_config_str=None,
     absl_flags=None,
     rollout_rewards_queue=None,
+    participant_args=None,
 ):
     """Performs rollouts using the given policy.
 
@@ -175,7 +176,11 @@ def perform_rollouts(
     """
     setup_subprocess_env(gin_config_str, absl_flags)
     env = create_domain_fn()
-    policy, participant_module = _load_policy(module_path, env)
+    if participant_args is None:
+        participant_args = {}
+    policy, participant_module = _load_policy(
+        module_path, env, participant_args=participant_args
+    )
     episode_reward_metric = py_metrics.AverageReturnMetric()
     rollout_actor = actor.Actor(
         env=env,
@@ -284,9 +289,7 @@ def _perform_rollout_task(
     for key, value in generalization_env_vars.items():
         os.environ[key] = value
 
-    create_domain_fn = functools.partial(
-        suite_gym.create_domain, env_name=domain.value, root_dir=root_dir
-    )
+    create_domain_fn = functools.partial(suite_gym.create_domain, root_dir=root_dir)
     all_rewards = perform_rollouts(
         module_path=participant_module_path,
         create_domain_fn=create_domain_fn,
@@ -456,7 +459,10 @@ class Submission:
         setup_subprocess_env(self.gin_config_str, self.absl_flags)
 
         create_domain_fn = functools.partial(
-            suite_gym.create_domain, env_name=self.domain.value, root_dir=self.root_dir
+            suite_gym.create_domain,
+            # env_name=self.domain.value,
+            root_dir=self.root_dir,
+            # load_kwargs=self.participant_args,
         )
         if measure_emissions:
 
@@ -473,6 +479,7 @@ class Submission:
                         self.gin_config_str,
                         self.absl_flags,
                         rollout_rewards_queue,
+                        self.participant_args,
                     ),
                 )
                 rollout_process.start()
@@ -486,6 +493,7 @@ class Submission:
                 module_path=self.participant_module_path,
                 gin_config_str=self.gin_config_str,
                 absl_flags=self.absl_flags,
+                participant_args=self.participant_args,
             )
 
     def _run_training_benchmark(self):
@@ -552,10 +560,8 @@ class Submission:
 
     def _run_inference_benchmark(self):
         if not self.run_offline_metrics_only:
-            logging.info("Creating Gymnasium domain...")
-            env = suite_gym.create_domain(
-                env_name=self.domain.value, root_dir=self.root_dir
-            )
+            logging.info("Creating Gymnasium environment...")
+            env = suite_gym.create_domain(root_dir=self.root_dir)
             logging.info("Successfully created domain")
 
             logging.info("Generating inference data...")
@@ -566,7 +572,9 @@ class Submission:
 
             logging.info("Loading the policy for inference...")
             participant_policy, participant_module = _load_policy(
-                module_path=self.participant_module_path, env=env
+                module_path=self.participant_module_path,
+                env=env,
+                participant_args=self.participant_args,
             )
 
             # Only include time_step_spec if the participant policy has it as an

@@ -5,8 +5,7 @@ from typing import Any, Dict
 from absl import app, flags
 from xmanager import xm, xm_local
 
-from a2perf.constants import BenchmarkDomain
-from a2perf.constants import ENV_NAMES
+from a2perf.constants import ENV_NAMES, BenchmarkDomain
 from a2perf.launch.docker_utils import (
     DOCKER_EXPERIMENT_DIR,
     DOCKER_PARTICIPANT_DIR,

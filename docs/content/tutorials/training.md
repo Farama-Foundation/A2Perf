@@ -46,20 +46,20 @@ You can clone this repository and modify it to fit your specific implementation.
 
 - `inference.py`
   Next, the `inference.py` file is subsequently used for benchmarking the
-  trained model.
+  trained agent.
   This file includes several key functions.\
   \
   __`load_model(env)`:__
-  This function loads and returns the trained model. A2Perf passes the
+  This function loads and returns the trained agent. A2Perf passes the
   environment that is being tested via the `env` parameter. This allows the
-  model loading logic to use any context needed, such as the environment name.
+  agent loading logic to use any context needed, such as the environment object.
   \
   __`preprocess_observation(observation)`:__
-  Preprocesses the observation before feeding it to the model. If no
+  Preprocesses the observation before feeding it to the agent. If no
   preprocessing is required, simply return the initial observation.
   \
   __`infer_once(model, observation)`:__
-  Passes a single observation to the loaded model and returns the predicted
+  Passes a single observation to the loaded agent and returns the predicted
   action. This function performs a single inference step.
 
 - `requirements.txt`:
@@ -78,30 +78,30 @@ branch: `baselines-local`
 
 ### Navigate to the Submodule Directory
 
-   ```bash
-   cd a2perf/a2perf_benchmark_submission
-   ```
+ ```bash
+ cd a2perf/a2perf_benchmark_submission
+ ```
 
 ### Checkout the branch with code for baselines
 
-   ```bash
-   git fetch origin
-   git checkout baselines-local
-   ```
+ ```bash
+ git fetch origin
+ git checkout baselines-local
+ ```
 
 ### Pull Latest Changes
 
-    ```bash
-    git pull origin baselines-local
-    ```
+```bash
+git pull origin baselines-local
+```
 
 ### Back to the Main Directory
 
-Return to the main directory of the `A2Perf` repository:
+Return to the root directory of the `A2Perf` repository:
 
-      ```bash
-      cd ../../..
-      ```
+```bash
+cd ../..
+```
 
 ---
 
@@ -113,7 +113,7 @@ Return to the main directory of the `A2Perf` repository:
 
 ```bash
 xmanager launch xm_launch.py -- \
-  --experiment-name=test \ 
+  --experiment-name=test \
   --root-dir=~/gcs/a2perf/experiments/ \
   --domain=QuadrupedLocomotion-DogPace-v0  \
   --submission-gin-config-path=a2perf/submission/configs/quadruped_locomotion/train.gin \
@@ -137,13 +137,18 @@ xmanager launch xm_launch.py -- \
 [XManager](https://github.com/google-deepmind/xmanager) will automatically
 launch a Docker container with the necessary dependencies installed. It will
 also create a new experiment directory
-at `~/gcs/a2perf/experiments/<experiment-number>/test/1/`. The number `1` is
+at `~/gcs/a2perf/experiments/<experiment-id>/test/1/`. The number `1` is
 included because we are running a single work unit in the experiment. For more
 details on work units, refer
 to [XManager's documentation](https://github.com/google-deepmind/xmanager).
 
+**Important**: Make note of the `<experiment-id>` in your experiment directory
+path. You will need this ID when running the inference benchmark later.
+The `<experiment-id>` is a unique identifier for your training run and is
+typically a long string of numbers.
+
 The experiment directory will contain all logs and artifacts generated during
-the benchmark. Here is how the directory structure will look at the end of the
+the benchmark. Here is how the directory structure will look at the end of
 training:
 
 ```plaintext
@@ -154,6 +159,7 @@ training:
         ├── metrics
         ├── policies
         ├── submission_config.gin
+        ├── training_complete
         └── train
 ```
 
@@ -188,6 +194,7 @@ training:
   ├── collect_policy
   ├── greedy_policy
   └── policy
+  ```
 
 - **`train/`**: Contains additional checkpoint information and TensorBoard logs
   from the training process, which are useful for monitoring training progress
@@ -220,7 +227,6 @@ python a2perf/launch/entrypoint.py \
   --submission-gin-config-path=$A2PERF_ROOT/a2perf/submission/configs/quadruped_locomotion/train.gin \
   --participant-module-path=$A2PERF_ROOT/a2perf/a2perf_benchmark_submission \
   --participant-args="gin_config_path=configs/quadruped_locomotion/dog_pace/ppo.gin"
-
 ```
 
 #### Command line arguments

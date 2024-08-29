@@ -4,7 +4,6 @@ import os
 import gin
 from absl import app, flags, logging
 
-from a2perf.constants import BenchmarkMode
 from a2perf.submission import submission_util
 
 _GIN_CONFIG = flags.DEFINE_string(
@@ -32,12 +31,6 @@ _EXTRA_GIN_BINDINGS = flags.DEFINE_multi_string(
 _RUN_OFFLINE_METRICS_ONLY = flags.DEFINE_bool(
     "run-offline-metrics-only", False, "Whether to run offline metrics only."
 )
-_MODE = flags.DEFINE_enum(
-    "mode",
-    "train",
-    ["train", "inference", "generalization"],
-    "Mode of the submission. train, inference, or generalization.",
-)
 
 
 def main(_):
@@ -54,7 +47,6 @@ def main(_):
         logging.info("Adding extra gin binding: %s", binding)
 
     submission = submission_util.Submission(
-        mode=BenchmarkMode(_MODE.value),
         root_dir=_ROOT_DIR.value,
         metric_values_dir=_METRIC_VALUES_DIR.value,
         participant_module_path=_PARTICIPANT_MODULE_PATH.value,

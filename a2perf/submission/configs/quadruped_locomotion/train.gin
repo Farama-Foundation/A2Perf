@@ -10,7 +10,7 @@ import a2perf.submission.submission_util
 # Set up submission object
 Submission.mode = %a2perf.constants.BenchmarkMode.TRAIN
 Submission.domain = %a2perf.constants.BenchmarkDomain.QUADRUPED_LOCOMOTION
-Submission.run_offline_metrics_only=False
+Submission.run_offline_metrics_only = False
 Submission.measure_emissions=True
 
 
