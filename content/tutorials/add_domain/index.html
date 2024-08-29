@@ -302,19 +302,23 @@
           </div>
           <article role="main">
             
-            <section id="Adding-Custom-Domains">
-<h1>Adding Custom Domains<a class="headerlink" href="#Adding-Custom-Domains" title="Link to this heading">¶</a></h1>
+            <section class="tex2jax_ignore mathjax_ignore" id="adding-custom-domains">
+<h1>Adding Custom Domains<a class="headerlink" href="#adding-custom-domains" title="Link to this heading">¶</a></h1>
 <p>This tutorial will demonstrate how to add additional domains to A2Perf.</p>
-<section id="Path-to-A2Perf-Domains">
-<h2>Path to A2Perf Domains<a class="headerlink" href="#Path-to-A2Perf-Domains" title="Link to this heading">¶</a></h2>
-<p>Domains are stored in <code class="docutils literal notranslate"><span class="pre">A2Perf/a2perf/domains</span></code>. Currently, you’ll find the main domains in this folder such as <code class="docutils literal notranslate"><span class="pre">circuit_training</span></code>, <code class="docutils literal notranslate"><span class="pre">quadruped_locomotion</span></code>, and <code class="docutils literal notranslate"><span class="pre">web_navigation</span></code>. There are also additional modules such as <code class="docutils literal notranslate"><span class="pre">tfa</span></code> that is there for interfacing with Tensorflow Agents.</p>
+<section id="path-to-a2perf-domains">
+<h2>Path to A2Perf Domains<a class="headerlink" href="#path-to-a2perf-domains" title="Link to this heading">¶</a></h2>
+<p>Domains are stored in <code class="docutils literal notranslate"><span class="pre">A2Perf/a2perf/domains</span></code>. Currently, you’ll find the main
+domains in this folder such as <code class="docutils literal notranslate"><span class="pre">circuit_training</span></code>, <code class="docutils literal notranslate"><span class="pre">quadruped_locomotion</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">web_navigation</span></code>. There are also additional modules such as <code class="docutils literal notranslate"><span class="pre">tfa</span></code> that is there
+for interfacing with Tensorflow Agents.</p>
 </section>
 <hr class="docutils" />
-<section id="Creating-a-new-domain">
-<h2>Creating a new domain<a class="headerlink" href="#Creating-a-new-domain" title="Link to this heading">¶</a></h2>
+<section id="creating-a-new-domain">
+<h2>Creating a new domain<a class="headerlink" href="#creating-a-new-domain" title="Link to this heading">¶</a></h2>
 <p>To add a new domain:</p>
 <ol class="arabic simple">
-<li><p>Create a new folder in the domains directory. For the purposes of this tutorial, we will create a new domain called “my_domain”:</p></li>
+<li><p>Create a new folder in the domains directory. For the purposes of this
+tutorial, we will create a new domain called “my_domain”:</p></li>
 </ol>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>A2Perf/a2perf/domains
 mkdir<span class="w"> </span>my_domain
@@ -328,7 +332,9 @@ mkdir<span class="w"> </span>my_domain
 <li><p>[any other files needed for your domain]</p></li>
 </ul>
 <ol class="arabic simple" start="3">
-<li><p>Inside of <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>, you will need to register your domain with gymnasium. Here is an example of how we do this for the web navigation domain:</p></li>
+<li><p>Inside of <code class="docutils literal notranslate"><span class="pre">__init__.py</span></code>, you will need to register your domain with
+gymnasium. Here is an example of how we do this for the web navigation
+domain:</p></li>
 </ol>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gymnasium</span> <span class="k">as</span> <span class="nn">gym</span>
 <span class="kn">import</span> <span class="nn">pkg_resources</span>
@@ -337,34 +343,34 @@ mkdir<span class="w"> </span>my_domain
                                                 <span class="s1">&#39;gwob&#39;</span><span class="p">)</span>
 <span class="n">base_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;file://</span><span class="si">{</span><span class="n">base_url_path</span><span class="si">}</span><span class="s1">/&#39;</span>
 <span class="n">data_dir</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span>
-    <span class="s1">&#39;a2perf.domains.web_navigation.environment_generation&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="s1">&#39;a2perf.domains.web_navigation.environment_generation&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
 
 <span class="n">gym</span><span class="o">.</span><span class="n">envs</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
-    <span class="nb">id</span><span class="o">=</span><span class="s1">&#39;WebNavigation-v0&#39;</span><span class="p">,</span>
-    <span class="n">entry_point</span><span class="o">=</span><span class="p">(</span>
-        <span class="s1">&#39;a2perf.domains.web_navigation.gwob.CoDE.environment:WebNavigationEnv&#39;</span>
-    <span class="p">),</span>
-    <span class="n">apply_api_compatibility</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">disable_env_checker</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-    <span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
-        <span class="n">use_legacy_step</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">use_legacy_reset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-        <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>
-        <span class="n">base_url</span><span class="o">=</span><span class="n">base_url</span><span class="p">),</span>
+        <span class="nb">id</span><span class="o">=</span><span class="s1">&#39;WebNavigation-v0&#39;</span><span class="p">,</span>
+        <span class="n">entry_point</span><span class="o">=</span><span class="p">(</span>
+                <span class="s1">&#39;a2perf.domains.web_navigation.gwob.CoDE.environment:WebNavigationEnv&#39;</span>
+        <span class="p">),</span>
+        <span class="n">apply_api_compatibility</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">disable_env_checker</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+                <span class="n">use_legacy_step</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">use_legacy_reset</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">data_dir</span><span class="o">=</span><span class="n">data_dir</span><span class="p">,</span>
+                <span class="n">base_url</span><span class="o">=</span><span class="n">base_url</span><span class="p">),</span>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p>Note: The <code class="docutils literal notranslate"><span class="pre">base_url_path</span></code>, <code class="docutils literal notranslate"><span class="pre">base_url</span></code>, and <code class="docutils literal notranslate"><span class="pre">data_dir</span></code> are specific to web navigation and are not necessary for your domain.</p>
+<p>Note: The <code class="docutils literal notranslate"><span class="pre">base_url_path</span></code>, <code class="docutils literal notranslate"><span class="pre">base_url</span></code>, and <code class="docutils literal notranslate"><span class="pre">data_dir</span></code> are specific to web
+navigation and are not necessary for your domain.</p>
 </section>
 <hr class="docutils" />
-<section id="Additional-configurations">
-<h2>Additional configurations<a class="headerlink" href="#Additional-configurations" title="Link to this heading">¶</a></h2>
+<section id="additional-configurations">
+<h2>Additional configurations<a class="headerlink" href="#additional-configurations" title="Link to this heading">¶</a></h2>
 <p>When adding a new domain, you may need to configure additional settings:</p>
 <ol class="arabic">
-<li><p>Docker configurations: In <code class="docutils literal notranslate"><span class="pre">a2perf/launch/docker_utils.py</span></code>, add entries for your new domain:</p>
-<ol class="loweralpha simple">
-<li><p>In the <code class="docutils literal notranslate"><span class="pre">get_docker_instructions</span></code> function:</p></li>
-</ol>
+<li><p>Docker configurations:
+In <code class="docutils literal notranslate"><span class="pre">a2perf/launch/docker_utils.py</span></code>, add entries for your new domain:</p>
+<p>a. In the <code class="docutils literal notranslate"><span class="pre">get_docker_instructions</span></code> function:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">docker_instructions</span> <span class="o">=</span> <span class="p">{</span>
     <span class="c1"># ... existing entries ...</span>
     <span class="n">BenchmarkDomain</span><span class="o">.</span><span class="n">MY_DOMAIN</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">common_setup</span> <span class="o">+</span> <span class="p">[</span>
@@ -374,13 +380,44 @@ mkdir<span class="w"> </span>my_domain
 <span class="p">}</span>
 </pre></div>
 </div>
-<ol class="loweralpha simple" start="2">
-<li><p>In the <code class="docutils literal notranslate"><span class="pre">get_entrypoint</span></code> function: ```python entrypoints = { # … existing entries … BenchmarkDomain.MY_DOMAIN.value: xm.CommandList([ # Add your domain-specific entrypoint commands here ]), }</p></li>
-</ol>
+<p>b. In the <code class="docutils literal notranslate"><span class="pre">get_entrypoint</span></code> function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">entrypoints</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># ... existing entries ...</span>
+    <span class="n">BenchmarkDomain</span><span class="o">.</span><span class="n">MY_DOMAIN</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">xm</span><span class="o">.</span><span class="n">CommandList</span><span class="p">([</span>
+        <span class="c1"># Add your domain-specific entrypoint commands here</span>
+    <span class="p">]),</span>
+<span class="p">}</span>
+
+</pre></div>
+</div>
 </li>
-<li><p>Update constants: In <code class="docutils literal notranslate"><span class="pre">a2perf/constants.py</span></code>, add your new domain to the <code class="docutils literal notranslate"><span class="pre">BenchmarkDomain</span></code> enum: <code class="docutils literal notranslate"><span class="pre">python</span>&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">&#64;gin.constants_from_enum</span>&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">class</span> <span class="pre">BenchmarkDomain(enum.Enum):</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">QUADRUPED_LOCOMOTION</span> <span class="pre">=</span> <span class="pre">&quot;QuadrupedLocomotion-v0&quot;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">WEB_NAVIGATION</span> <span class="pre">=</span> <span class="pre">&quot;WebNavigation-v0&quot;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">CIRCUIT_TRAINING</span> <span class="pre">=</span> <span class="pre">&quot;CircuitTraining-v0&quot;</span>&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; <span class="pre">MY_DOMAIN</span> <span class="pre">=</span> <span class="pre">&quot;MyDomain-v0&quot;</span></code></p></li>
+<li><p>Update constants:
+In <code class="docutils literal notranslate"><span class="pre">a2perf/constants.py</span></code>, add your new domain to the <code class="docutils literal notranslate"><span class="pre">BenchmarkDomain</span></code> enum
+and update the <code class="docutils literal notranslate"><span class="pre">ENV_NAMES</span></code> dictionary:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">enum</span>
+<span class="kn">import</span> <span class="nn">gin</span>
+
+<span class="nd">@gin</span><span class="o">.</span><span class="n">constants_from_enum</span>
+<span class="k">class</span> <span class="nc">BenchmarkDomain</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">QUADRUPED_LOCOMOTION</span> <span class="o">=</span> <span class="s2">&quot;QuadrupedLocomotion&quot;</span>
+    <span class="n">WEB_NAVIGATION</span> <span class="o">=</span> <span class="s2">&quot;WebNavigation&quot;</span>
+    <span class="n">CIRCUIT_TRAINING</span> <span class="o">=</span> <span class="s2">&quot;CircuitTraining&quot;</span>
+    <span class="n">MY_DOMAIN</span> <span class="o">=</span> <span class="s2">&quot;MyDomain&quot;</span>  <span class="c1"># Add your new domain here</span>
+
+<span class="c1"># ... (other existing code)</span>
+
+<span class="n">ENV_NAMES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># ... (existing domains)</span>
+    <span class="n">BenchmarkDomain</span><span class="o">.</span><span class="n">MY_DOMAIN</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;MyDomain-Task1-v0&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;MyDomain-Task2-v0&quot;</span><span class="p">,</span>
+        <span class="c1"># Add all the environment names for your new domain</span>
+    <span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</li>
 </ol>
-<p>These configurations ensure A2Perf can properly set up and run experiments for your new domain.</p>
 </section>
 </section>
 
@@ -454,9 +491,9 @@ mkdir<span class="w"> </span>my_domain
             <div class="toc-tree">
               <ul>
 <li><a class="reference internal" href="#">Adding Custom Domains</a><ul>
-<li><a class="reference internal" href="#Path-to-A2Perf-Domains">Path to A2Perf Domains</a></li>
-<li><a class="reference internal" href="#Creating-a-new-domain">Creating a new domain</a></li>
-<li><a class="reference internal" href="#Additional-configurations">Additional configurations</a></li>
+<li><a class="reference internal" href="#path-to-a2perf-domains">Path to A2Perf Domains</a></li>
+<li><a class="reference internal" href="#creating-a-new-domain">Creating a new domain</a></li>
+<li><a class="reference internal" href="#additional-configurations">Additional configurations</a></li>
 </ul>
 </li>
 </ul>
@@ -548,8 +585,6 @@ mkdir<span class="w"> </span>my_domain
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=7660844c"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <script>
 
