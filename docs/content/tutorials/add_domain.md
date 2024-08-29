@@ -22,7 +22,7 @@ To add a new domain:
 ```bash
 cd A2Perf/a2perf/domains
 mkdir my_domain
-``` 
+```
 
 2. Inside of `my_domain`, create the following files:
 
