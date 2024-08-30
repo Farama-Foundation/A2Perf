@@ -12,7 +12,6 @@ from contextlib import contextmanager
 import codecarbon
 import gin
 import numpy as np
-import pkg_resources
 from absl import flags, logging
 from tf_agents.metrics import py_metrics
 from tf_agents.train import actor
@@ -464,7 +463,10 @@ class Submission:
         # Ensure all specified generalization tasks exist in the available directories
         assert all(
             [task in self.generalization_tasks for task in available_task_directories]
-        ), "Specified generalization tasks must be a subset of the tasks available in the configs directory."
+        ), (
+            "Specified generalization tasks must be a subset of the "
+            "tasks available in the configs directory."
+        )
 
         # Filter tasks to only those specified for generalization
         selected_generalization_tasks = [
@@ -483,7 +485,8 @@ class Submission:
             # Check if the gin configuration file exists
             if not os.path.exists(gin_config_path):
                 raise FileNotFoundError(
-                    f"Gin configuration file for generalization task '{task_name}' not found."
+                    f"Gin configuration file for generalization task"
+                    f" '{task_name}' not found."
                 )
             logging.info("Running generalization task: %s", task_name)
 

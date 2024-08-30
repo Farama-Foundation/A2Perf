@@ -3,8 +3,7 @@ import os
 from absl import logging
 from xmanager import xm
 
-from a2perf.constants import BenchmarkDomain
-from a2perf.constants import ENV_NAMES
+from a2perf.constants import ENV_NAMES, BenchmarkDomain
 
 GENERIC_GIN_CONFIG_NAME = "submission_config.gin"
 DOCKER_EXPERIMENT_DIR = "/experiment_dir"
