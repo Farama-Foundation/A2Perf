@@ -63,7 +63,6 @@ _ROOT_DIR = flags.DEFINE_string(
 def main(_):
     """Main function to set up and run the experiment."""
     create_experiment = xm_local.create_experiment
-    domain = _ENV_NAME.value.split("-")[0]
     with create_experiment(experiment_title=_EXPERIMENT_NAME.value) as experiment:
         experiment_id = _EXPERIMENT_ID.value or experiment.experiment_id
         base_root_dir = os.path.join(
@@ -104,7 +103,7 @@ def main(_):
                 experimental_stream_output=True,
             )
             docker_instructions = get_docker_instructions(
-                uid=_USER_ID.value, domain=domain, user=_USER.value
+                uid=_USER_ID.value, env_name=_ENV_NAME.value, user=_USER.value
             )
 
             base_image = (
@@ -119,7 +118,9 @@ def main(_):
                         use_deep_module=True,
                         base_image=base_image,
                         docker_instructions=docker_instructions,
-                        entrypoint=get_entrypoint(domain=domain, user=_USER.value),
+                        entrypoint=get_entrypoint(
+                            env_name=_ENV_NAME.value, user=_USER.value
+                        ),
                     )
                 ]
             )

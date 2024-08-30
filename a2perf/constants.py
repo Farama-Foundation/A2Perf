@@ -5,9 +5,9 @@ import gin
 
 @gin.constants_from_enum
 class BenchmarkDomain(enum.Enum):
-    QUADRUPED_LOCOMOTION = "QuadrupedLocomotion"
-    WEB_NAVIGATION = "WebNavigation"
-    CIRCUIT_TRAINING = "CircuitTraining"
+    QUADRUPED_LOCOMOTION = "quadruped_locomotion"
+    WEB_NAVIGATION = "web_navigation"
+    CIRCUIT_TRAINING = "circuit_training"
 
 
 @gin.constants_from_enum

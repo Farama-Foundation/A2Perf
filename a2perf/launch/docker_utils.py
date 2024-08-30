@@ -1,10 +1,10 @@
 import os
-from typing import Optional
 
 from absl import logging
 from xmanager import xm
 
 from a2perf.constants import BenchmarkDomain
+from a2perf.constants import ENV_NAMES
 
 GENERIC_GIN_CONFIG_NAME = "submission_config.gin"
 DOCKER_EXPERIMENT_DIR = "/experiment_dir"
@@ -55,11 +55,11 @@ def _get_common_setup(uid: str, user: str):
     ]
 
 
-def get_entrypoint(domain: str, user: str) -> xm.CommandList:
+def get_entrypoint(env_name: str, user: str) -> xm.CommandList:
     # flake8: noqa
 
-    entrypoints = {
-        BenchmarkDomain.QUADRUPED_LOCOMOTION.value: xm.CommandList(
+    if env_name in ENV_NAMES[BenchmarkDomain.QUADRUPED_LOCOMOTION]:
+        return xm.CommandList(
             [
                 "echo $@",
                 f"""
@@ -73,8 +73,9 @@ EOF
                 # Waste the trailing "$@" argument
                 "echo",
             ]
-        ),
-        BenchmarkDomain.WEB_NAVIGATION.value: xm.CommandList(
+        )
+    elif env_name in ENV_NAMES[BenchmarkDomain.WEB_NAVIGATION]:
+        return xm.CommandList(
             [
                 "echo $@",
                 "service dbus start",
@@ -89,8 +90,9 @@ EOF
                 # Waste the trailing "$@" argument
                 "echo",
             ]
-        ),
-        BenchmarkDomain.CIRCUIT_TRAINING.value: xm.CommandList(
+        )
+    elif env_name in ENV_NAMES[BenchmarkDomain.CIRCUIT_TRAINING]:
+        return xm.CommandList(
             [
                 "echo $@",
                 f"""
@@ -104,14 +106,13 @@ EOF
                 # Waste the trailing "$@" argument
                 "echo",
             ]
-        ),
-    }
+        )
+    else:
+        raise ValueError(f"Unsupported environment: {env_name}")
     # flake8: qa
 
-    return entrypoints[domain]
 
-
-def get_docker_instructions(uid: str, user: str, domain: str):
+def get_docker_instructions(uid: str, user: str, env_name: str):
     repo_dir = os.path.basename(
         os.path.abspath(
             os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
@@ -119,9 +120,8 @@ def get_docker_instructions(uid: str, user: str, domain: str):
     )
     common_setup = _get_common_setup(uid, user)
 
-    docker_instructions = {
-        BenchmarkDomain.QUADRUPED_LOCOMOTION.value: common_setup
-        + [
+    if env_name in ENV_NAMES[BenchmarkDomain.QUADRUPED_LOCOMOTION]:
+        return common_setup + [
             "RUN mkdir -p /workdir",
             "WORKDIR /workdir",
             f"COPY {repo_dir}/quadruped_locomotion_environment.yml .",
@@ -138,9 +138,9 @@ def get_docker_instructions(uid: str, user: str, domain: str):
                 python /workdir/setup.py install && \
                 pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
             """,
-        ],
-        BenchmarkDomain.WEB_NAVIGATION.value: common_setup
-        + [
+        ]
+    elif env_name in ENV_NAMES[BenchmarkDomain.WEB_NAVIGATION]:
+        return common_setup + [
             'ARG CHROME_VERSION="120.0.6099.109-1"',
             'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
             """
@@ -169,9 +169,9 @@ def get_docker_instructions(uid: str, user: str, domain: str):
             """,
             f"RUN mkdir -p /var/run/dbus && chown -R {uid}:root /var/run/dbus",
             "ENV CONDA_DEFAULT_ENV=py310",
-        ],
-        BenchmarkDomain.CIRCUIT_TRAINING.value: common_setup
-        + [
+        ]
+    elif env_name in ENV_NAMES[BenchmarkDomain.CIRCUIT_TRAINING]:
+        return common_setup + [
             """
                     RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
                       ${APT_COMMAND} install flex \
@@ -196,7 +196,7 @@ def get_docker_instructions(uid: str, user: str, domain: str):
                         pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
                     """,
             "ENV CONDA_DEFAULT_ENV=py310",
-        ],
-    }
+        ]
 
-    return docker_instructions[domain]
+    else:
+        raise ValueError(f"Unsupported environment: {env_name}")
