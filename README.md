@@ -84,10 +84,25 @@ version.
 
 ## API
 
-Environments in A2Perf are registered under the
-names `WebNavigation-v0`, `QuadrupedLocomotion-v0`,
-and `CircuitTraining-v0`. For example, you can create an instance of
-the `WebNavigation-v0` environment as follows:
+Environments in A2Perf are registered under specific names for each domain and
+task. Here are the available environments:
+
+1. Quadruped Locomotion:
+    - `QuadrupedLocomotion-DogPace-v0`
+    - `QuadrupedLocomotion-DogTrot-v0`
+    - `QuadrupedLocomotion-DogSpin-v0`
+
+2. Web Navigation:
+    - `WebNavigation-Difficulty-01-v0`
+    - `WebNavigation-Difficulty-02-v0`
+    - `WebNavigation-Difficulty-03-v0`
+
+3. Circuit Training:
+    - `CircuitTraining-ToyMacro-v0`
+    - `CircuitTraining-Ariane-v0`
+
+For example, you can create an instance of the `WebNavigation-Difficulty-01-v0`
+environment as follows:
 
 ```python
 import gymnasium as gym
@@ -114,7 +129,7 @@ described [here](docs/content/tutorials/training.md).
           ```
         - `inference.py` - defines the following functions:
           ```python
-          def load_policy(env):
+          def load_policy(env, **load_kwargs):
             """Loads a trained policy model from the specified directory."""
           def infer_once(policy, observation):
             """Runs a single inference step using the given policy and observation."""
@@ -128,52 +143,42 @@ described [here](docs/content/tutorials/training.md).
 
 ## Gin Configuration Files
 
-Under [`a2perf/submission/configs`](https://github.com/Farama-Foundation/A2Perf/tree/main/a2perf/submission/configs),
+Under [
+`a2perf/submission/configs`](https://github.com/Farama-Foundation/A2Perf/tree/main/a2perf/submission/configs),
 there are default gin configuration files for training and inference for each
-domain. These files define various settings and hyperparameters for
+domain. These files define various settings and parameters for
 benchmarking.
 
-Here's an example of an `inference.gin` file for web navigation:
+Here's an example of an `training.gin` file for web navigation:
 
 ```python
 # ----------------------
 # IMPORTS
 # ----------------------
 import a2perf.submission.submission_util
-import a2perf.domains.tfa.suite_gym
 
 # ----------------------
 # SUBMISSION SETUP
 # ----------------------
 # Set up submission object
-Submission.mode = %BenchmarkMode.INFERENCE
+Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-# Submission.run_offline_metrics_only = True
+Submission.run_offline_metrics_only = False
 Submission.measure_emissions = True
-
-####################################
-# Set up domain
-####################################
-
-####################################
-# Set up benchmark mode
-####################################
-Submission.num_inference_steps = 10000
-Submission.num_inference_episodes = 100
-Submission.time_participant_code = True
 
 # ----------------------
 # SYSTEM METRICS SETUP
 # ----------------------
 # Set up codecarbon for system metrics
-track_emissions_decorator.project_name = 'a2perf_web_navigation_inference'
-track_emissions_decorator.measure_power_secs = 1
+track_emissions_decorator.project_name = 'a2perf_web_navigation_train'
+track_emissions_decorator.measure_power_secs = 5
 track_emissions_decorator.save_to_file = True  # Save data to file
 track_emissions_decorator.save_to_logger = False  # Do not save data to logger
-track_emissions_decorator.gpu_ids = None  # Enter a list of specific GPU IDs to track if desired
+track_emissions_decorator.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
 track_emissions_decorator.log_level = 'info'  # Log level set to 'info'
 track_emissions_decorator.country_iso_code = 'USA'
 track_emissions_decorator.region = 'Massachusetts'
+track_emissions_decorator.offline = True
 ```
 
 ## Baselines
@@ -186,15 +191,18 @@ A2Perf.
 A2Perf keeps strict versioning for reproducibility reasons. All environments end
 in a suffix like "-v0". When changes are made to environments that might impact
 learning results, the number is increased by one to prevent potential confusion.
-This is follows the Gymnasium conventions.
+This follows the Gymnasium convention.
 
-## Citation
+[//]: # (## Citation)
 
-You can cite A2Perf as:
-\
-TODO
+[//]: # ()
 
-```
-@misc{ADD CITATION,
-}
-```
+[//]: # (You can cite A2Perf as:)
+
+[//]: # ()
+
+[//]: # (```bibtex)
+
+[//]: # (@misc{TODO })
+
+[//]: # (```)
