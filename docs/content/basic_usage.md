@@ -14,8 +14,9 @@ domains. Here are some examples:
 ```python
 import gymnasium as gym
 
-env = gym.make('CircuitTraining-Ariane-v0',
-               netlist_file='path/to/netlist.pb.txt')
+env = gym.make('CircuitTraining-Ariane-v0')
+# Other available environments:
+# env = gym.make('CircuitTraining-ToyMacro-v0')
 ```
 
 ## Web Navigation
@@ -23,7 +24,7 @@ env = gym.make('CircuitTraining-Ariane-v0',
 ```python
 import gymnasium as gym
 
-env = gym.make('WebNavigation-Difficulty-01-v0', difficulty=1, num_websites=1)
+env = gym.make('WebNavigation-Difficulty-01-v0', num_websites=1)
 ```
 
 ## Quadruped Locomotion
@@ -51,10 +52,17 @@ compatibility across different systems.
 To install A2Perf from source, follow these steps:
 
 1. Clone the repository:
+
     ```bash
-    git clone https://github.com/Farama-Foundation/A2Perf.git
-    cd A2Perf
-    git submodule update --init --recursive
+       git clone --recursive https://github.com/Farama-Foundation/A2Perf.git
+      ```
+
+   or
+
+    ```bash
+       git clone https://github.com/Farama-Foundation/A2Perf.git
+       cd A2Perf
+       git submodule update --init --recursive
     ```
 
 2. Install the package:
