@@ -131,7 +131,6 @@ def main(_):
                     "submission-gin-config-path": os.path.join(
                         DOCKER_EXPERIMENT_DIR, GENERIC_GIN_CONFIG_NAME
                     ),
-                    "participant-module-path": DOCKER_PARTICIPANT_DIR,
                     "participant-args": _PARTICIPANT_ARGS.value,
                 }
             )

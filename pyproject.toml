@@ -11,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 authors = [{ name = "Farama Foundation", email = "contact@farama.org" }]
 license = { text = "MIT License" }
-keywords = ["Reinforcement Learning", "Autonomous Agents", "RL", "IL", "Benchmark", "AI"]
+keywords = ["Reinforcement Learning", "Autonomous Agents", "RL", "Imitation Learning", "Benchmark", "AI"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
@@ -32,6 +32,9 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+
+[project.scripts]
+a2perf = "a2perf.launch.entrypoint:run_main"
 
 [project.optional-dependencies]
 # Update dependencies in `all` if any are added or removed

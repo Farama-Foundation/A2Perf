@@ -62,10 +62,9 @@ Replace `<experiment-id>` with the actual ID of your training experiment.
 ### Running Locally Without Docker
 
 ```bash
-CUDA_VISIBLE_DEVICES=-1 python a2perf/launch/entrypoint.py \
+CUDA_VISIBLE_DEVICES=-1 a2perf ../a2perf_benchmark_submission \
   --root-dir=~/gcs/a2perf/experiments/<experiment-id>/test/1 \
   --submission-gin-config-path=../submission/configs/quadruped_locomotion/generalization.gin \
-  --participant-module-path=../a2perf_benchmark_submission \
   --participant-args="root_dir=~/gcs/a2perf/experiments/<experiment-id>/test/1,policy_name=greedy_policy"
 ```
 

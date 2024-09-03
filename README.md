@@ -68,7 +68,7 @@ To install specific packages, you can use the following commands:
 ```bash
 pip install -e .[web_navigation]
 pip install -e .[quadruped_locomotion]
-pip install -e .[circuit_training] && python setup.py circuit_training
+pip install -e .[circuit_training]
 ```
 
 Both x86-64 and Arch64 (ARM64) architectures are supported.

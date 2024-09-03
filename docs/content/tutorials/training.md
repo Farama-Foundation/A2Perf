@@ -222,10 +222,9 @@ Locomotion - Dog Pace environment with the following command:
 ```bash
 cd A2perf
 export A2PERF_ROOT=$(pwd)
-python a2perf/launch/entrypoint.py \
+a2perf $A2PERF_ROOT/a2perf/a2perf_benchmark_submission \
   --root-dir=~/gcs/a2perf/experiments/test_without_docker \
   --submission-gin-config-path=$A2PERF_ROOT/a2perf/submission/configs/quadruped_locomotion/train.gin \
-  --participant-module-path=$A2PERF_ROOT/a2perf/a2perf_benchmark_submission \
   --participant-args="gin_config_path=configs/quadruped_locomotion/dog_pace/ppo.gin"
 ```
 
