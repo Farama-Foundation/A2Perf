@@ -1,6 +1,8 @@
 [build-system]
-requires = ["setuptools>=61.0.0"]
+requires = ["setuptools>=61.0.0", "wheel", "build"]
 build-backend = "setuptools.build_meta"
+
+
 
 [project]
 name = "a2perf"
@@ -29,6 +31,7 @@ dependencies = [
     "codecarbon"
 ]
 dynamic = ["version"]
+
 
 [project.optional-dependencies]
 # Update dependencies in `all` if any are added or removed
@@ -67,12 +70,12 @@ all = [
     "pybullet",
 ]
 
-# Add this when we are ready to publish the package
-#[project.urls]
-#Homepage = "https://farama.org"
-#Repository = "https://github.com/Farama-Foundation/A2Perf"
-#Documentation = "https://a2perf.farama.org"
-#"Bug Report" = "https://github.com/Farama-Foundation/A2Perf/issues"
+[project.urls]
+Homepage = "https://farama.org"
+Repository = "https://github.com/Farama-Foundation/A2Perf"
+Documentation = "https://a2perf.farama.org"
+"Bug Report" = "https://github.com/Farama-Foundation/A2Perf/issues"
+
 
 [tool.setuptools]
 include-package-data = true
@@ -126,5 +129,6 @@ addopts = ["--ignore-glob=*/__init__.py", "-n=auto", "--ignore=tutorials", "--ig
     "domains/quadruped_locomotion/motion_imitation/data/motions/*.txt",
     "domains/circuit_training/**/*.pb.txt",
     "domains/circuit_training/**/*.plc",
-    "domains/circuit_training/bin/plc_wrapper_main"
+    "domains/circuit_training/bin/plc_wrapper_main",
+    "domains/circuit_training/dreamplace_builds/*.tar.gz"
 ]
