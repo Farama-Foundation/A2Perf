@@ -359,10 +359,9 @@ execution).</p></li>
 </section>
 <section id="running-locally-without-docker">
 <h3>Running Locally Without Docker<a class="headerlink" href="#running-locally-without-docker" title="Link to this heading">¶</a></h3>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span>-1<span class="w"> </span>python<span class="w"> </span>a2perf/launch/entrypoint.py<span class="w"> </span><span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">CUDA_VISIBLE_DEVICES</span><span class="o">=</span>-1<span class="w"> </span>a2perf<span class="w"> </span>../a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/&lt;experiment-id&gt;/test/1<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--submission-gin-config-path<span class="o">=</span>../submission/configs/quadruped_locomotion/generalization.gin<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--participant-module-path<span class="o">=</span>../a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--participant-args<span class="o">=</span><span class="s2">&quot;root_dir=~/gcs/a2perf/experiments/&lt;experiment-id&gt;/test/1,policy_name=greedy_policy&quot;</span>
 </pre></div>
 </div>

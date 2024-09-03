@@ -309,8 +309,9 @@ domains. Here are some examples:</p>
 <h2>Circuit Training<a class="headerlink" href="#circuit-training" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gymnasium</span> <span class="k">as</span> <span class="nn">gym</span>
 
-<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;CircuitTraining-Ariane-v0&#39;</span><span class="p">,</span>
-               <span class="n">netlist_file</span><span class="o">=</span><span class="s1">&#39;path/to/netlist.pb.txt&#39;</span><span class="p">)</span>
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;CircuitTraining-Ariane-v0&#39;</span><span class="p">)</span>
+<span class="c1"># Other available environments:</span>
+<span class="c1"># env = gym.make(&#39;CircuitTraining-ToyMacro-v0&#39;)</span>
 </pre></div>
 </div>
 </section>
@@ -318,7 +319,7 @@ domains. Here are some examples:</p>
 <h2>Web Navigation<a class="headerlink" href="#web-navigation" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">gymnasium</span> <span class="k">as</span> <span class="nn">gym</span>
 
-<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;WebNavigation-Difficulty-01-v0&#39;</span><span class="p">,</span> <span class="n">difficulty</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_websites</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s1">&#39;WebNavigation-Difficulty-01-v0&#39;</span><span class="p">,</span> <span class="n">num_websites</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -346,9 +347,13 @@ compatibility across different systems.</p>
 <p>To install A2Perf from source, follow these steps:</p>
 <ol class="arabic">
 <li><p>Clone the repository:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Farama-Foundation/A2Perf.git
-<span class="nb">cd</span><span class="w"> </span>A2Perf
-git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init<span class="w"> </span>--recursive
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">   </span>git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/Farama-Foundation/A2Perf.git
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w">   </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Farama-Foundation/A2Perf.git
+<span class="w">   </span><span class="nb">cd</span><span class="w"> </span>A2Perf
+<span class="w">   </span>git<span class="w"> </span>submodule<span class="w"> </span>update<span class="w"> </span>--init<span class="w"> </span>--recursive
 </pre></div>
 </div>
 </li>

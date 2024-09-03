@@ -510,10 +510,9 @@ dependencies. Run the following command:</p>
 Locomotion - Dog Pace environment with the following command:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>A2perf
 <span class="nb">export</span><span class="w"> </span><span class="nv">A2PERF_ROOT</span><span class="o">=</span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>
-python<span class="w"> </span>a2perf/launch/entrypoint.py<span class="w"> </span><span class="se">\</span>
+a2perf<span class="w"> </span><span class="nv">$A2PERF_ROOT</span>/a2perf/a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--root-dir<span class="o">=</span>~/gcs/a2perf/experiments/test_without_docker<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--submission-gin-config-path<span class="o">=</span><span class="nv">$A2PERF_ROOT</span>/a2perf/submission/configs/quadruped_locomotion/train.gin<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--participant-module-path<span class="o">=</span><span class="nv">$A2PERF_ROOT</span>/a2perf/a2perf_benchmark_submission<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--participant-args<span class="o">=</span><span class="s2">&quot;gin_config_path=configs/quadruped_locomotion/dog_pace/ppo.gin&quot;</span>
 </pre></div>
 </div>
