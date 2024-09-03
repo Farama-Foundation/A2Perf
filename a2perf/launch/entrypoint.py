@@ -1,9 +1,7 @@
 import os
 import subprocess
 
-from absl import app
-from absl import flags
-from absl import logging
+from absl import app, flags, logging
 
 _ROOT_DIR = flags.DEFINE_string(
     "root-dir", None, "Root directory to save metrics and logs from training"
@@ -22,18 +20,22 @@ _SUBMISSION_GIN_CONFIG_PATH = flags.DEFINE_string(
 _PARTICIPANT_ARGS = flags.DEFINE_string(
     "participant-args",
     None,
-    "Additional keyword arguments to pass to the participant's train and inference functions.",
+    "Additional keyword arguments to pass to the"
+    " participant's train and inference functions.",
 )
 
 
 def _usage():
     return (
-        "Usage: a2perf <participant_module_path> --root-dir=<root_dir> --submission-gin-config-path=<path> [--participant-args=<k1=v1,k2=v2,...>]\n"
+        "Usage: a2perf <participant_module_path> "
+        "--root-dir=<root_dir> "
+        "--submission-gin-config-path=<path> "
+        "[--participant-args=<k1=v1,k2=v2,...>]\n"
         "\n"
         "Options:\n"
         "\t--root-dir\tRoot directory for the experiment\n"
         "\t--submission-gin-config-path\tPath to the gin configuration file\n"
-        "\t--participant-args\tAdditional arguments for the participant's train function"
+        "\t--participant-args\tAdditional arguments for the participant's train function"  # noqa: E501
     )
 
 

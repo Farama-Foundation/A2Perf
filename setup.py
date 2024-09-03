@@ -1,14 +1,7 @@
 """Sets up the project."""
 
-import importlib.util
 import logging
-import os
 import pathlib
-import shutil
-import site
-import sys
-import urllib.request
-from distutils.cmd import Command
 
 from setuptools import setup
 
