@@ -10,11 +10,14 @@ on:
   release:
     types: [ published ]
 
+
+
+
 jobs:
   build-wheels:
     runs-on: ${{ matrix.os }}
     permissions:
-      contents: write
+      contents: read
     strategy:
       matrix:
         include:
@@ -48,6 +51,9 @@ jobs:
 
   publish-testpypi:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     needs:
     - build-wheels
     if: github.event.release.prerelease == true  # Only run if it's a pre-release
