@@ -49,8 +49,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write
+      contents: read
     needs:
     - build-wheels
     if: github.event_name == 'release' && github.event.action == 'published' && github.event.release.prerelease == false
@@ -62,5 +62,24 @@ jobs:
         path: dist
     - name: Publish
       uses: pypa/gh-action-pypi-publish@release/v1
+
+
+  publish-testpypi:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    needs:
+    - build-wheels
+    if: github.event.release.prerelease == true  # Only run if it's a pre-release
+    steps:
+    - name: Download dists
+      uses: actions/download-artifact@v3
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        name: artifact
+        path: dist
+    - name: Publish to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
