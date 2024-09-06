@@ -51,13 +51,16 @@ A2Perf provides benchmark environments in the following domains:
 
 ## Installation
 
-A2Perf can be installed on your local machine:
+A2Perf can be installed directly from PyPI:
 
 ```bash
-git clone https://github.com/Farama-Foundation/A2Perf.git
-cd A2Perf
-git submodule sync --recursive
-git submodule update --init --recursive
+pip install a2perf[all]
+```
+
+A2Perf can also be installed from source for development purposes:
+
+```bash
+git clone https://github.com/Farama-Foundation/A2Perf.git --recursive
 pip install -e .[all]
 ```
 
@@ -66,6 +69,12 @@ pip install -e .[all]
 To install specific packages, you can use the following commands:
 
 ```bash
+# From PyPI
+pip install a2perf[web_navigation]
+pip install a2perf[circuit_training]  
+pip install a2perf[quadruped_locomotion]
+
+# From source
 pip install -e .[web_navigation]
 pip install -e .[quadruped_locomotion]
 pip install -e .[circuit_training]
@@ -79,8 +88,7 @@ It can be used for development and testing but if you want to conduct serious (
 time and resource-extensive) experiments on Windows,
 please consider
 using [Docker](https://docs.docker.com/docker-for-windows/install/)
-or [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) with Linux
-version.
+or [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10).
 
 ## API
 

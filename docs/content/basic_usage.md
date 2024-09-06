@@ -40,8 +40,21 @@ env = gym.make('QuadrupedLocomotion-DogPace-v0')
 
 # Installation
 
-Note: The pip installation is not available yet. Users should install from
-source for now.
+## Installing from PyPI
+
+To install A2Perf from PyPI, run the following command:
+
+```bash
+pip install a2perf
+```
+
+You can also install specific domains by specifying the package name:
+
+```bash
+pip install a2perf[web-navigation]
+pip install a2perf[circuit-training]
+pip install a2perf[quadruped-locomotion]
+```
 
 ## Installing from source
 
