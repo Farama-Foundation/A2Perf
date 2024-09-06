@@ -48,6 +48,9 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     needs:
     - build-wheels
     if: github.event_name == 'release' && github.event.action == 'published' && github.event.release.prerelease == false
