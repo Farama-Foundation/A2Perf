@@ -94,15 +94,3 @@ To install A2Perf from source, follow these steps:
     ```bash
     pip install .[all]
     ```
-
-   Once pip installation becomes available, you'll be able to install A2Perf
-   directly:
-
-    ```bash
-    # Install all domains
-    pip install a2perf[all]
-    # Or install specific domains
-    pip install a2perf[circuit-training]
-    pip install a2perf[web-navigation]
-    pip install a2perf[quadruped-locomotion]
-    ```
