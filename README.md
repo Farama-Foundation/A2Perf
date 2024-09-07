@@ -71,7 +71,7 @@ To install specific packages, you can use the following commands:
 ```bash
 # From PyPI
 pip install a2perf[web_navigation]
-pip install a2perf[circuit_training]  
+pip install a2perf[circuit_training]
 pip install a2perf[quadruped_locomotion]
 
 # From source
