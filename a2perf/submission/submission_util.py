@@ -12,15 +12,11 @@ from contextlib import contextmanager
 import codecarbon
 import gin
 import numpy as np
-import pkg_resources
-from absl import flags
-from absl import logging
+from absl import flags, logging
 from tf_agents.metrics import py_metrics
 from tf_agents.train import actor
 
-from a2perf.constants import BenchmarkDomain
-from a2perf.constants import BenchmarkMode
-from a2perf.constants import ReliabilityMetrics
+from a2perf.constants import BenchmarkDomain, BenchmarkMode, ReliabilityMetrics
 from a2perf.domains.tfa import suite_gym
 
 
@@ -145,13 +141,13 @@ def _load_module(module_path, filename):
     return module, spec
 
 
-def _load_policy(module_path, env):
+def _load_policy(module_path, env, participant_args=None):
     """Loads the policy from the participant's module."""
     with working_directory(module_path):
         participant_module, participant_module_spec = _load_module(
             module_path, "inference.py"
         )
-        policy = participant_module.load_policy(env)
+        policy = participant_module.load_policy(env, **(participant_args or {}))
     return policy, participant_module
 
 
@@ -162,6 +158,7 @@ def perform_rollouts(
     gin_config_str=None,
     absl_flags=None,
     rollout_rewards_queue=None,
+    participant_args=None,
 ):
     """Performs rollouts using the given policy.
 
@@ -178,7 +175,11 @@ def perform_rollouts(
     """
     setup_subprocess_env(gin_config_str, absl_flags)
     env = create_domain_fn()
-    policy, participant_module = _load_policy(module_path, env)
+    if participant_args is None:
+        participant_args = {}
+    policy, participant_module = _load_policy(
+        module_path, env, participant_args=participant_args
+    )
     episode_reward_metric = py_metrics.AverageReturnMetric()
     rollout_actor = actor.Actor(
         env=env,
@@ -203,104 +204,26 @@ def perform_rollouts(
 
 def _perform_rollout_task(
     generalization_task,
-    domain,
+    # domain,
     root_dir,
     participant_module_path,
     num_generalization_episodes,
     gin_config_str,
     absl_flags,
+    participant_args,
 ):
-    generalization_env_vars = {}
+    """Performs rollouts for a generalization task."""
 
-    if domain == BenchmarkDomain.WEB_NAVIGATION:
-        if generalization_task == "difficulty_level_1_num_websites_1":
-            generalization_env_vars["DIFFICULTY_LEVEL"] = "1"
-            generalization_env_vars["NUM_WEBSITES"] = "1"
-        elif generalization_task == "difficulty_level_1_num_websites_5":
-            generalization_env_vars["DIFFICULTY_LEVEL"] = "1"
-            generalization_env_vars["NUM_WEBSITES"] = "5"
-        elif generalization_task == "difficulty_level_1_num_websites_10":
-            generalization_env_vars["DIFFICULTY_LEVEL"] = "1"
-            generalization_env_vars["NUM_WEBSITES"] = "10"
-        else:
-            raise ValueError(
-                "Generalization tasks for WebNavigation domain must be either"
-                " difficulty_level_1_num_websites_1, "
-                "difficulty_level_1_num_websites_5, "
-                "or difficulty_level_1_num_websites_10"
-            )
-    elif domain == BenchmarkDomain.CIRCUIT_TRAINING:
-        if generalization_task == "toy_macro_stdcell":
-            generalization_env_vars["NETLIST_PATH"] = pkg_resources.resource_filename(
-                "a2perf",
-                "domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/netlist.pb.txt",
-            )
-            generalization_env_vars["INIT_PLACEMENT_PATH"] = (
-                pkg_resources.resource_filename(
-                    "a2perf",
-                    "domains/circuit_training/circuit_training/environment/test_data/toy_macro_stdcell/initial.plc",
-                )
-            )
-        elif generalization_task == "ariane":
-            generalization_env_vars["NETLIST_PATH"] = pkg_resources.resource_filename(
-                "a2perf",
-                "domains/circuit_training/circuit_training/environment/test_data/ariane/netlist.pb.txt",
-            )
-            generalization_env_vars["INIT_PLACEMENT_PATH"] = (
-                pkg_resources.resource_filename(
-                    "a2perf",
-                    "domains/circuit_training/circuit_training/environment/test_data/ariane/initial.plc",
-                )
-            )
-        else:
-            raise ValueError(
-                "Generalization tasks for CircuitTraining domain must be either toy_macro_stdcell or ariane"
-            )
-    elif domain == BenchmarkDomain.QUADRUPED_LOCOMOTION:
-        if generalization_task == "dog_pace":
-            generalization_env_vars["MOTION_FILE_PATH"] = (
-                pkg_resources.resource_filename(
-                    "a2perf",
-                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_pace.txt",
-                )
-            )
-        elif generalization_task == "dog_trot":
-            generalization_env_vars["MOTION_FILE_PATH"] = (
-                pkg_resources.resource_filename(
-                    "a2perf",
-                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_trot.txt",
-                )
-            )
-        elif generalization_task == "dog_spin":
-            generalization_env_vars["MOTION_FILE_PATH"] = (
-                pkg_resources.resource_filename(
-                    "a2perf",
-                    "domains/quadruped_locomotion/motion_imitation/data/motions/dog_spin.txt",
-                )
-            )
-    else:
-        raise ValueError(
-            "Generalization tasks are only supported for WebNavigation, CircuitTraining, and QuadrupedLocomotion domains."
-        )
-
-    for key, value in generalization_env_vars.items():
-        os.environ[key] = value
-
-    create_domain_fn = functools.partial(
-        suite_gym.create_domain, env_name=domain.value, root_dir=root_dir
-    )
+    create_domain_fn = functools.partial(suite_gym.create_domain, root_dir=root_dir)
     all_rewards = perform_rollouts(
         module_path=participant_module_path,
         create_domain_fn=create_domain_fn,
         num_episodes=num_generalization_episodes,
         gin_config_str=gin_config_str,
         absl_flags=absl_flags,
+        participant_args=participant_args,
         rollout_rewards_queue=None,
     )
-
-    # Reset the environment variables after rolling out each task
-    for key in generalization_env_vars.keys():
-        os.environ.pop(key)
 
     return generalization_task, all_rewards
 
@@ -458,7 +381,10 @@ class Submission:
         setup_subprocess_env(self.gin_config_str, self.absl_flags)
 
         create_domain_fn = functools.partial(
-            suite_gym.create_domain, env_name=self.domain.value, root_dir=self.root_dir
+            suite_gym.create_domain,
+            # env_name=self.domain.value,
+            root_dir=self.root_dir,
+            # load_kwargs=self.participant_args,
         )
         if measure_emissions:
 
@@ -475,6 +401,7 @@ class Submission:
                         self.gin_config_str,
                         self.absl_flags,
                         rollout_rewards_queue,
+                        self.participant_args,
                     ),
                 )
                 rollout_process.start()
@@ -488,6 +415,7 @@ class Submission:
                 module_path=self.participant_module_path,
                 gin_config_str=self.gin_config_str,
                 absl_flags=self.absl_flags,
+                participant_args=self.participant_args,
             )
 
     def _run_training_benchmark(self):
@@ -498,66 +426,110 @@ class Submission:
 
             participant_training_process.start()
             logging.info(
-                f"Participant training process ID: {participant_training_process.pid}"
+                "Participant training process ID: %d", participant_training_process.pid
             )
-
             participant_training_process.join()
             logging.info(
-                f"Participant module process {participant_training_process.pid} finished"
+                "Participant module process %d finished",
+                participant_training_process.pid,
             )
 
             if participant_training_process.is_alive():
                 logging.error("Participant process is still running")
             elif participant_training_process.exitcode != 0:
                 logging.error(
-                    "Participant process exited with code"
-                    f" {participant_training_process.exitcode}"
+                    "Participant process exited with code %d",
+                    participant_training_process.exitcode,
                 )
             else:
                 logging.info(
-                    f"Participant process {participant_training_process.pid} finished"
+                    "Participant process %d finished", participant_training_process.pid
                 )
 
     def _run_generalization_benchmark(self):
-        all_returns = collections.defaultdict(list)
-        tasks = []
+        # Dictionary to store the returns from all generalization tasks
+        generalization_returns = collections.defaultdict(list)
 
-        for generalization_task in self.generalization_tasks:
-            logging.info("Running generalization task: %s", generalization_task)
-            tasks.append(
+        # Define the base directory for configuration files based on the domain
+        configs_base_directory = os.path.join("configs", self.domain.value)
+
+        # List all generalization task directories in the base config directory
+        available_task_directories = [
+            directory
+            for directory in os.listdir(configs_base_directory)
+            if os.path.isdir(os.path.join(configs_base_directory, directory))
+        ]
+
+        # Ensure all specified generalization tasks exist in the available directories
+        assert all(
+            [task in self.generalization_tasks for task in available_task_directories]
+        ), (
+            "Specified generalization tasks must be a subset of the "
+            "tasks available in the configs directory."
+        )
+
+        # Filter tasks to only those specified for generalization
+        selected_generalization_tasks = [
+            task
+            for task in available_task_directories
+            if task in self.generalization_tasks
+        ]
+
+        task_parameters = []
+        for task_name in selected_generalization_tasks:
+            # Construct the path to the gin configuration file for the task
+            gin_config_path = os.path.join(
+                configs_base_directory, task_name, "domain.gin"
+            )
+
+            # Check if the gin configuration file exists
+            if not os.path.exists(gin_config_path):
+                raise FileNotFoundError(
+                    f"Gin configuration file for generalization task"
+                    f" '{task_name}' not found."
+                )
+            logging.info("Running generalization task: %s", task_name)
+
+            # Load the gin configuration for the task
+            gin.parse_config_file(gin_config_path)
+            task_gin_config_string = gin.config_str()
+
+            # Prepare parameters for multiprocessing
+            task_parameters.append(
                 (
-                    generalization_task,
-                    self.domain,
+                    task_name,
+                    # self.domain,
                     self.root_dir,
                     self.participant_module_path,
                     self.num_generalization_episodes,
-                    self.gin_config_str,
+                    task_gin_config_string,
                     self.absl_flags,
+                    self.participant_args,
                 )
             )
 
+        # Execute the generalization benchmark tasks in parallel
         with multiprocessing.Pool() as pool:
-            results = pool.starmap(_perform_rollout_task, tasks)
+            task_results = pool.starmap(_perform_rollout_task, task_parameters)
             pool.close()
             pool.join()
 
-        for generalization_task, all_rewards in results:
-            all_returns[generalization_task] = all_rewards
+        # Collect the results from each task
+        for task_name, task_rewards in task_results:
+            generalization_returns[task_name] = task_rewards
 
-        # Save the rollouts for each generalization task to a file
+        # Save the generalization task rollouts to a JSON file
         logging.info("Saving generalization rollouts to file")
-        logging.info("Generalization rollouts: %s", all_returns)
+        logging.info("Generalization rollouts: %s", generalization_returns)
         with open(
             os.path.join(self.metric_values_dir, "generalization_rollouts.json"), "w"
-        ) as f:
-            json.dump(all_returns, f)
+        ) as output_file:
+            json.dump(generalization_returns, output_file)
 
     def _run_inference_benchmark(self):
         if not self.run_offline_metrics_only:
-            logging.info("Creating Gymnasium domain...")
-            env = suite_gym.create_domain(
-                env_name=self.domain.value, root_dir=self.root_dir
-            )
+            logging.info("Creating Gymnasium environment...")
+            env = suite_gym.create_domain(root_dir=self.root_dir)
             logging.info("Successfully created domain")
 
             logging.info("Generating inference data...")
@@ -568,7 +540,9 @@ class Submission:
 
             logging.info("Loading the policy for inference...")
             participant_policy, participant_module = _load_policy(
-                module_path=self.participant_module_path, env=env
+                module_path=self.participant_module_path,
+                env=env,
+                participant_args=self.participant_args,
             )
 
             # Only include time_step_spec if the participant policy has it as an
@@ -586,9 +560,11 @@ class Submission:
                 logging.info("Timing inference steps...")
                 inference_times = []
                 for i in range(self.num_inference_steps):
-                    inference_step = lambda: participant_module.infer_once(
-                        policy=participant_policy,
-                        preprocessed_observation=preprocessed_data[i],
+                    inference_step = (
+                        lambda: participant_module.infer_once(  # noqa: E731
+                            policy=participant_policy,
+                            preprocessed_observation=preprocessed_data[i],
+                        )
                     )
                     inference_times.append(timeit.timeit(inference_step, number=1))
                 logging.info("Finished timing inference steps")
@@ -645,7 +621,8 @@ class Submission:
 
         if not os.path.exists(self.participant_module_path):
             raise FileNotFoundError(
-                f"Participant module path {self.participant_module_path} not found. This is necessary for running training and inference code."
+                f"Participant module path {self.participant_module_path} not found."
+                f" This is necessary for running training and inference code."
             )
 
         if self.mode == BenchmarkMode.TRAIN:
@@ -653,13 +630,15 @@ class Submission:
         elif self.mode == BenchmarkMode.INFERENCE:
             if not os.path.exists(self.root_dir):
                 raise FileNotFoundError(
-                    f"Root directory {self.root_dir} not found. This is necessary for loading the trained model"
+                    f"Root directory {self.root_dir} not found."
+                    f" This is necessary for loading the trained model"
                 )
             self._run_inference_benchmark()
         elif self.mode == BenchmarkMode.GENERALIZATION:
             if not os.path.exists(self.root_dir):
                 raise FileNotFoundError(
-                    f"Root directory {self.root_dir} not found. This is necessary for loading the trained model"
+                    f"Root directory {self.root_dir} not found."
+                    f" This is necessary for loading the trained model"
                 )
             self._run_generalization_benchmark()
 

@@ -1,8 +1,0 @@
-import rl_perf.submission.submission_util
-
-
-Submission.create_domain.seed = 0
-Submission.create_domain.motion_file_path = /rl-perf/rl_perf/domains/quadruped_locomotion/motion_imitation/data/motions/dog_trot.txt
-
-
-

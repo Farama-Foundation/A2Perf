@@ -16,7 +16,8 @@ def get_distributed_experiment_metric(
         run_groups = []
         run_ids = group["run_id"].unique()
 
-        # Create a separate DataFrame for each run_id with the specific metric column renamed
+        # Create a separate DataFrame for each run_id with the
+        # specific metric column renamed
         for run_id in run_ids:
             run_group = (
                 group[group["run_id"] == run_id][
@@ -219,13 +220,12 @@ def get_total_energy(data_df):
 
 
 def get_power_usage(data_df):
-    ram_power_usage = get_ram_power_usage(data_df)
+    ram_power_usage = get_ram_power_usage(data_df)  # noqa: F841
     gpu_power_usage = get_gpu_power_usage(data_df)
-    cpu_power_usage = get_cpu_power_usage(data_df)
+    cpu_power_usage = get_cpu_power_usage(data_df)  # noqa: F841
 
     return {
         "gpu_power_usage": gpu_power_usage,
-        # 'cpu_power_usage': cpu_power_usage,
     }
 
 

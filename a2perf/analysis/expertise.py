@@ -3,13 +3,11 @@ import json
 import multiprocessing
 import os
 
-from absl import app
-from absl import flags
-from absl import logging
-from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from absl import app, flags, logging
+from matplotlib import pyplot as plt
 
 _EXPERIMENT_IDS = flags.DEFINE_list(
     "experiment_ids", [], "List of experiment IDs to load the evaluation data."

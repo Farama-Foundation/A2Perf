@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath("../a2perf/domains/web_navigation"))
 
 
 # -- Project information -----------------------------------------------------
-from typing import Any, Dict
+# from typing import Any, Dict
 
 # TODO: Replace A2Perf, remove comment and remove this line
 # import A2Perf
@@ -86,13 +86,13 @@ html_theme = "furo"
 html_title = "A2Perf Documentation"
 html_baseurl = "https://a2perf.farama.org"
 html_copy_source = False
-html_favicon = "_static/img/favicon.png"
+html_favicon = "_static/img/logo/favicon/A2Perf-favicon.png"
 html_theme_options = {
-    "light_logo": "img/a2perf_black.svg",
-    "dark_logo": "img/a2perf_white.svg",
+    "light_logo": "img/logo/vectors/A2Perf.svg",
+    "dark_logo": "img/logo/vectors/A2Perf-white.svg",
     "gtag": "G-6H9C8TWXZ8",
-    "description": "A2Perf is a benchmarking suite for evaluating autonomous agents on real-world problems.",
-    "image": "img/a2perf-github.png",
+    "description": "A2Perf is a benchmarking suite for evaluating autonomous agents on real-world problems.",  # noqa: E501
+    "image": "_static/img/logo/vectors/A2Perf-github.svg",
     "versioning": True,
     "source_repository": "https://github.com/Farama-Foundation/A2Perf/",
     "source_branch": "main",

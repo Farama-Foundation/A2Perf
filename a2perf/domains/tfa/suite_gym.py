@@ -22,28 +22,24 @@ agent behaviour. This prevents us from setting the appropriate discount value
 for the final step of an episode. To prevent that we extract the step limit
 from the environment specs and utilize our TimeLimit wrapper.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import json
 import os
-from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Optional
-from typing import Sequence
-from typing import Text
+from typing import Any, Callable, Dict, Optional, Sequence, Text
 
 import gin
 import gymnasium as gym
 import numpy as np
 from absl import logging
-from tf_agents.environments import py_environment
-from tf_agents.environments import wrappers
+from tf_agents.environments import py_environment, wrappers
 from tf_agents.typing import types
 
+from a2perf.domains import circuit_training  # noqa: F401
+from a2perf.domains import quadruped_locomotion  # noqa: F401
+from a2perf.domains import web_navigation  # noqa: F401
 from a2perf.domains.tfa import gym_wrapper
+from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
 
 TimeLimitWrapperType = Callable[
     [py_environment.PyEnvironment, int], py_environment.PyEnvironment
@@ -181,8 +177,6 @@ def create_domain(
 ):
     if env_name in WEB_NAVIGATION_ENVS:
         # noinspection PyUnresolvedReferences
-        from a2perf.domains import web_navigation
-        from a2perf.domains.web_navigation.gwob.CoDE import vocabulary_node
 
         save_vocab_dir = os.path.join(root_dir, "vocabulary")
         reload_vocab = env_kwargs.pop("reload_vocab", True)
@@ -190,7 +184,7 @@ def create_domain(
         if vocab_type == "threaded":
             global_vocab = vocabulary_node.LockedThreadedVocabulary()
         elif vocab_type == "unlocked":
-            global_vocab = vocabulary_node.UnlockedVocabulary()
+            vocabulary_node.UnlockedVocabulary()
         elif vocab_type == "multiprocessing":
             global_vocab = vocabulary_node.LockedMultiprocessingVocabulary()
         else:
@@ -206,14 +200,14 @@ def create_domain(
                     global_vocab.restore(state=global_vocab_dict)
         seed = int(os.environ.get("SEED", None))
         num_websites = int(os.environ.get("NUM_WEBSITES", None))
-        difficulty = int(os.environ.get("DIFFICULTY_LEVEL", None))
+        # difficulty = int(os.environ.get("DIFFICULTY_LEVEL", None))
 
         env_kwargs.update(
             {
                 "global_vocabulary": global_vocab,
                 "seed": seed,
                 "num_websites": num_websites,
-                "difficulty": difficulty,
+                # "difficulty": difficulty,
                 "browser_args": dict(
                     threading=False,
                     chrome_options={
@@ -227,30 +221,26 @@ def create_domain(
         )
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
     elif env_name in CIRCUIT_TRAINING_ENVS:
-        # noinspection PyUnresolvedReferences
-        from a2perf.domains import circuit_training
 
         env_kwargs.pop("netlist", None)
-        netlist_file_path = os.environ.get("NETLIST_PATH", None)
+        # netlist_file_path = os.environ.get("NETLIST_PATH", None)
         seed = int(os.environ.get("SEED", None))
-        init_placement_file_path = os.environ.get("INIT_PLACEMENT_PATH", None)
-        std_cell_placer_mode = os.environ.get("STD_CELL_PLACER_MODE", None)
+        # init_placement_file_path = os.environ.get("INIT_PLACEMENT_PATH", None)
+        # std_cell_placer_mode = os.environ.get("STD_CELL_PLACER_MODE", None)
         env_kwargs.update(
             {
                 "global_seed": seed,
-                "netlist_file": netlist_file_path,
-                "init_placement": init_placement_file_path,
+                # "netlist_file": netlist_file_path,
+                # "init_placement": init_placement_file_path,
                 "output_plc_file": os.path.join(root_dir, "output.plc"),
-                "std_cell_placer_mode": std_cell_placer_mode,
+                # "std_cell_placer_mode": std_cell_placer_mode,
             }
         )
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
     elif env_name in QUADRUPED_LOCOMOTION_ENVS:
-        # noinspection PyUnresolvedReferences
-        from a2perf.domains import quadruped_locomotion
 
-        motion_file_path = os.environ.get("MOTION_FILE_PATH", None)
-        env_kwargs["motion_files"] = [motion_file_path]
+        # motion_file_path = os.environ.get("MOTION_FILE_PATH", None)
+        # env_kwargs["motion_files"] = [motion_file_path]
         env_wrappers = [wrappers.ActionClipWrapper] + list(env_wrappers)
     else:
         raise NotImplementedError(f"Unknown environment: {env_name}")

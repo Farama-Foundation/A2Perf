@@ -1,5 +1,17 @@
-# A2Perf: Real-World Autonomous Agents Benchmark
+![pre-commit](https://github.com/Farama-Foundation/A2Perf/actions/workflows/pre-commit.yml/badge.svg)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+[//]: # ([![Python]&#40;https://img.shields.io/pypi/pyversions/gymnasium.svg&#41;]&#40;https://badge.fury.io/py/gymnasium&#41; TODO: Add working Python versions once a2perf package is available)
+
+[//]: # ([![PyPI]&#40;https://badge.fury.io/py/gymnasium.svg&#41;]&#40;https://badge.fury.io/py/gymnasium&#41;
+TODO: Add PyPI once a2perf package is available)
+
+[//]: # ([![arXiv]&#40;https://img.shields.io/badge/arXiv-2407.17032-b31b1b.svg&#41;]&#40;https://arxiv.org/abs/2407.17032&#41; TODO: Add arXiv once we have DOI link)
+
+
+<p align="center">
+    <img src="docs/_static/img/logo/github/A2Perf-github.png" width="500px"/>
+</p>
 A2Perf is a benchmark for evaluating agents on sequential decision problems that
 are relevant to the real world. This
 repository contains code for running and evaluating participant's submissions on
@@ -24,7 +36,7 @@ A2Perf provides benchmark environments in the following domains:
   open-source Circuit Training framework, which uses reinforcement learning to
   optimize chip layouts for multiple objectives.
 
-<!-- 
+<!--
 ### Web Navigation
 
 ![Three web navigation environments](media/gminiwob_scene.png)
@@ -39,13 +51,16 @@ A2Perf provides benchmark environments in the following domains:
 
 ## Installation
 
-A2Perf can be installed on your local machine:
+A2Perf can be installed directly from PyPI:
 
 ```bash
-git clone https://github.com/Farama-Foundation/A2Perf.git
-cd A2Perf
-git submodule sync --recursive
-git submodule update --init --recursive
+pip install a2perf[all]
+```
+
+A2Perf can also be installed from source for development purposes:
+
+```bash
+git clone https://github.com/Farama-Foundation/A2Perf.git --recursive
 pip install -e .[all]
 ```
 
@@ -54,9 +69,15 @@ pip install -e .[all]
 To install specific packages, you can use the following commands:
 
 ```bash
+# From PyPI
+pip install a2perf[web_navigation]
+pip install a2perf[circuit_training]  
+pip install a2perf[quadruped_locomotion]
+
+# From source
 pip install -e .[web_navigation]
 pip install -e .[quadruped_locomotion]
-pip install -e .[circuit_training] && python setup.py circuit_training
+pip install -e .[circuit_training]
 ```
 
 Both x86-64 and Arch64 (ARM64) architectures are supported.
@@ -67,15 +88,29 @@ It can be used for development and testing but if you want to conduct serious (
 time and resource-extensive) experiments on Windows,
 please consider
 using [Docker](https://docs.docker.com/docker-for-windows/install/)
-or [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10) with Linux
-version.
+or [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10).
 
 ## API
 
-Environments in A2Perf are registered under the
-names `WebNavigation-v0`, `QuadrupedLocomotion-v0`,
-and `CircuitTraining-v0`. For example, you can create an instance of
-the `WebNavigation-v0` environment as follows:
+Environments in A2Perf are registered under specific names for each domain and
+task. Here are the available environments:
+
+1. Quadruped Locomotion:
+    - `QuadrupedLocomotion-DogPace-v0`
+    - `QuadrupedLocomotion-DogTrot-v0`
+    - `QuadrupedLocomotion-DogSpin-v0`
+
+2. Web Navigation:
+    - `WebNavigation-Difficulty-01-v0`
+    - `WebNavigation-Difficulty-02-v0`
+    - `WebNavigation-Difficulty-03-v0`
+
+3. Circuit Training:
+    - `CircuitTraining-ToyMacro-v0`
+    - `CircuitTraining-Ariane-v0`
+
+For example, you can create an instance of the `WebNavigation-Difficulty-01-v0`
+environment as follows:
 
 ```python
 import gymnasium as gym
@@ -89,7 +124,7 @@ env = gym.make("WebNavigation-DifficultyLevel-01-v0", num_websites=10, seed=0)
 ## User Submission
 
 A beginners guide to benchmarking with A2Perf is
-described [here](docs/content/tutorials/training.ipynb).
+described [here](docs/content/tutorials/training.md).
 
 - Users can pull the template repository
   at https://github.com/Farama-Foundation/a2perf-benchmark-submission
@@ -102,7 +137,7 @@ described [here](docs/content/tutorials/training.ipynb).
           ```
         - `inference.py` - defines the following functions:
           ```python
-          def load_policy(env):
+          def load_policy(env, **load_kwargs):
             """Loads a trained policy model from the specified directory."""
           def infer_once(policy, observation):
             """Runs a single inference step using the given policy and observation."""
@@ -116,52 +151,42 @@ described [here](docs/content/tutorials/training.ipynb).
 
 ## Gin Configuration Files
 
-Under [`a2perf/submission/configs`](https://github.com/Farama-Foundation/A2Perf/tree/main/a2perf/submission/configs),
+Under [
+`a2perf/submission/configs`](https://github.com/Farama-Foundation/A2Perf/tree/main/a2perf/submission/configs),
 there are default gin configuration files for training and inference for each
-domain. These files define various settings and hyperparameters for
+domain. These files define various settings and parameters for
 benchmarking.
 
-Here's an example of an `inference.gin` file for web navigation:
+Here's an example of an `training.gin` file for web navigation:
 
 ```python
 # ----------------------
 # IMPORTS
 # ----------------------
 import a2perf.submission.submission_util
-import a2perf.domains.tfa.suite_gym
 
 # ----------------------
 # SUBMISSION SETUP
 # ----------------------
 # Set up submission object
-Submission.mode = %BenchmarkMode.INFERENCE
+Submission.mode = %BenchmarkMode.TRAIN
 Submission.domain = %BenchmarkDomain.WEB_NAVIGATION
-# Submission.run_offline_metrics_only = True
+Submission.run_offline_metrics_only = False
 Submission.measure_emissions = True
-
-####################################
-# Set up domain
-####################################
-
-####################################
-# Set up benchmark mode
-####################################
-Submission.num_inference_steps = 10000
-Submission.num_inference_episodes = 100
-Submission.time_participant_code = True
 
 # ----------------------
 # SYSTEM METRICS SETUP
 # ----------------------
 # Set up codecarbon for system metrics
-track_emissions_decorator.project_name = 'a2perf_web_navigation_inference'
-track_emissions_decorator.measure_power_secs = 1
+track_emissions_decorator.project_name = 'a2perf_web_navigation_train'
+track_emissions_decorator.measure_power_secs = 5
 track_emissions_decorator.save_to_file = True  # Save data to file
 track_emissions_decorator.save_to_logger = False  # Do not save data to logger
-track_emissions_decorator.gpu_ids = None  # Enter a list of specific GPU IDs to track if desired
+track_emissions_decorator.gpu_ids = None  # Enter list of specific GPU IDs to track if desired
 track_emissions_decorator.log_level = 'info'  # Log level set to 'info'
 track_emissions_decorator.country_iso_code = 'USA'
 track_emissions_decorator.region = 'Massachusetts'
+track_emissions_decorator.offline = True
 ```
 
 ## Baselines
@@ -174,15 +199,18 @@ A2Perf.
 A2Perf keeps strict versioning for reproducibility reasons. All environments end
 in a suffix like "-v0". When changes are made to environments that might impact
 learning results, the number is increased by one to prevent potential confusion.
-This is follows the Gymnasium conventions.
+This follows the Gymnasium convention.
 
-## Citation
+[//]: # (## Citation)
 
-You can cite A2Perf as:
-\
-TODO
+[//]: # ()
 
-```
-@misc{ADD CITATION,
-}
-```
+[//]: # (You can cite A2Perf as:)
+
+[//]: # ()
+
+[//]: # (```bibtex)
+
+[//]: # (@misc{TODO })
+
+[//]: # (```)

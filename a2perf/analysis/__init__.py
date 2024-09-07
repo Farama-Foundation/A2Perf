@@ -1,3 +1,1 @@
-from . import reliability
-from . import results
-from . import system
+from . import reliability, results, system  # noqa

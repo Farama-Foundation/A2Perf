@@ -1,15 +1,16 @@
 # ----------------------
 # IMPORTS
 # ----------------------
+import a2perf
 import a2perf.submission.submission_util
 
 # ----------------------
 # SUBMISSION SETUP
 # ----------------------
 # Set up submission object
-Submission.mode = %BenchmarkMode.TRAIN
-Submission.domain = %BenchmarkDomain.QUADRUPED_LOCOMOTION
-Submission.run_offline_metrics_only=False
+Submission.mode = %a2perf.constants.BenchmarkMode.TRAIN
+Submission.domain = %a2perf.constants.BenchmarkDomain.QUADRUPED_LOCOMOTION
+Submission.run_offline_metrics_only = False
 Submission.measure_emissions=True
 
 

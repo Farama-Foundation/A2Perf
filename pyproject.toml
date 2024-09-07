@@ -1,6 +1,8 @@
 [build-system]
-requires = ["setuptools>=61.0.0"]
+requires = ["setuptools>=61.0.0", "wheel", "build"]
 build-backend = "setuptools.build_meta"
+
+
 
 [project]
 name = "a2perf"
@@ -9,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 authors = [{ name = "Farama Foundation", email = "contact@farama.org" }]
 license = { text = "MIT License" }
-keywords = ["Reinforcement Learning", "Autonomous Agents", "RL", "IL", "Benchmark", "AI"]
+keywords = ["Reinforcement Learning", "Autonomous Agents", "RL", "Imitation Learning", "Benchmark", "AI"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "License :: OSI Approved :: MIT License",
@@ -29,6 +31,10 @@ dependencies = [
     "codecarbon"
 ]
 dynamic = ["version"]
+
+
+[project.scripts]
+a2perf = "a2perf.launch.entrypoint:run_main"
 
 [project.optional-dependencies]
 # Update dependencies in `all` if any are added or removed
@@ -67,12 +73,12 @@ all = [
     "pybullet",
 ]
 
-# Add this when we are ready to publish the package
-#[project.urls]
-#Homepage = "https://farama.org"
-#Repository = "https://github.com/Farama-Foundation/A2Perf"
-#Documentation = "https://a2perf.farama.org"
-#"Bug Report" = "https://github.com/Farama-Foundation/A2Perf/issues"
+[project.urls]
+Homepage = "https://farama.org"
+Repository = "https://github.com/Farama-Foundation/A2Perf"
+Documentation = "https://a2perf.farama.org"
+"Bug Report" = "https://github.com/Farama-Foundation/A2Perf/issues"
+
 
 [tool.setuptools]
 include-package-data = true
@@ -126,5 +132,6 @@ addopts = ["--ignore-glob=*/__init__.py", "-n=auto", "--ignore=tutorials", "--ig
     "domains/quadruped_locomotion/motion_imitation/data/motions/*.txt",
     "domains/circuit_training/**/*.pb.txt",
     "domains/circuit_training/**/*.plc",
-    "domains/circuit_training/bin/plc_wrapper_main"
+    "domains/circuit_training/bin/plc_wrapper_main",
+    "domains/circuit_training/dreamplace_builds/*.tar.gz"
 ]

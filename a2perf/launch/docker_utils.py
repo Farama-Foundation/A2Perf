@@ -1,11 +1,9 @@
 import os
-from typing import Optional
 
 from absl import logging
 from xmanager import xm
 
-from a2perf.constants import BenchmarkDomain
-
+from a2perf.constants import ENV_NAMES, BenchmarkDomain
 
 GENERIC_GIN_CONFIG_NAME = "submission_config.gin"
 DOCKER_EXPERIMENT_DIR = "/experiment_dir"
@@ -56,9 +54,11 @@ def _get_common_setup(uid: str, user: str):
     ]
 
 
-def get_entrypoint(domain: str, user: str) -> xm.CommandList:
-    entrypoints = {
-        BenchmarkDomain.QUADRUPED_LOCOMOTION.value: xm.CommandList(
+def get_entrypoint(env_name: str, user: str) -> xm.CommandList:
+    # flake8: noqa
+
+    if env_name in ENV_NAMES[BenchmarkDomain.QUADRUPED_LOCOMOTION]:
+        return xm.CommandList(
             [
                 "echo $@",
                 f"""
@@ -66,14 +66,15 @@ su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py39 &&
 pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
-python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+a2perf {DOCKER_PARTICIPANT_DIR} --verbosity={logging.get_verbosity()} $@
 EOF
 """,
                 # Waste the trailing "$@" argument
                 "echo",
             ]
-        ),
-        BenchmarkDomain.WEB_NAVIGATION.value: xm.CommandList(
+        )
+    elif env_name in ENV_NAMES[BenchmarkDomain.WEB_NAVIGATION]:
+        return xm.CommandList(
             [
                 "echo $@",
                 "service dbus start",
@@ -82,14 +83,15 @@ su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
-python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+a2perf {DOCKER_PARTICIPANT_DIR} --verbosity={logging.get_verbosity()} $@
 EOF
                     """,
                 # Waste the trailing "$@" argument
                 "echo",
             ]
-        ),
-        BenchmarkDomain.CIRCUIT_TRAINING.value: xm.CommandList(
+        )
+    elif env_name in ENV_NAMES[BenchmarkDomain.CIRCUIT_TRAINING]:
+        return xm.CommandList(
             [
                 "echo $@",
                 f"""
@@ -97,15 +99,16 @@ su {user} -c /bin/bash <<EOF
 source /opt/conda/etc/profile.d/conda.sh &&
 conda activate py310 &&
 pip install -r {DOCKER_PARTICIPANT_DIR}/requirements.txt &&
-python /workdir/a2perf/launch/entrypoint.py --verbosity={logging.get_verbosity()} $@ 
+a2perf {DOCKER_PARTICIPANT_DIR} --verbosity={logging.get_verbosity()} $@
 EOF
 """,
                 # Waste the trailing "$@" argument
                 "echo",
             ]
-        ),
-    }
-    return entrypoints[domain]
+        )
+    else:
+        raise ValueError(f"Unsupported environment: {env_name}")
+    # flake8: qa
 
 
 def get_docker_instructions(uid: str, user: str, env_name: str):
@@ -116,9 +119,8 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
     )
     common_setup = _get_common_setup(uid, user)
 
-    docker_instructions = {
-        BenchmarkDomain.QUADRUPED_LOCOMOTION.value: common_setup
-        + [
+    if env_name in ENV_NAMES[BenchmarkDomain.QUADRUPED_LOCOMOTION]:
+        return common_setup + [
             "RUN mkdir -p /workdir",
             "WORKDIR /workdir",
             f"COPY {repo_dir}/quadruped_locomotion_environment.yml .",
@@ -133,11 +135,11 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
                 conda activate py39 && \
                 pip install -e /workdir[all] seaborn matplotlib minari==0.4.3 && \
                 python /workdir/setup.py install && \
-                pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"       
+                pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
             """,
-        ],
-        BenchmarkDomain.WEB_NAVIGATION.value: common_setup
-        + [
+        ]
+    elif env_name in ENV_NAMES[BenchmarkDomain.WEB_NAVIGATION]:
+        return common_setup + [
             'ARG CHROME_VERSION="120.0.6099.109-1"',
             'ARG CHROMEDRIVER_VERSION="120.0.6099.109"',
             """
@@ -166,9 +168,9 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
             """,
             f"RUN mkdir -p /var/run/dbus && chown -R {uid}:root /var/run/dbus",
             "ENV CONDA_DEFAULT_ENV=py310",
-        ],
-        BenchmarkDomain.CIRCUIT_TRAINING.value: common_setup
-        + [
+        ]
+    elif env_name in ENV_NAMES[BenchmarkDomain.CIRCUIT_TRAINING]:
+        return common_setup + [
             """
                     RUN ${APT_COMMAND} update --allow-releaseinfo-change && \
                       ${APT_COMMAND} install flex \
@@ -192,7 +194,7 @@ def get_docker_instructions(uid: str, user: str, env_name: str):
                         pip uninstall -y nvidia-cuda-nvrtc-cu11 nvidia-cuda-runtime-cu11 nvidia-cudnn-cu11"
                     """,
             "ENV CONDA_DEFAULT_ENV=py310",
-        ],
-    }
+        ]
 
-    return docker_instructions[env_name]
+    else:
+        raise ValueError(f"Unsupported environment: {env_name}")
