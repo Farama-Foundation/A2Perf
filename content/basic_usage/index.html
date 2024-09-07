@@ -220,7 +220,6 @@
 <ul>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../circuit_training/">Circuit Training Environments</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Circuit Training Environments</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../circuit_training/CircuitTraining-Ariane-v0/">Ariane</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../circuit_training/CircuitTraining-ToyMacroStdcell-v0/">Toy Macro Standard Cell</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../quadruped_locomotion/">Quadruped Locomotion Environments</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Quadruped Locomotion Environments</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -337,8 +336,19 @@ domains. Here are some examples:</p>
 </section>
 <section class="tex2jax_ignore mathjax_ignore" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h1>
-<p>Note: The pip installation is not available yet. Users should install from
-source for now.</p>
+<section id="installing-from-pypi">
+<h2>Installing from PyPI<a class="headerlink" href="#installing-from-pypi" title="Link to this heading">¶</a></h2>
+<p>To install A2Perf from PyPI, run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>a2perf
+</pre></div>
+</div>
+<p>You can also install specific domains by specifying the package name:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>web-navigation<span class="o">]</span>
+pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>circuit-training<span class="o">]</span>
+pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>quadruped-locomotion<span class="o">]</span>
+</pre></div>
+</div>
+</section>
 <section id="installing-from-source">
 <h2>Installing from source<a class="headerlink" href="#installing-from-source" title="Link to this heading">¶</a></h2>
 <p><strong>Note:</strong> We highly recommend using Conda to manage your environment for
@@ -368,16 +378,6 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 </div>
 <p>If you do not need an editable installation, you can omit the <code class="docutils literal notranslate"><span class="pre">-e</span></code> flag:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>.<span class="o">[</span>all<span class="o">]</span>
-</pre></div>
-</div>
-<p>Once pip installation becomes available, you’ll be able to install A2Perf
-directly:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install all domains</span>
-pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>all<span class="o">]</span>
-<span class="c1"># Or install specific domains</span>
-pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>circuit-training<span class="o">]</span>
-pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>web-navigation<span class="o">]</span>
-pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">[</span>quadruped-locomotion<span class="o">]</span>
 </pre></div>
 </div>
 </li>
@@ -449,6 +449,7 @@ pip<span class="w"> </span>install<span class="w"> </span>a2perf<span class="o">
 </ul>
 </li>
 <li><a class="reference internal" href="#installation">Installation</a><ul>
+<li><a class="reference internal" href="#installing-from-pypi">Installing from PyPI</a></li>
 <li><a class="reference internal" href="#installing-from-source">Installing from source</a></li>
 </ul>
 </li>
