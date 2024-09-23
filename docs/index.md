@@ -12,11 +12,6 @@ lastpage:
 A2Perf is a benchmarking suite for evaluating agents on sequential decision-making problems that are relevant to the real world.
 ```
 
-```{figure} _static/REPLACE_ME.gif
-   :alt: REPLACE ME
-   :width: 500
-```
-
 This library contains a collection of environments from domains spanning
 computer chip-floorplanning, web navigation, and quadruped locomotion.
 
