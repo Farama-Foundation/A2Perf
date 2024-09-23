@@ -1,4 +1,4 @@
-# Ariane
+# Toy Macro Standard Cell
 
 ![The Toy Macro Standard Cell  CPU](../../_static/img/CircuitTraining-ToyMacro-v0.gif)
 

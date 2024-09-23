@@ -36,7 +36,7 @@
         </div>
         <div class="env-item">
             <img src="../../_static/img/CircuitTraining-ToyMacro-v0.gif" alt="Toy Macro Netlist">
-            <a href="CircuitTraining-ToyMacroStdcell-v0">Toy Macro Netlist</a>
+            <a href="CircuitTraining-ToyMacro-v0">Toy Macro Netlist</a>
         </div>
     </div>
 </div>
@@ -46,5 +46,5 @@
 :caption: Circuit Training Environments
 
 CircuitTraining-Ariane-v0
-CircuitTraining-ToyMacroStdcell-v0
+CircuitTraining-ToyMacro-v0
 ```
