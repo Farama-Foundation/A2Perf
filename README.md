@@ -12,6 +12,8 @@ TODO: Add PyPI once a2perf package is available)
 <p align="center">
     <img src="docs/_static/img/logo/github/A2Perf-github.png" width="500px"/>
 </p>
+**Nov 7, 2025: This project has been deprecated due to a lack of widespread community use, and is no longer planned to receive any additional updates or support.**
+
 A2Perf is a benchmark for evaluating agents on sequential decision problems that
 are relevant to the real world. This
 repository contains code for running and evaluating participant's submissions on
