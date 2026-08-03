@@ -39,7 +39,7 @@ a2perf = "a2perf.launch.entrypoint:run_main"
 [project.optional-dependencies]
 # Update dependencies in `all` if any are added or removed
 circuit-training = [
-    "torch==1.13.1",
+    "torch==2.13.0",
     "tensorflow<2.16.1",
     "tf-agents",
     "timeout-decorator",
@@ -58,7 +58,7 @@ quadruped-locomotion = [
 ]
 all = [
     # circuit-training
-    "torch==1.13.1",
+    "torch==2.13.0",
     "tensorflow<2.16.1",
     "tf-agents",
     "timeout-decorator",
